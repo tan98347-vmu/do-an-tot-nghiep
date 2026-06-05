@@ -10,6 +10,7 @@ __pycache__/
 media/
 backups/
 session.txt
+bug.txt
 staticfiles/
 .codex-runtime/
 .codex-tmp/
