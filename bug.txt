@@ -1,0 +1,908 @@
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/radar_chart/radar_chart_pain
+ter.dart:410:23:
+Error: 'Size' isn't a type.
+  double radarCenterY(Size size) => size.height / 2.0;
+                      ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/radar_chart/radar_chart_pain
+ter.dart:413:23:
+Error: 'Size' isn't a type.
+  double radarCenterX(Size size) => size.width / 2.0;
+                      ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/radar_chart/radar_chart_pain
+ter.dart:416:22:
+Error: 'Size' isn't a type.
+  double radarRadius(Size size) =>
+                     ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/radar_chart/radar_chart_pain
+ter.dart:421:5:
+Error: 'Size' isn't a type.
+    Size viewSize,
+    ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/radar_chart/radar_chart_pain
+ter.dart:438:16:
+Error: 'Offset' isn't a type.
+          List<Offset>.filled(dataSet.dataEntries.length, Offset.zero);
+               ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/radar_chart/radar_chart_pain
+ter.dart:438:59:
+Error: The getter 'Offset' isn't defined for the type 'RadarChartPainter'.
+ - 'RadarChartPainter' is from 'package:fl_chart/src/chart/radar_chart/radar_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/radar_chart/radar_chart_p
+ ainter.dart').
+          List<Offset>.filled(dataSet.dataEntries.length, Offset.zero);
+                                                          ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/radar_chart/radar_chart_pain
+ter.dart:447:29:
+Error: The method 'Offset' isn't defined for the type 'RadarChartPainter'.
+ - 'RadarChartPainter' is from 'package:fl_chart/src/chart/radar_chart/radar_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/radar_chart/radar_chart_p
+ ainter.dart').
+        final entryOffset = Offset(
+                            ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/radar_chart/radar_chart_pain
+ter.dart:464:14:
+Error: 'Offset' isn't a type.
+  final List<Offset> entriesOffset;
+             ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:19:28:
+Error: The method 'Paint' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+    _bgTouchTooltipPaint = Paint()
+                           ^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:20:17:
+Error: The getter 'PaintingStyle' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+      ..style = PaintingStyle.fill
+                ^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:21:17:
+Error: The getter 'Colors' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+      ..color = Colors.white;
+                ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:23:32:
+Error: The method 'Paint' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+    _borderTouchTooltipPaint = Paint()
+                               ^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:24:17:
+Error: The getter 'PaintingStyle' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+      ..style = PaintingStyle.stroke
+                ^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:25:17:
+Error: The getter 'Colors' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+      ..color = Colors.transparent
+                ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:29:8:
+Error: 'Paint' isn't a type.
+  late Paint _bgTouchTooltipPaint;
+       ^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:30:8:
+Error: 'Paint' isn't a type.
+  late Paint _borderTouchTooltipPaint;
+       ^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:35:5:
+Error: 'BuildContext' isn't a type.
+    BuildContext context,
+    ^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:46:5:
+Error: 'BuildContext' isn't a type.
+    BuildContext context,
+    ^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:57:9:
+Error: The getter 'Rect' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+        Rect.fromLTRB(
+        ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:63:9:
+Error: The method 'Paint' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+        Paint(),
+        ^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:88:30:
+Error: The getter 'Rect' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+      canvasWrapper.clipRect(Rect.fromLTRB(left, top, right, bottom));
+                             ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:101:9:
+Error: The method 'Offset' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+        Offset(pixelX, pixelY),
+        ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:117:22:
+Error: The method 'TextSpan' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+        final span = TextSpan(
+                     ^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:130:22:
+Error: The getter 'TextAlign' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+          textAlign: TextAlign.center,
+                     ^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:128:20:
+Error: The method 'TextPainter' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+        final tp = TextPainter(
+                   ^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:168:11:
+Error: The method 'Offset' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+          Offset(newPixelX, newPixelY),
+          ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:180:5:
+Error: 'BuildContext' isn't a type.
+    BuildContext context,
+    ^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:203:5:
+Error: 'BuildContext' isn't a type.
+    BuildContext context,
+    ^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:217:18:
+Error: The method 'TextSpan' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+    final span = TextSpan(
+                 ^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:223:32:
+Error: The method 'TextPainter' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+    final drawingTextPainter = TextPainter(
+                               ^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:236:27:
+Error: The method 'Offset' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+    final mostTopOffset = Offset(
+                          ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:252:16:
+Error: The getter 'Rect' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+    var rect = Rect.fromLTWH(
+               ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:265:16:
+Error: The getter 'Rect' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+        rect = Rect.fromLTRB(
+               ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:275:16:
+Error: The getter 'Rect' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+        rect = Rect.fromLTRB(
+               ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:287:16:
+Error: The getter 'Rect' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+        rect = Rect.fromLTRB(
+               ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:297:16:
+Error: The getter 'Rect' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+        rect = Rect.fromLTRB(
+               ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:306:20:
+Error: The getter 'Radius' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+    final radius = Radius.circular(tooltipData.tooltipRoundedRadius);
+                   ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:307:25:
+Error: The getter 'RRect' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+    final roundedRect = RRect.fromRectAndCorners(
+                        ^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:319:9:
+Error: The method 'Offset' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+        Offset(0, Utils().calculateRotationOffset(rect.size, rotateAngle).dy);
+        ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:320:28:
+Error: The method 'Offset' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+    final rectDrawOffset = Offset(roundedRect.left, roundedRect.top);
+                           ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:325:24:
+Error: The method 'Offset' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+    final drawOffset = Offset(
+                       ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:333:38:
+Error: The getter 'BorderSide' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+    if (tooltipData.tooltipBorder != BorderSide.none) {
+                                     ^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:361:5:
+Error: 'Offset' isn't a type.
+    Offset localPosition,
+    ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:362:5:
+Error: 'Size' isn't a type.
+    Size viewSize,
+    ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_chart_
+painter.dart:373:22:
+Error: The method 'Offset' isn't defined for the type 'ScatterChartPainter'.
+ - 'ScatterChartPainter' is from 'package:fl_chart/src/chart/scatter_chart/scatter_chart_painter.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/scatter_chart/scatter_cha
+ rt_painter.dart').
+      final center = Offset(spotPixelX, spotPixelY);
+                     ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:18:9:
+Error: 'Axis' isn't a type.
+  final Axis direction;
+        ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:23:47:
+Error: 'BuildContext' isn't a type.
+  AxisSideTitlesRenderFlex createRenderObject(BuildContext context) {
+                                              ^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:33:5:
+Error: 'BuildContext' isn't a type.
+    BuildContext context,
+    ^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:43:28:
+Error: 'DiagnosticPropertiesBuilder' isn't a type.
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:44:11:
+Error: Superclass has no method named 'debugFillProperties'.
+    super.debugFillProperties(properties);
+          ^^^^^^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:45:33:
+Error: 'Axis' isn't a type.
+    properties.add(EnumProperty<Axis>('direction', direction));
+                                ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:45:20:
+Error: The method 'EnumProperty' isn't defined for the type 'SideTitlesFlex'.
+ - 'SideTitlesFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+    properties.add(EnumProperty<Axis>('direction', direction));
+                   ^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:55:5:
+Error: 'Axis' isn't a type.
+    Axis direction = Axis.horizontal,
+    ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:63:3:
+Error: 'Axis' isn't a type.
+  Axis _direction;
+  ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:65:17:
+Error: 'Axis' isn't a type.
+  set direction(Axis value) {
+                ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:68:7:
+Error: The method 'markNeedsLayout' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+      markNeedsLayout();
+      ^^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:78:7:
+Error: The method 'markNeedsLayout' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+      markNeedsLayout();
+      ^^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:89:7:
+Error: The method 'markNeedsLayout' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+      markNeedsLayout();
+      ^^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:94:24:
+Error: 'RenderBox' isn't a type.
+  void setupParentData(RenderBox child) {
+                       ^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:95:30:
+Error: 'FlexParentData' isn't a type.
+    if (child.parentData is! FlexParentData) {
+                             ^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:96:26:
+Error: The method 'FlexParentData' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+      child.parentData = FlexParentData();
+                         ^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:104:43:
+Error: 'TextBaseline' isn't a type.
+  double? computeDistanceToActualBaseline(TextBaseline baseline) {
+                                          ^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:105:23:
+Error: The getter 'Axis' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+    if (_direction == Axis.horizontal) {
+                      ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:106:14:
+Error: The method 'defaultComputeDistanceToHighestActualBaseline' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+      return defaultComputeDistanceToHighestActualBaseline(baseline);
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:108:12:
+Error: The method 'defaultComputeDistanceToFirstActualBaseline' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+    return defaultComputeDistanceToFirstActualBaseline(baseline);
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:111:24:
+Error: 'Size' isn't a type.
+  double _getCrossSize(Size size) {
+                       ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:113:12:
+Error: Not a constant expression.
+      case Axis.horizontal:
+           ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:115:12:
+Error: Not a constant expression.
+      case Axis.vertical:
+           ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:111:10:
+Error: A non-null value must be returned since the return type 'double' doesn't allow null.
+  double _getCrossSize(Size size) {
+         ^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:120:23:
+Error: 'Size' isn't a type.
+  double _getMainSize(Size size) {
+                      ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:122:12:
+Error: Not a constant expression.
+      case Axis.horizontal:
+           ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:124:12:
+Error: Not a constant expression.
+      case Axis.vertical:
+           ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:120:10:
+Error: A non-null value must be returned since the return type 'double' doesn't allow null.
+  double _getMainSize(Size size) {
+         ^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:130:25:
+Error: 'BoxConstraints' isn't a type.
+  Size computeDryLayout(BoxConstraints constraints) {
+                        ^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:137:12:
+Error: Not a constant expression.
+      case Axis.horizontal:
+           ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:139:12:
+Error: Not a constant expression.
+      case Axis.vertical:
+           ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:132:20:
+Error: The getter 'ChildLayoutHelper' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+      layoutChild: ChildLayoutHelper.dryLayoutChild,
+                   ^^^^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:138:38:
+Error: The method 'Size' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+        return constraints.constrain(Size(sizes.mainSize, sizes.crossSize));
+                                     ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:140:38:
+Error: The method 'Size' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+        return constraints.constrain(Size(sizes.crossSize, sizes.mainSize));
+                                     ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:145:14:
+Error: 'BoxConstraints' isn't a type.
+    required BoxConstraints constraints,
+             ^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:146:14:
+Error: 'ChildLayouter' isn't a type.
+    required ChildLayouter layoutChild,
+             ^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:158:52:
+Error: 'FlexParentData' isn't a type.
+      final childParentData = child.parentData! as FlexParentData;
+                                                   ^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:162:9:
+Error: Not a constant expression.
+        Axis.horizontal => BoxConstraints.tightFor(
+        ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:165:9:
+Error: Not a constant expression.
+        Axis.vertical => BoxConstraints.tightFor(
+        ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:149:39:
+Error: The getter 'Axis' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+    final maxMainSize = _direction == Axis.horizontal
+                                      ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:156:17:
+Error: The getter 'firstChild' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+    var child = firstChild;
+                ^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:162:28:
+Error: The getter 'BoxConstraints' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+        Axis.horizontal => BoxConstraints.tightFor(
+                           ^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:165:26:
+Error: The getter 'BoxConstraints' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+        Axis.vertical => BoxConstraints.tightFor(
+                         ^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:198:12:
+Error: Not a constant expression.
+      case Axis.horizontal:
+           ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:202:12:
+Error: Not a constant expression.
+      case Axis.vertical:
+           ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:212:52:
+Error: 'FlexParentData' isn't a type.
+      final childParentData = child.parentData! as FlexParentData;
+                                                   ^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:221:9:
+Error: Not a constant expression.
+        Axis.horizontal => Offset(childMainPosition, childCrossPosition),
+        ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:222:9:
+Error: Not a constant expression.
+        Axis.vertical => Offset(childCrossPosition, childMainPosition),
+        ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:187:30:
+Error: The getter 'constraints' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+    final constraints = this.constraints;
+                             ^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:189:20:
+Error: The getter 'ChildLayoutHelper' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+      layoutChild: ChildLayoutHelper.layoutChild,
+                   ^^^^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:199:38:
+Error: The method 'Size' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+        size = constraints.constrain(Size(actualSize, crossSize));
+                                     ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:199:9:
+Error: The setter 'size' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+        size = constraints.constrain(Size(actualSize, crossSize));
+        ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:200:22:
+Error: The getter 'size' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+        actualSize = size.width;
+                     ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:201:21:
+Error: The getter 'size' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+        crossSize = size.height;
+                    ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:203:38:
+Error: The method 'Size' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+        size = constraints.constrain(Size(crossSize, actualSize));
+                                     ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:203:9:
+Error: The setter 'size' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+        size = constraints.constrain(Size(crossSize, actualSize));
+        ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:204:22:
+Error: The getter 'size' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+        actualSize = size.height;
+                     ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:205:21:
+Error: The getter 'size' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+        crossSize = size.width;
+                    ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:209:17:
+Error: The getter 'firstChild' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+    var child = firstChild;
+                ^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:221:28:
+Error: The method 'Offset' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+        Axis.horizontal => Offset(childMainPosition, childCrossPosition),
+                           ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:222:26:
+Error: The method 'Offset' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+        Axis.vertical => Offset(childCrossPosition, childMainPosition),
+                         ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:230:24:
+Error: 'BoxHitTestResult' isn't a type.
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+                       ^^^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:230:59:
+Error: 'Offset' isn't a type.
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+                                                          ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:231:12:
+Error: The method 'defaultHitTestChildren' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+    return defaultHitTestChildren(result, position: position);
+           ^^^^^^^^^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:235:14:
+Error: 'PaintingContext' isn't a type.
+  void paint(PaintingContext context, Offset offset) {
+             ^^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:235:39:
+Error: 'Offset' isn't a type.
+  void paint(PaintingContext context, Offset offset) {
+                                      ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:237:9:
+Error: The getter 'size' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+    if (size.isEmpty) {
+        ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:242:5:
+Error: The method 'defaultPaint' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+    defaultPaint(context, offset);
+    ^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:245:21:
+Error: 'ClipRectLayer' isn't a type.
+  final LayerHandle<ClipRectLayer> _clipRectLayer =
+                    ^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:245:9:
+Error: 'LayerHandle' isn't a type.
+  final LayerHandle<ClipRectLayer> _clipRectLayer =
+        ^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:246:19:
+Error: 'ClipRectLayer' isn't a type.
+      LayerHandle<ClipRectLayer>();
+                  ^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:246:7:
+Error: Method not found: 'LayerHandle'.
+      LayerHandle<ClipRectLayer>();
+      ^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:251:11:
+Error: Superclass has no method named 'dispose'.
+    super.dispose();
+          ^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:255:28:
+Error: 'DiagnosticPropertiesBuilder' isn't a type.
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:256:11:
+Error: Superclass has no method named 'debugFillProperties'.
+    super.debugFillProperties(properties);
+          ^^^^^^^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:257:33:
+Error: 'Axis' isn't a type.
+    properties.add(EnumProperty<Axis>('direction', direction));
+                                ^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:257:20:
+Error: The method 'EnumProperty' isn't defined for the type 'AxisSideTitlesRenderFlex'.
+ - 'AxisSideTitlesRenderFlex' is from 'package:fl_chart/src/chart/base/axis_chart/side_titles/side_titles_flex.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titl
+ es/side_titles_flex.dart').
+    properties.add(EnumProperty<Axis>('direction', direction));
+                   ^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/side_titles/
+side_titles_flex.dart:297:9:
+Error: 'Widget' isn't a type.
+  final Widget widget;
+        ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/extensions/fl_border_data_extensio
+n.dart:5:37:
+Error: The getter 'EdgeInsets' isn't defined for the type 'FlBorderData'.
+ - 'FlBorderData' is from 'package:fl_chart/src/chart/base/base_chart/base_chart_data.dart'
+ ('/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/base_chart/base_char
+ t_data.dart').
+  EdgeInsets get allSidesPadding => EdgeInsets.only(
+                                    ^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/extensions/text_align_extension.da
+rt:6:51:
+Error: 'TextDirection' isn't a type.
+  HorizontalAlignment getFinalHorizontalAlignment(TextDirection? direction) {
+                                                  ^^^^^^^^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/line.dart:10:9:
+Error: 'Offset' isn't a type.
+  final Offset from;
+        ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/line.dart:13:9:
+Error: 'Offset' isn't a type.
+  final Offset to;
+        ^^^^^^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_quill-11.5.0/lib/src/toolbar/buttons/clipboard_but
+ton.dart:144:47:
+Error: The type 'dynamic' is not exhaustively matched by the switch cases since it doesn't match 'Object()'.
+  String get defaultTooltip => switch (widget.clipboardAction) {
+                                              ^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_quill-11.5.0/lib/src/toolbar/buttons/clipboard_but
+ton.dart:151:50:
+Error: The type 'dynamic' is not exhaustively matched by the switch cases since it doesn't match 'Object()'.
+  IconData get defaultIconData => switch (widget.clipboardAction) {
+                                                 ^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/axis_chart_w
+idgets.dart:56:47:
+Error: The type 'dynamic' is not exhaustively matched by the switch cases since it doesn't match 'Object()'.
+  Alignment _getAlignment() => switch (widget.axisSide) {
+                                              ^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/axis_chart_w
+idgets.dart:63:45:
+Error: The type 'dynamic' is not exhaustively matched by the switch cases since it doesn't match 'Object()'.
+  EdgeInsets _getMargin() => switch (widget.axisSide) {
+                                            ^
+/C:/Users/nao%20tomori/AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.69.2/lib/src/chart/base/axis_chart/axis_chart_w
+idgets.dart:85:33:
+Error: The type 'dynamic' is not exhaustively matched by the switch cases since it doesn't match 'Object()'.
+    final size = switch (widget.axisSide) {
+                                ^
+Error: Compilation failed.
+  Command: G:\check\myworld\Scripts\flutter_windows_3.41.4-stable\flutter\bin\cache\dart-sdk\bin\dart.exe compile js
+  --platform-binaries=G:\check\myworld\Scripts\flutter_windows_3.41.4-stable\flutter\bin\cache\flutter_web_sdk\kernel
+  --invoker=flutter_tool -Ddart.vm.product=true -DFLUTTER_VERSION=3.41.4 -DFLUTTER_CHANNEL=stable
+  -DFLUTTER_GIT_URL=https://github.com/flutter/flutter.git -DFLUTTER_FRAMEWORK_REVISION=ff37bef603
+  -DFLUTTER_ENGINE_REVISION=e4b8dca3f1 -DFLUTTER_DART_VERSION=3.11.1 -DFLUTTER_WEB_USE_SKIA=true
+  -DFLUTTER_WEB_USE_SKWASM=false
+  -DFLUTTER_WEB_CANVASKIT_URL=https://www.gstatic.com/flutter-canvaskit/e4b8dca3f1b4ede4c30371002441c88c12187ed6/
+  --native-null-assertions --no-source-maps -O4 --minify -o
+  G:\check\myworld\Scripts\my_tennis_club_v2_ngay_25\flutter_frontend\.dart_tool\flutter_build\cb84feeccddcef2dfecb9d73a
+  edf07f8\app.dill
+  --packages=G:\check\myworld\Scripts\my_tennis_club_v2_ngay_25\flutter_frontend\.dart_tool\package_config.json
+  --cfe-only
+  G:\check\myworld\Scripts\my_tennis_club_v2_ngay_25\flutter_frontend\.dart_tool\flutter_build\cb84feeccddcef2dfecb9d73a
+  edf07f8\main.dart
+#0      RunResult.throwException (package:flutter_tools/src/base/process.dart:153:5)
+#1      _DefaultProcessUtils.run (package:flutter_tools/src/base/process.dart:379:19)
+<asynchronous suspension>
+#2      Dart2JSTarget.build (package:flutter_tools/src/build_system/targets/web.dart:208:5)
+<asynchronous suspension>
+#3      _BuildInstance._invokeInternal (package:flutter_tools/src/build_system/build_system.dart:937:9)
+<asynchronous suspension>
+#4      Future.wait.<anonymous closure> (dart:async/future.dart:546:21)
+<asynchronous suspension>
+#5      _BuildInstance.invokeTarget (package:flutter_tools/src/build_system/build_system.dart:875:32)
+<asynchronous suspension>
+#6      Future.wait.<anonymous closure> (dart:async/future.dart:546:21)
+<asynchronous suspension>
+#7      _BuildInstance.invokeTarget (package:flutter_tools/src/build_system/build_system.dart:875:32)
+<asynchronous suspension>
+#8      FlutterBuildSystem.build (package:flutter_tools/src/build_system/build_system.dart:684:16)
+<asynchronous suspension>
+#9      WebBuilder.buildWeb (package:flutter_tools/src/web/compile.dart:107:34)
+<asynchronous suspension>
+#10     BuildWebCommand.runCommand (package:flutter_tools/src/commands/build_web.dart:300:5)
+<asynchronous suspension>
+#11     FlutterCommand.run.<anonymous closure> (package:flutter_tools/src/runner/flutter_command.dart:1590:27)
+<asynchronous suspension>
+#12     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+<asynchronous suspension>
+#13     CommandRunner.runCommand (package:args/command_runner.dart:212:13)
+<asynchronous suspension>
+#14     FlutterCommandRunner.runCommand.<anonymous closure> (package:flutter_tools/src/runner/flutter_command_runner.dart:496:9)
+<asynchronous suspension>
+#15     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+<asynchronous suspension>
+#16     FlutterCommandRunner.runCommand (package:flutter_tools/src/runner/flutter_command_runner.dart:431:5)
+<asynchronous suspension>
+#17     FlutterCommandRunner.run.<anonymous closure> (package:flutter_tools/src/runner/flutter_command_runner.dart:307:33)
+<asynchronous suspension>
+#18     run.<anonymous closure>.<anonymous closure> (package:flutter_tools/runner.dart:104:11)
+<asynchronous suspension>
+#19     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+<asynchronous suspension>
+#20     main (package:flutter_tools/executable.dart:103:3)
+<asynchronous suspension>
+
+Compiling lib\main.dart for the Web...

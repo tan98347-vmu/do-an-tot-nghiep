@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<!-- Tệp này dùng để: hỗ trợ bootstrap hoặc bridge web trong flutter_frontend/web/index.html. -->
+<!-- Cách hoạt động: được gọi từ lớp phía trên, xử lý dữ liệu theo vai trò hiện có và trả kết quả về cho luồng gọi. -->
+<!-- Vai trò trong hệ thống: Đây là tài nguyên web đầu vào của Flutter. -->
+<!-- Tác dụng khi hệ thống vận hành: giúp bản build web hoạt động đúng trong trình duyệt. -->
+
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="AI Document Manager">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="AI Document Manager">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>AI Document Manager</title>
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Google Sign-In client ID -->
+  <meta name="google-signin-client_id"
+        content="298318684696-0s1neh9d5t028smim9pe1epqd44mm8pc.apps.googleusercontent.com">
+</head>
+<body>
+  <!-- Facebook SDK (required by flutter_facebook_auth on web) -->
+  <div id="fb-root"></div>
+  <!-- Khối script này nạp hoặc ghép hành vi client-side cần thiết cho trang hiện tại. -->
+
+  <script async defer crossorigin="anonymous"
+    src="https://connect.facebook.net/vi_VN/sdk.js">
+  </script>
+
+  <!-- Khối script này nạp hoặc ghép hành vi client-side cần thiết cho trang hiện tại. -->
+
+  <script src="voice_assistant_bridge.js"></script>
+  <script>
+    (function normalizeFlutterHashRoute() {
+      const rawPath = window.location.pathname || '/';
+      const path = rawPath.length > 1 && rawPath.endsWith('/')
+        ? rawPath.slice(0, -1)
+        : rawPath;
+      const search = window.location.search || '';
+      const hash = window.location.hash || '';
+      if (hash && hash !== '#') return;
+      if (path === '/' || path.endsWith('.html')) return;
+
+      const blockedPrefixes = [
+        '/api',
+        '/django-admin',
+        '/assets',
+        '/canvaskit',
+        '/icons',
+        '/static',
+        '/media',
+      ];
+      if (blockedPrefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))) {
+        return;
+      }
+
+      const flutterRoutePrefixes = [
+        '/login',
+        '/register',
+        '/guest',
+        '/dashboard',
+        '/sharing',
+        '/templates',
+        '/documents',
+        '/summaries',
+        '/compliance-check',
+        '/ai-doc',
+        '/chat',
+        '/mailbox',
+        '/chat-rag-result',
+        '/assistant',
+        '/rag',
+        '/prompts',
+        '/profile',
+        '/trash',
+        '/pending-approvals',
+        '/signing',
+        '/signed-pdfs',
+        '/admin',
+        '/platform',
+      ];
+      if (!flutterRoutePrefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))) {
+        return;
+      }
+
+      window.location.replace(`${path}${search}#${path}`);
+    })();
+  </script>
+  <!-- Khối script này nạp hoặc ghép hành vi client-side cần thiết cho trang hiện tại. -->
+
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

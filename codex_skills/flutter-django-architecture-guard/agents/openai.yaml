@@ -1,0 +1,4 @@
+interface:
+  display_name: "Flutter Django Guard"
+  short_description: "Protect this repo's Flutter+Django boundaries"
+  default_prompt: "Use $flutter-django-architecture-guard to keep this repo on its API-only Django backend and Flutter Web frontend architecture."

@@ -1,0 +1,87 @@
+from rest_framework import serializers
+
+from documents.edit_lock_state import get_document_edit_lock_state
+from documents.manual_edit_models import DocumentManualEditSession
+from documents.manual_edit_provider import (
+    build_manual_edit_editor_url,
+    get_manual_edit_provider_status,
+)
+
+
+class DocumentManualEditFinishSerializer(serializers.Serializer):
+    change_note = serializers.CharField(required=False, allow_blank=True, max_length=500)
+
+
+class DocumentManualEditSessionSerializer(serializers.ModelSerializer):
+    document_title = serializers.CharField(source='document.title', read_only=True)
+    created_by_name = serializers.SerializerMethodField()
+    editor_url = serializers.SerializerMethodField()
+    provider_ready = serializers.SerializerMethodField()
+    provider_status_code = serializers.SerializerMethodField()
+    provider_status_detail = serializers.SerializerMethodField()
+    is_active = serializers.SerializerMethodField()
+    lock_message = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DocumentManualEditSession
+        fields = (
+            'id',
+            'document',
+            'document_title',
+            'created_by',
+            'created_by_name',
+            'status',
+            'provider',
+            'base_version_number',
+            'committed_version',
+            'working_copy_updated_at',
+            'expires_at',
+            'last_activity_at',
+            'finished_at',
+            'cancelled_at',
+            'created_at',
+            'updated_at',
+            'editor_url',
+            'provider_ready',
+            'provider_status_code',
+            'provider_status_detail',
+            'is_active',
+            'lock_message',
+        )
+        read_only_fields = fields
+
+    def _provider_status(self):
+        cached = self.context.get('_manual_edit_provider_status')
+        if cached is not None:
+            return cached
+        cached = get_manual_edit_provider_status()
+        self.context['_manual_edit_provider_status'] = cached
+        return cached
+
+    def get_created_by_name(self, obj):
+        if obj.created_by_id:
+            return obj.created_by.get_full_name() or obj.created_by.username
+        return ''
+
+    def get_editor_url(self, obj):
+        request = self.context.get('request')
+        if request is None:
+            return None
+        return build_manual_edit_editor_url(obj, request)
+
+    def get_provider_ready(self, obj):
+        return self._provider_status().is_ready
+
+    def get_provider_status_code(self, obj):
+        return self._provider_status().code
+
+    def get_provider_status_detail(self, obj):
+        return self._provider_status().detail
+
+    def get_is_active(self, obj):
+        return obj.is_active
+
+    def get_lock_message(self, obj):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        return get_document_edit_lock_state(obj.document, user=user).detail

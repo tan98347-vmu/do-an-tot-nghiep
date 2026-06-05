@@ -1,0 +1,28 @@
+# Cloudflare Tunnel config cho domain aiagentvmu.id.vn
+# ---------------------------------------------------------------
+# Cach dung:
+#   1. Chay: cloudflared tunnel login
+#   2. Chay: cloudflared tunnel create aiagentvmu
+#      -> Lenh nay in ra Tunnel ID (UUID) va tao file credentials .json
+#         trong C:\Users\<user>\.cloudflared\<UUID>.json
+#   3. Thay <TUNNEL_UUID> ben duoi bang UUID that.
+#   4. Sua credentials-file cho dung duong dan .json that.
+#   5. Route DNS: cloudflared tunnel route dns aiagentvmu aiagentvmu.id.vn
+#   6. Chay: cloudflared tunnel --config "G:\check\myworld\Scripts\backup 1-5 toi-uu\deploy\cloudflare\config.yml" run aiagentvmu
+#
+# nginx la public host duy nhat, lang nghe 127.0.0.1:8888
+# (Flutter web + /api -> Django 8000 + Collabora -> 9980 deu di qua 8888)
+
+tunnel: <TUNNEL_UUID>
+credentials-file: C:\Users\<user>\.cloudflared\<TUNNEL_UUID>.json
+
+# Giu websocket / upload lon on dinh
+originRequest:
+  connectTimeout: 30s
+  noTLSVerify: true
+
+ingress:
+  - hostname: aiagentvmu.id.vn
+    service: http://127.0.0.1:8888
+  # Bat buoc phai co rule catch-all cuoi cung
+  - service: http_status:404

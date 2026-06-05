@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual Capture Bootstrap</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #f5f7fb;
+      color: #1f2937;
+      font: 16px/1.5 "Segoe UI", Arial, sans-serif;
+    }
+    .card {
+      width: min(680px, calc(100vw - 32px));
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
+      padding: 28px;
+    }
+    h1 { margin: 0 0 12px; font-size: 24px; }
+    p { margin: 0 0 10px; }
+    pre {
+      margin: 14px 0 0;
+      padding: 14px;
+      border-radius: 12px;
+      background: #0f172a;
+      color: #e2e8f0;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Bootstrap screenshot realtime</h1>
+    <p id="status">Dang khoi tao dang nhap...</p>
+    <pre id="log"></pre>
+  </div>
+  <script>
+    const statusEl = document.getElementById('status');
+    const logEl = document.getElementById('log');
+
+    function setStatus(text) {
+      statusEl.textContent = text;
+    }
+
+    function logLine(value) {
+      logEl.textContent += `${value}\n`;
+    }
+
+    async function run() {
+      const params = new URLSearchParams(window.location.search);
+      const route = params.get('route') || '/dashboard';
+      const identifier = params.get('identifier') || 'admin';
+      const password = params.get('password') || 'admin123';
+      const companyId = Number(params.get('company_id') || '1');
+      const loginScope = params.get('login_scope') || 'company';
+
+      setStatus(`Dang dang nhap vao ${route}...`);
+      logLine(`route=${route}`);
+      logLine(`login_scope=${loginScope}`);
+      logLine(`company_id=${companyId}`);
+
+      localStorage.removeItem('flutter.access_token');
+      localStorage.removeItem('flutter.refresh_token');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+
+      const response = await fetch('/api/auth/login/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          identifier,
+          password,
+          login_scope: loginScope,
+          company_id: companyId,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setStatus('Dang nhap that bai');
+        logLine(`status=${response.status}`);
+        logLine(JSON.stringify(data, null, 2));
+        return;
+      }
+
+      const values = {
+        'flutter.access_token': JSON.stringify(data.access || ''),
+        'flutter.refresh_token': JSON.stringify(data.refresh || ''),
+        access_token: JSON.stringify(data.access || ''),
+        refresh_token: JSON.stringify(data.refresh || ''),
+      };
+      Object.entries(values).forEach(([key, value]) => {
+        if (value) {
+          localStorage.setItem(key, value);
+          logLine(`stored ${key}`);
+        }
+      });
+
+      const dashboardBootstrapUrl = `/dashboard?manual_capture=1&manual_target_route=${encodeURIComponent(route)}`;
+      setStatus(`Dang chuyen huong sang ${dashboardBootstrapUrl}...`);
+      window.location.replace(dashboardBootstrapUrl);
+    }
+
+    run().catch((error) => {
+      setStatus('Co loi khi bootstrap screenshot');
+      logLine(String(error));
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seed Login</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #eef4ff;
+      color: #0f172a;
+      font: 16px/1.5 "Segoe UI", Arial, sans-serif;
+    }
+    .card {
+      width: min(640px, calc(100vw - 32px));
+      background: white;
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+    }
+    h1 { margin-top: 0; }
+    .ok {
+      color: #166534;
+      font-weight: 700;
+    }
+    a {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: #2563eb;
+      color: white;
+      text-decoration: none;
+    }
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #0f172a;
+      color: #dbeafe;
+      padding: 14px;
+      border-radius: 12px;
+      min-height: 96px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Seed session cho tài liệu hướng dẫn</h1>
+    <p id="status">Đang đăng nhập và ghi token vào Flutter web storage...</p>
+    <a id="dashboardLink" href="/dashboard" style="display:none">Mở Dashboard</a>
+    <pre id="log"></pre>
+  </div>
+  <script>
+    const statusEl = document.getElementById('status');
+    const logEl = document.getElementById('log');
+    const dashboardLink = document.getElementById('dashboardLink');
+    const write = (text) => logEl.textContent += `${text}\n`;
+
+    async function run() {
+      const response = await fetch('/api/auth/login/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          identifier: 'admin',
+          password: 'admin123',
+          login_scope: 'company',
+          company_id: 1,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        statusEl.textContent = 'Đăng nhập thất bại';
+        write(JSON.stringify(data, null, 2));
+        return;
+      }
+      const values = {
+        'flutter.access_token': JSON.stringify(data.access || ''),
+        'flutter.refresh_token': JSON.stringify(data.refresh || ''),
+        access_token: JSON.stringify(data.access || ''),
+        refresh_token: JSON.stringify(data.refresh || ''),
+      };
+      Object.entries(values).forEach(([key, value]) => {
+        localStorage.setItem(key, value);
+        write(`stored ${key}`);
+      });
+      statusEl.innerHTML = '<span class=\"ok\">Đăng nhập thành công. Session đã sẵn sàng.</span>';
+      dashboardLink.style.display = 'inline-block';
+    }
+
+    run().catch((error) => {
+      statusEl.textContent = 'Có lỗi khi seed session';
+      write(String(error));
+    });
+  </script>
+</body>
+</html>
