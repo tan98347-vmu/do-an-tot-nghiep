@@ -37,6 +37,8 @@ PWD_KDF_R = 8
 PWD_KDF_P = 1
 
 
+# def derive_master_from_password dẫn xuất master key 32 byte từ mật khẩu admin bằng Scrypt (KDF) với salt cho trước; mật khẩu rỗng / salt sai độ dài -> ValueError.
+# vd: derive_master_from_password('matkhau', salt16) -> khóa 32 byte để mã hóa gói.
 def derive_master_from_password(password: str, pwd_salt: bytes) -> bytes:
     """Scrypt KDF: admin password -> 32-byte master_key."""
     if not password:
@@ -49,6 +51,8 @@ def derive_master_from_password(password: str, pwd_salt: bytes) -> bytes:
     ).derive(password.encode('utf-8'))
 
 
+# def _derive_key dẫn xuất khóa AES 32 byte cho từng gói từ master_key + salt + company_id (Scrypt); gắn company_id để khóa khác nhau giữa các công ty (chống dùng chéo).
+# vd: cùng master_key nhưng company khác -> khóa AES khác nhau.
 def _derive_key(master_key: bytes, salt: bytes, company_id: int) -> bytes:
     """Dan xuat khoa AES tu master + salt + company_id (scrypt)."""
     if not master_key or len(master_key) != 32:
@@ -57,6 +61,8 @@ def _derive_key(master_key: bytes, salt: bytes, company_id: int) -> bytes:
     return Scrypt(salt=info, length=32, n=KDF_N, r=KDF_R, p=KDF_P).derive(master_key)
 
 
+# def encrypt_file_stream mã hóa file theo luồng AES-256-GCM từng chunk 4MB (nonce = prefix + counter để không trùng), AAD=company_id chống dùng nhầm gói của công ty khác; nhận master_key (chế độ env) HOẶC password (Scrypt-derive). Trả encryption_meta (JSON-safe) để giải mã sau.
+# vd: encrypt_file_stream(plain, ct, password='x', company_id=1) -> meta gồm salt/nonce_prefix/pwd_salt.
 def encrypt_file_stream(in_path: str, out_path: str,
                         master_key: Optional[bytes] = None,
                         *, company_id: int,
@@ -116,6 +122,8 @@ def encrypt_file_stream(in_path: str, out_path: str,
     return out
 
 
+# def resolve_master_key_for_meta khôi phục master key 32 byte để giải mã từ meta + (password hoặc env master key): meta có pwd_salt -> bắt buộc password; ngược lại dùng env master key; thiếu -> ValueError.
+# vd: gói mã bằng password admin -> phải nhập đúng password mới giải mã được.
 def resolve_master_key_for_meta(meta: dict,
                                 env_master_key: Optional[bytes],
                                 password: Optional[str]) -> bytes:
@@ -134,6 +142,8 @@ def resolve_master_key_for_meta(meta: dict,
     return env_master_key
 
 
+# def _read_meta_from_dict đọc salt + nonce_prefix (base64) từ encryption_meta và kiểm tra độ dài hợp lệ.
+# vd: meta sai độ dài salt -> ValueError.
 def _read_meta_from_dict(meta: dict) -> tuple[bytes, bytes]:
     salt = base64.b64decode(meta['salt'])
     nonce_prefix = base64.b64decode(meta['nonce_prefix'])
@@ -142,6 +152,8 @@ def _read_meta_from_dict(meta: dict) -> tuple[bytes, bytes]:
     return salt, nonce_prefix
 
 
+# def decrypt_file_stream giải mã file ciphertext ra out_path theo luồng; nếu file bị sửa -> AESGCM ném InvalidTag (phát hiện giả mạo); kiểm tra MAGIC và chunk không bị cắt.
+# vd: ciphertext bị sửa 1 byte -> giải mã thất bại (InvalidTag).
 def decrypt_file_stream(in_path: str, out_path: str, master_key: bytes, meta: dict,
                         *, company_id: int) -> None:
     """Decrypt file streaming vao out_path. Raise InvalidTag neu ciphertext bi sua."""
@@ -173,6 +185,8 @@ def decrypt_file_stream(in_path: str, out_path: str, master_key: bytes, meta: di
             counter += 1
 
 
+# def decrypt_to_response là generator yield từng khối plaintext khi giải mã, dùng cho StreamingHttpResponse (tải file đã giải mã trực tiếp, không cần ghi tạm).
+# vd: dùng trong endpoint download -> stream plaintext về client.
 def decrypt_to_response(in_path: str, master_key: bytes, meta: dict,
                         *, company_id: int) -> Iterator[bytes]:
     """Generator yield bytes plaintext. Dung voi StreamingHttpResponse."""
@@ -202,6 +216,8 @@ def decrypt_to_response(in_path: str, master_key: bytes, meta: dict,
             counter += 1
 
 
+# def looks_like_encrypted kiểm tra header file có MAGIC 'CBKv1' không, để phân biệt gói đã mã hóa với gói zip plaintext (legacy).
+# vd: file ciphertext -> True; zip thường -> False.
 def looks_like_encrypted(path: str) -> bool:
     """Kiem tra header file co MAGIC khong (de phan biet legacy plaintext zip)."""
     try:

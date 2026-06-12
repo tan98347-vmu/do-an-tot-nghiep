@@ -6,6 +6,8 @@ from django.utils import timezone
 from .models import DocumentNumberConfig
 
 
+# def _ascii_safe_name đổi tiêu đề (có dấu) thành tên file ASCII an toàn.
+# vd: 'Đơn xin nghỉ' -> 'Don_xin_nghi'.
 def _ascii_safe_name(title):
     title = str(title or '')
     title = title.replace('\u0111', 'd').replace('\u0110', 'D')
@@ -18,6 +20,8 @@ def _ascii_safe_name(title):
     return safe.strip('_').strip() or 'document'
 
 
+# def _auto_doc_number cấp số văn bản tự động cho phòng ban (ưu tiên cấu hình theo danh mục, fallback cấu hình chung); không có cấu hình -> chuỗi rỗng.
+# vd: phòng A có DocumentNumberConfig -> '...-001'.
 def _auto_doc_number(department, category=None):
     if not department:
         return ''
@@ -35,6 +39,8 @@ def _auto_doc_number(department, category=None):
     return ''
 
 
+# def _extract_text_from_docx trích text từ file DOCX theo đúng thứ tự (đoạn văn + bảng), nuốt lỗi trả chuỗi rỗng.
+# vd: file DOCX -> chuỗi text gồm các đoạn và ô bảng.
 def _extract_text_from_docx(docx_file):
     try:
         import docx as python_docx
@@ -62,6 +68,21 @@ def _extract_text_from_docx(docx_file):
         return ''
 
 
+# def resolve_document_company_for_generation xác định công ty cho văn bản sắp tạo: ưu tiên công ty của user, fallback công ty của mẫu.
+# vd: user thuộc công ty A -> trả công ty A.
+def resolve_document_company_for_generation(user, template=None):
+    from accounts.tenancy import get_user_company
+
+    company = get_user_company(user)
+    if company is not None:
+        return company
+    if template is not None and getattr(template, 'company_id', None):
+        return template.company
+    return None
+
+
+# def safe_attachment_filename dựng header Content-Disposition filename an toàn (phần ASCII + phần UTF-8 đã mã hóa) cho việc tải file tên có dấu.
+# vd: 'Đơn.docx' -> 'filename=ASCII; filename*=UTF-8 (bản mã hóa)'.
 def safe_attachment_filename(name: str) -> str:
     normalized = str(name or '').strip() or 'file'
     ascii_part = ''.join(

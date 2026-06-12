@@ -1,8 +1,7 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH HỘP THƯ KÝ (nhiệm vụ ký của tôi) ===
+// Liệt kê SigningTask cần ký ('signing/tasks/', signingSummaryProvider), lọc/tìm theo trạng thái (_matches/_count), mở chi tiết nhiệm vụ (/signing/tasks/<id>); link trang quyền (/signing/access).
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -17,27 +16,23 @@ import '../../providers/signing_summary_provider.dart';
 import '../../widgets/common/collapsible_filter_panel.dart';
 import '../../widgets/common/list_filter_extras.dart';
 
-// Mục đích: Widget `SigningInboxScreen` triển khai phần việc `Signing Inbox Screen` trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn HỘP THƯ KÝ (nhiệm vụ ký của tôi) — ConsumerStatefulWidget.
 
 class SigningInboxScreen extends ConsumerStatefulWidget {
+  // Widget màn HỘP THƯ KÝ (nhiệm vụ ký của tôi).
   const SigningInboxScreen({super.key});
 
   @override
   ConsumerState<SigningInboxScreen> createState() => _SigningInboxScreenState();
 }
 
-// Mục đích: Widget `_SigningInboxScreenState` triển khai phần việc `Signing Inbox Screen State` trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn hộp thư ký: tải nhiệm vụ, lọc/tìm, nhóm theo trạng thái.
 
 class _SigningInboxScreenState extends ConsumerState<SigningInboxScreen> {
   static const _refreshInterval = Duration(seconds: 8);
 
   AppStrings get _strings => AppStrings.of(context);
+  // Chọn chuỗi hiển thị VI/EN (i18n).
   String _pick(String vi, String en) => _strings.pick(vi, en);
 
   final _searchController = TextEditingController();
@@ -63,11 +58,7 @@ class _SigningInboxScreenState extends ConsumerState<SigningInboxScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Mở màn: nạp danh sách nhiệm vụ ký (_load 'signing/tasks/').
   void initState() {
     super.initState();
     _load();
@@ -79,11 +70,7 @@ class _SigningInboxScreenState extends ConsumerState<SigningInboxScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Rời màn: dọn controller tìm kiếm.
   void dispose() {
     _refreshTimer?.cancel();
     _debounce?.cancel();
@@ -91,10 +78,7 @@ class _SigningInboxScreenState extends ConsumerState<SigningInboxScreen> {
     super.dispose();
   }
 
-  // Mục đích: Phương thức `_load` triển khai phần việc `load` trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tải danh sách nhiệm vụ ký từ server ('signing/tasks/'); silent=true để làm mới ngầm.
 
   Future<void> _load({bool silent = false}) async {
     if (!silent) {
@@ -145,11 +129,7 @@ class _SigningInboxScreenState extends ConsumerState<SigningInboxScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_onSearchChanged` triển khai phần việc `on Search Changed` trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Lọc nhiệm vụ theo từ khóa tìm kiếm.
   void _onSearchChanged(String value) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 250), () {
@@ -160,11 +140,7 @@ class _SigningInboxScreenState extends ConsumerState<SigningInboxScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_matches` triển khai phần việc `matches` trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Một nhiệm vụ có khớp bộ lọc/tìm kiếm hiện tại không.
   bool _matches(SigningTaskItem task) {
     if (_query.isEmpty) return true;
     final haystack = <String>[
@@ -178,6 +154,7 @@ class _SigningInboxScreenState extends ConsumerState<SigningInboxScreen> {
     return haystack.contains(_query);
   }
 
+  // Lọc nhiệm vụ theo trạng thái cho từng nhóm (cần ký / đã ký / ...).
   List<SigningTaskItem> _sectionTasks(String status) {
     return _tasks.where((task) {
       if (!_matches(task)) return false;
@@ -190,19 +167,11 @@ class _SigningInboxScreenState extends ConsumerState<SigningInboxScreen> {
     }).toList();
   }
 
-  // Mục đích: Phương thức `_count` triển khai phần việc `count` trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Đếm số nhiệm vụ theo trạng thái (cho chip thống kê).
   int _count(String status) =>
       _tasks.where((task) => task.status == status).length;
 
-  // Mục đích: Phương thức `_statusLabel` triển khai phần việc `status Label` trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Màu badge theo trạng thái nhiệm vụ.
   Color _statusColor(String status) {
     switch (status) {
       case 'available':
@@ -218,11 +187,7 @@ class _SigningInboxScreenState extends ConsumerState<SigningInboxScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_formatDate` triển khai phần việc `format Date` trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Định dạng ngày để hiển thị.
   String _formatDate(String value) {
     if (value.isEmpty) return _pick('Chưa có thời gian', 'No timestamp');
     try {
@@ -238,11 +203,7 @@ class _SigningInboxScreenState extends ConsumerState<SigningInboxScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Dựng màn: chip thống kê + danh sách nhiệm vụ ký theo nhóm; mở chi tiết (/signing/tasks/<id>).
   Widget build(BuildContext context) {
     // Lắng nghe provider để widget tự động dựng lại khi dữ liệu hoặc trạng thái thay đổi.
 
@@ -256,10 +217,7 @@ class _SigningInboxScreenState extends ConsumerState<SigningInboxScreen> {
         available.length + blocked.length + signed.length + rejected.length;
     final showAllSections = _query.isEmpty && _statusFilter == 'all';
 
-    // Mục đích: Phương thức `section` triển khai phần việc `section` trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
-    // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-    // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-    // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+    // Dựng 1 nhóm nhiệm vụ ký (tiêu đề + danh sách theo trạng thái).
 
     Widget section(String title, String status, List<SigningTaskItem> tasks,
         String emptyText) {
@@ -560,10 +518,7 @@ class _SigningInboxScreenState extends ConsumerState<SigningInboxScreen> {
   }
 }
 
-// Mục đích: Lớp `_MetricChip` triển khai phần việc `Metric Chip` trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget chip thống kê số liệu (nhãn + số).
 
 class _MetricChip extends StatelessWidget {
   final String label;
@@ -572,10 +527,7 @@ class _MetricChip extends StatelessWidget {
   const _MetricChip({required this.label, required this.value});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chip thống kê.
 
   Widget build(BuildContext context) {
     return Container(
@@ -602,10 +554,7 @@ class _MetricChip extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_FilterChip` triển khai phần việc `Filter Chip` trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget chip lọc theo trạng thái.
 
 class _FilterChip extends StatelessWidget {
   final String label;
@@ -620,10 +569,7 @@ class _FilterChip extends StatelessWidget {
       required this.onTap});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chip lọc.
 
   Widget build(BuildContext context) {
     return InkWell(
@@ -648,24 +594,19 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_TaskCard` triển khai phần việc `Task Card` trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Thẻ 1 nhiệm vụ ký (tiêu đề tài liệu, hạn, trạng thái).
 
 class _TaskCard extends StatelessWidget {
   final SigningTaskItem task;
   final Color color;
   final String dateText;
 
+  // Thẻ 1 nhiệm vụ ký: tiêu đề tài liệu, hạn, trạng thái; bấm để mở chi tiết.
   const _TaskCard(
       {required this.task, required this.color, required this.dateText});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/signing/signing_inbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng thẻ nhiệm vụ ký; bấm mở chi tiết.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);

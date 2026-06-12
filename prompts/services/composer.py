@@ -81,6 +81,8 @@ OPTION_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
 }
 
 
+# def _load_usage_scopes nạp danh sách scope được phép compose prompt từ prompts.models.USAGE_SCOPES (dict hoặc iterable); nếu lỗi/khác kiểu thì fallback về DEFAULT_USAGE_SCOPES.
+# vd: USAGE_SCOPES có 6 key -> trả tuple ('template_fill','summary','word_ai_edit','chat','compliance_check',...).
 def _load_usage_scopes() -> tuple[str, ...]:
     try:
         from prompts.models import USAGE_SCOPES  # type: ignore
@@ -93,6 +95,8 @@ def _load_usage_scopes() -> tuple[str, ...]:
     return DEFAULT_USAGE_SCOPES
 
 
+# def _peer_can kiểm tra quyền chia sẻ ngang hàng (peer) của user trên một đối tượng theo mức ('view'/'edit'...); nếu module peer chưa khả dụng thì fallback cho phép (True).
+# vd: _peer_can(user, prompt, 'view') -> True nếu user được chia sẻ xem prompt.
 def _peer_can(user, obj, level: str) -> bool:
     try:
         from accounts.peer_permissions import peer_can  # type: ignore
@@ -101,6 +105,8 @@ def _peer_can(user, obj, level: str) -> bool:
     return bool(peer_can(user, obj, level))
 
 
+# def _load_base_prompt nạp prompt nền theo id để compose: không có id -> None; id không tồn tại -> DoesNotExist; có user thì chỉ cho phép nếu là chủ sở hữu / superuser / được peer-share quyền view, ngược lại PermissionError.
+# vd: nhân viên A dùng prompt của B mà chưa được chia sẻ -> PermissionError('Bạn không có quyền dùng prompt này').
 def _load_base_prompt(*, base_prompt_id: int | None, user=None) -> Prompt | None:
     if not base_prompt_id:
         return None
@@ -117,6 +123,8 @@ def _load_base_prompt(*, base_prompt_id: int | None, user=None) -> Prompt | None
     raise PermissionError('Bạn không có quyền dùng prompt này.')
 
 
+# def compose_prompt ghép thành một prompt hoàn chỉnh từ: prompt nền (Hệ tư tưởng + Quy tắc) + các tùy chọn theo scope (tone/length/format/depth...) + yêu cầu thêm của user; trả về composed_text, ước lượng token và danh sách section.
+# vd: scope='summary', options={'depth':'brief'} -> thêm section 'Tóm tắt ngắn trong 5-7 câu' vào prompt cuối.
 def compose_prompt(
     *,
     base_prompt_id: int | None,

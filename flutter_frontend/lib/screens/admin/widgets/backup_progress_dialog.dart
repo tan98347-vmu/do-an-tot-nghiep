@@ -1,3 +1,6 @@
+// === DIALOG TIẾN ĐỘ TẠO BACKUP ===
+// Poll 'admin/backups/<id>/progress/' (_poll) để cập nhật % + bước; _finalize() trả BackupProgressResult khi xong/lỗi; hiển thị thời gian chạy (_elapsed) và dung lượng (_sizeDisplay).
+
 import 'dart:async';
 
 import 'package:dio/dio.dart';

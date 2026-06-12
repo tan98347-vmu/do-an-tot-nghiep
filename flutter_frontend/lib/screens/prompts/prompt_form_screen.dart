@@ -1,8 +1,16 @@
+// === MÀN HÌNH TẠO / SỬA PROMPT ===
+// Form cấu hình một Prompt (khuôn điều khiển AI): system_content (hệ tư tưởng) + rules_content (quy tắc), phạm vi private/group/public (chọn nhóm qua GET 'groups/'), tags.
+// - _loadExisting(): nạp prompt khi sửa ('prompts/<id>/'); _loadGroups(): nạp nhóm.
+// - _checkPrompt(): gọi kiểm tra AN TOÀN prompt (pipeline chống prompt-injection) — BẮT BUỘC pass mới cho lưu nếu có quy tắc.
+// - _save(): POST/PUT 'prompts/'. _refreshPromptSharingState/_approvalHint: hiển thị trạng thái duyệt theo phạm vi.
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
+import '../../core/browser_alert.dart';
+import '../../providers/prompt_preflight_provider.dart';
 import '../../providers/prompts_provider.dart';
 import '../../providers/recent_prompts_provider.dart';
 import '../../widgets/sharing/unified_share_sheet.dart';
@@ -25,6 +33,8 @@ class _PromptFormScreenState extends ConsumerState<PromptFormScreen> {
   final Set<String> _usageScopes = {'template_fill'};
   bool _loading = false;
   bool _saving = false;
+  bool _checkingPrompt = false;
+  String? _promptCheckToken;
   String? _error;
   List<Map<String, dynamic>> _groups = [];
 
@@ -104,6 +114,50 @@ class _PromptFormScreenState extends ConsumerState<PromptFormScreen> {
     } catch (_) {}
   }
 
+  String get _promptText => [
+        _systemCtrl.text.trim(),
+        _rulesCtrl.text.trim(),
+      ].where((part) => part.isNotEmpty).join('\n\n');
+
+  void _invalidatePromptCheck() {
+    if (_promptCheckToken != null) {
+      setState(() => _promptCheckToken = null);
+    }
+  }
+
+  Future<void> _checkPrompt() async {
+    final promptText = _promptText;
+    if (promptText.isEmpty) {
+      await showBrowserAlert(context, 'Vui lòng nhập nội dung prompt trước khi kiểm tra.');
+      return;
+    }
+    setState(() {
+      _checkingPrompt = true;
+      _error = null;
+    });
+    final result = await checkPromptPreflight(
+      scope: 'saved_prompt',
+      context: 'prompt_library',
+      promptRole: 'saved_prompt',
+      promptText: promptText,
+    );
+    if (!mounted) return;
+    if (_promptText != promptText) {
+      setState(() {
+        _checkingPrompt = false;
+        _promptCheckToken = null;
+      });
+      return;
+    }
+    setState(() {
+      _checkingPrompt = false;
+      _promptCheckToken = result.promptCheckToken;
+    });
+    if (!result.passed) {
+      await showBrowserAlert(context, promptPreflightFailureMessage(result));
+    }
+  }
+
   Future<void> _save() async {
     final title = _titleCtrl.text.trim();
     if (title.isEmpty) {
@@ -120,6 +174,10 @@ class _PromptFormScreenState extends ConsumerState<PromptFormScreen> {
       _showSnack('Vui long chon it nhat 1 pham vi su dung.');
       return;
     }
+    if ((_promptCheckToken ?? '').isEmpty) {
+      await showBrowserAlert(context, 'Hãy bấm "Check prompt" và sửa prompt nếu cần trước khi lưu.');
+      return;
+    }
 
     setState(() {
       _saving = true;
@@ -132,6 +190,7 @@ class _PromptFormScreenState extends ConsumerState<PromptFormScreen> {
         'system_content': _systemCtrl.text,
         'tags': _tagsCtrl.text,
         'usage_scope': _usageScopes.toList(),
+        'prompt_check_token': _promptCheckToken,
         if (!_shareSettingsManagedInPanel) 'visibility': _visibility,
         if (!_shareSettingsManagedInPanel && _visibility == 'group')
           'group': _groupId,
@@ -222,6 +281,7 @@ class _PromptFormScreenState extends ConsumerState<PromptFormScreen> {
                       controller: _rulesCtrl,
                       minLines: 4,
                       maxLines: 12,
+                      onChanged: (_) => _invalidatePromptCheck(),
                       decoration: const InputDecoration(
                         labelText: 'Yêu cầu / quy tắc (rules)',
                         helperText:
@@ -234,12 +294,36 @@ class _PromptFormScreenState extends ConsumerState<PromptFormScreen> {
                       controller: _systemCtrl,
                       minLines: 2,
                       maxLines: 5,
+                      onChanged: (_) => _invalidatePromptCheck(),
                       decoration: const InputDecoration(
                         labelText:
                             'Phần hệ tư tưởng (system content) - nâng cao',
                         helperText:
                             'Không bắt buộc. Chỉ dùng khi muốn ghi đè identity AI.',
                         border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: _checkingPrompt || _saving ? null : _checkPrompt,
+                      icon: _checkingPrompt
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              (_promptCheckToken ?? '').isEmpty
+                                  ? Icons.fact_check_outlined
+                                  : Icons.verified_user_outlined,
+                              size: 16,
+                            ),
+                      label: Text(
+                        _checkingPrompt
+                            ? 'Đang kiểm tra...'
+                            : (_promptCheckToken ?? '').isEmpty
+                                ? 'Check prompt'
+                                : 'Prompt đạt yêu cầu',
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -408,7 +492,10 @@ class _PromptFormScreenState extends ConsumerState<PromptFormScreen> {
                                       strokeWidth: 2, color: Colors.white))
                               : const Icon(Icons.save),
                           label: Text(_isEdit ? 'Luu thay doi' : 'Tao prompt'),
-                          onPressed: _saving ? null : _save,
+                          onPressed:
+                              _saving || (_promptCheckToken ?? '').isEmpty
+                                  ? null
+                                  : _save,
                         ),
                       ],
                     ),

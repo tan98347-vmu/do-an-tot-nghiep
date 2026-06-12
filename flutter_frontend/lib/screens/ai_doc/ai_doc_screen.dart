@@ -1,8 +1,8 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH CHỌN MẪU ĐỂ SINH VĂN BẢN ===
+// Liệt kê mẫu (templatesProvider) có tìm kiếm/lọc (theo danh mục, khoảng ngày — _matchDate, _resetFilters).
+// Chọn 1 mẫu -> mở /ai-doc/<id> (hoặc kèm ?prefill=1 qua _showPrefillDialog để điền sẵn từ hồ sơ).
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -13,10 +13,7 @@ import '../../l10n/app_strings.dart';
 import '../../models/template.dart';
 import '../../providers/templates_provider.dart';
 
-// Mục đích: Widget `AiDocScreen` triển khai phần việc `Ai Doc Screen` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn SINH VĂN BẢN TỪ MẪU (chọn mẫu để điền) — ConsumerStatefulWidget.
 
 class AiDocScreen extends ConsumerStatefulWidget {
   final int? preselectedTemplateId;
@@ -27,10 +24,7 @@ class AiDocScreen extends ConsumerStatefulWidget {
   ConsumerState<AiDocScreen> createState() => _AiDocScreenState();
 }
 
-// Mục đích: Widget `_AiDocScreenState` triển khai phần việc `Ai Doc Screen State` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn chọn mẫu: tìm kiếm, lọc, chọn mẫu để mở luồng điền.
 
 class _AiDocScreenState extends ConsumerState<AiDocScreen> {
   final _searchCtrl = TextEditingController();
@@ -47,10 +41,7 @@ class _AiDocScreenState extends ConsumerState<AiDocScreen> {
   bool _showFilters = false;
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Rời màn: dọn controller tìm kiếm.
 
   void dispose() {
     _searchCtrl.dispose();
@@ -58,10 +49,7 @@ class _AiDocScreenState extends ConsumerState<AiDocScreen> {
     super.dispose();
   }
 
-  // Mục đích: Phương thức `_onSearchChanged` triển khai phần việc `on Search Changed` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Lọc danh sách mẫu theo từ khóa (debounce).
 
   void _onSearchChanged(String v) {
     _debounce?.cancel();
@@ -72,10 +60,7 @@ class _AiDocScreenState extends ConsumerState<AiDocScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_resetFilters` triển khai phần việc `reset Filters` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Xóa toàn bộ bộ lọc.
 
   void _resetFilters() {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -94,10 +79,7 @@ class _AiDocScreenState extends ConsumerState<AiDocScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_hasActiveFilter` triển khai phần việc `has Active Filter` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đang có bộ lọc nào bật không.
 
   bool _hasActiveFilter() =>
       _search.isNotEmpty ||
@@ -110,10 +92,7 @@ class _AiDocScreenState extends ConsumerState<AiDocScreen> {
       _endDateFrom != null ||
       _endDateTo != null;
 
-  // Mục đích: Phương thức `_matchDate` triển khai phần việc `match Date` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Kiểm 1 ngày có nằm trong khoảng lọc không.
 
   bool _matchDate(String? dateStr, DateTime? from, DateTime? to) {
     if (from == null && to == null) return true;
@@ -149,10 +128,7 @@ class _AiDocScreenState extends ConsumerState<AiDocScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng màn: tìm/lọc + lưới mẫu (mỗi mẫu là _TmplPickCard); chọn mẫu -> mở /ai-doc/<id>.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -511,10 +487,7 @@ class _AiDocScreenState extends ConsumerState<AiDocScreen> {
   }
 }
 
-// Mục đích: Lớp `_FilterChip` triển khai phần việc `Filter Chip` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget chip lọc.
 
 class _FilterChip extends StatelessWidget {
   final String label;
@@ -529,10 +502,7 @@ class _FilterChip extends StatelessWidget {
       this.color});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chip lọc.
 
   Widget build(BuildContext context) {
     final c = color ?? Theme.of(context).colorScheme.primary;
@@ -559,10 +529,7 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_DateRangeRow` triển khai phần việc `Date Range Row` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget chọn khoảng ngày trong bộ lọc.
 
 class _DateRangeRow extends StatelessWidget {
   final String label;
@@ -579,18 +546,12 @@ class _DateRangeRow extends StatelessWidget {
     required this.onToPick,
   });
 
-  // Mục đích: Phương thức `_fmt` triển khai phần việc `fmt` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Định dạng ngày để hiển thị.
 
   String _fmt(DateTime? d) =>
       d == null ? 'Chọn ngày' : '${d.day}/${d.month}/${d.year}';
 
-  // Mục đích: Phương thức `_pick` triển khai phần việc `pick` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở lịch chọn 1 mốc ngày.
 
   Future<void> _pick(BuildContext context, DateTime? current,
       void Function(DateTime?) cb) async {
@@ -604,10 +565,7 @@ class _DateRangeRow extends StatelessWidget {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng hàng chọn khoảng ngày.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -731,10 +689,7 @@ class _DateRangeRow extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_TmplPickCard` triển khai phần việc `Tmpl Pick Card` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Thẻ 1 mẫu để chọn sinh văn bản (tiêu đề + mô tả + số biến).
 
 class _TmplPickCard extends StatelessWidget {
   final DocumentTemplate template;
@@ -748,10 +703,7 @@ class _TmplPickCard extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng thẻ chọn mẫu; bấm mở luồng điền.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -1043,10 +995,7 @@ class _TmplPickCard extends StatelessWidget {
     );
   }
 
-  // Mục đích: Phương thức `_showPrefillDialog` triển khai phần việc `show Prefill Dialog` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở dialog chọn cách điền tự động (hồ sơ/công ty) trước khi vào màn điền.
 
   void _showPrefillDialog(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -1123,10 +1072,7 @@ class _TmplPickCard extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_HighlightText` triển khai phần việc `Highlight Text` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget tô sáng phần text khớp từ khóa.
 
 class _HighlightText extends StatelessWidget {
   final String text;
@@ -1141,10 +1087,7 @@ class _HighlightText extends StatelessWidget {
       this.maxLines = 1});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng text tô sáng.
 
   Widget build(BuildContext context) {
     if (query.isEmpty) {
@@ -1182,10 +1125,7 @@ class _HighlightText extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_VisChip` triển khai phần việc `Vis Chip` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget chip phạm vi hiển thị của mẫu.
 
 class _VisChip extends StatelessWidget {
   final String visibility;
@@ -1193,10 +1133,7 @@ class _VisChip extends StatelessWidget {
   const _VisChip({required this.visibility});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/ai_doc/ai_doc_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chip phạm vi.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);

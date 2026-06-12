@@ -29,14 +29,20 @@ from company_backups.services.crypto import (
 logger = logging.getLogger(__name__)
 
 
+# class RestoreError là ngoại lệ chung cho lỗi khôi phục backup (file thiếu, manifest sai, path traversal, decrypt lỗi...).
+# vd: file backup không tồn tại trên disk -> RestoreError.
 class RestoreError(Exception):
     pass
 
 
+# class BackupVerificationError (con của RestoreError) báo chữ ký số của backup không khớp -> từ chối khôi phục để tránh phục hồi dữ liệu đã bị giả mạo.
+# vd: zip bị sửa sau khi ký -> BackupVerificationError, không restore.
 class BackupVerificationError(RestoreError):
     """Raise khi chu ky so cua backup khong khop - tu choi restore."""
 
 
+# def _safe_extract_path tính đường dẫn giải nén an toàn, chặn path traversal (file trong zip cố thoát ra ngoài MEDIA_ROOT).
+# vd: member '../../etc/passwd' -> RestoreError('Path traversal').
 def _safe_extract_path(media_root: Path, zip_member: str) -> Path:
     target = (media_root / zip_member).resolve()
     if not str(target).startswith(str(media_root.resolve())):
@@ -44,6 +50,8 @@ def _safe_extract_path(media_root: Path, zip_member: str) -> Path:
     return target
 
 
+# def _open_backup_zip_for_restore (context manager) chuẩn bị zip để restore: xác minh chữ ký -> giải mã nếu cần (theo password/master key) -> yield đường dẫn zip plaintext; tự dọn file tạm khi thoát; chặn nếu metadata mã hóa không nhất quán.
+# vd: gói mã hóa + đã ký -> giải mã ra tmp, verify chữ ký rồi mới cho restore.
 @contextlib.contextmanager
 def _open_backup_zip_for_restore(
     backup,
@@ -83,6 +91,8 @@ def _open_backup_zip_for_restore(
                 env_key.encode('utf-8') if isinstance(env_key, str) else env_key,
             )
 
+    # def _verify_or_raise xác minh chữ ký file với danh sách public key; không có key -> bỏ qua (log); không key nào khớp -> BackupVerificationError.
+    # vd: chữ ký khớp 1 trong các public key -> qua; không khớp -> chặn restore.
     def _verify_or_raise(file_path: Path, message: str) -> None:
         if not public_keys:
             logger.info(format_log_message(
@@ -194,6 +204,8 @@ def _open_backup_zip_for_restore(
         yield zip_path
 
 
+# def restore_company_zip khôi phục một backup vào CHÍNH công ty sở hữu (chế độ replace): kiểm tra backup thuộc công ty + manifest khớp; xóa dữ liệu cũ theo delete_order rồi nạp lại theo import_order trong 1 transaction; giải nén media (chỉ trong thư mục công ty, chống traversal); cập nhật trạng thái. Lỗi verify chữ ký -> đánh dấu signature invalid và dừng.
+# vd: restore backup #5 của công ty A -> xóa data cũ của A, nạp lại từ backup, status='restored'.
 def restore_company_zip(
     *,
     company,

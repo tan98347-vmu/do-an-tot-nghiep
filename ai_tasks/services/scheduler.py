@@ -1,3 +1,14 @@
+'''
+/scheduler.py:1 đang có tác dụng thật.
+
+  Nó xóa các AITaskProgress:
+
+  - Đã completed.
+  - Đã failed.
+  - Đã cancelled.
+  - Cũ hơn 7 ngày.
+'''
+
 import logging
 from datetime import timedelta
 from threading import Lock
@@ -17,6 +28,8 @@ _scheduler = None
 _scheduler_lock = Lock()
 
 
+# def cleanup_finished_tasks để xóa các AITaskProgress đã kết thúc và cũ hơn N ngày (dry_run chỉ đếm).
+# vd: cleanup_finished_tasks(days=7) -> xóa task completed/failed/cancelled quá 7 ngày.
 def cleanup_finished_tasks(*, days: int = 7, dry_run: bool = False) -> int:
     cutoff = timezone.now() - timedelta(days=max(int(days or 7), 1))
     qs = AITaskProgress.objects.filter(
@@ -30,11 +43,15 @@ def cleanup_finished_tasks(*, days: int = 7, dry_run: bool = False) -> int:
     return deleted
 
 
+# def _job_cleanup_ai_tasks là job định kỳ gọi cleanup_finished_tasks và ghi log số dòng đã xóa.
+# vd: chạy mỗi 03:00 hằng ngày.
 def _job_cleanup_ai_tasks():
     removed = cleanup_finished_tasks(days=7, dry_run=False)
     logger.info('[ai_tasks] cleanup job removed %s stale task row(s).', removed)
 
 
+# def start_scheduler để khởi động APScheduler chạy job dọn task lúc 03:00 mỗi ngày (bỏ qua nếu chưa cài apscheduler); idempotent.
+# vd: gọi ở app ready() -> tạo 1 BackgroundScheduler duy nhất.
 def start_scheduler():
     global _scheduler
     with _scheduler_lock:
@@ -65,6 +82,8 @@ def start_scheduler():
         return _scheduler
 
 
+# def stop_scheduler để tắt scheduler nếu đang chạy (dùng khi reload/teardown).
+# vd: gọi khi tắt app -> shutdown scheduler.
 def stop_scheduler():
     global _scheduler
     with _scheduler_lock:

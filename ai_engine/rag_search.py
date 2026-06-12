@@ -1,9 +1,12 @@
 """
-Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
-Vai tro backend: File `ai_engine/rag_search.py` giu hoac ho tro luong backend cho chat, RAG, OCR, prefill ho so, sinh van ban, luu session va quan ly tri thuc AI.
-Vai tro cua no trong frontend: Cac man `/chat`, `/rag`, `/ai-doc`, `/guest` va cac dialog AI phu tro phu thuoc vao ket qua ma file nay sinh ra.
-Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `api/urls.py`, `ai_engine.models`, `ai_engine.rag_engine`, `ai_engine.rag_index`, `ai_engine.doc_creator`, `accounts.models`.
-Tac dung: Bao dam prompt, ket qua AI, session hoi thoai, du lieu trich xuat va chi muc RAG phuc vu dung ngu canh cua nguoi dung hien tai.
+  rag_index.py
+  = Người xây và bảo trì thư viện vector
+
+  rag_search.py
+  = Người tìm đúng sách và đúng đoạn trong thư viện
+
+  rag_engine.py
+  = Người đưa các đoạn đó cho LLM và yêu cầu LLM trả lời
 """
 
 import logging
@@ -17,10 +20,14 @@ from django.db.models.functions import Cast, Coalesce, Concat, Lower
 from langchain_community.vectorstores import PGVector
 
 from accounts.permissions import get_accessible_documents, get_accessible_templates
+from accounts.tenancy import get_user_company
 from document_templates.models import DocumentTemplate, STATUS_REJECTED
 from documents.models import Document
 
-from .rag_index import DOCUMENT_RAG_COLLECTION, TEMPLATE_RAG_COLLECTION
+from .rag_index import (
+    document_collection_names_for_companies,
+    template_collection_names_for_companies,
+)
 
 _logger = logging.getLogger('ai_engine')
 _SEMANTIC_FETCH_STEPS = (64, 128, 256)
@@ -34,6 +41,8 @@ _STOPWORDS = {
     've', 'va', 'vay', 'voi',
 }
 
+# class Unaccent là wrapper hàm SQL UNACCENT của PostgreSQL để so khớp không phân biệt dấu ngay trong truy vấn ORM.
+# vd: Unaccent(F('title')) -> so khớp 'hđ' với 'hd' bất kể dấu.
 class Unaccent(Func):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -45,6 +54,8 @@ class Unaccent(Func):
     function = 'UNACCENT'
     output_field = TextField()
 
+# def _rag_search_debug để in log debug cho luồng tìm kiếm hybrid (keyword + semantic).
+# vd: in '[RAG_HYBRID] keyword hits=3 semantic hits=5'.
 def _rag_search_debug(message):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -55,6 +66,8 @@ def _rag_search_debug(message):
     """
     print(f'[RAG_HYBRID] {message}', flush=True)
 
+# def _strip_html_text để bỏ thẻ HTML/script/style và gộp khoảng trắng, lấy text thuần để tìm kiếm/preview.
+# vd: '<p>Hợp <b>đồng</b></p>' -> 'Hợp đồng'.
 def _strip_html_text(value):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -71,6 +84,8 @@ def _strip_html_text(value):
     value = unescape(value)
     return re.sub(r'\s+', ' ', value).strip()
 
+# def _normalize_search_text để chuẩn hóa text về dạng không dấu, chữ thường, chỉ giữ chữ-số (đổi đ→d) phục vụ so khớp.
+# vd: 'Hợp Đồng Thuê' -> 'hop dong thue'.
 def _normalize_search_text(value):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -86,6 +101,8 @@ def _normalize_search_text(value):
     normalized = re.sub(r'[^0-9a-z]+', ' ', normalized)
     return ' '.join(normalized.split())
 
+# def _query_terms để tách câu hỏi thành danh sách từ khóa đã chuẩn hóa (bỏ stopword và từ quá ngắn, trừ allowlist), khử trùng lặp.
+# vd: 'mẫu đơn xin nghỉ phép' -> ['mau','don','xin','nghi','phep'] (bỏ stopword).
 def _query_terms(question):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -110,6 +127,8 @@ def _query_terms(question):
         results.append(part)
     return results
 
+# def _minimum_relevance_score để tính ngưỡng điểm liên quan tối thiểu theo số từ khóa và nguồn (template/document) nhằm loại kết quả quá yếu.
+# vd: 3 từ khóa, template -> ngưỡng ~38 điểm (loại kết quả thấp hơn).
 def _minimum_relevance_score(question, *, source='template'):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -125,6 +144,8 @@ def _minimum_relevance_score(question, *, source='template'):
     step = 5 if source == 'template' else 4
     return min(52, base + max(0, term_count - 1) * step)
 
+# def _normalize_with_index_map để chuẩn hóa text nhưng vẫn giữ bản đồ vị trí ký tự gốc, giúp tìm và cắt đoạn preview đúng chỗ khớp trong văn bản gốc.
+# vd: tìm 'hop dong' ở bản chuẩn hóa rồi map ngược về vị trí trong text gốc có dấu để cắt preview.
 def _normalize_with_index_map(value):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -156,6 +177,8 @@ def _normalize_with_index_map(value):
                 previous_space = True
     return ''.join(normalized_chars).strip(), index_map
 
+# def _find_match_span để tìm khoảng (vị trí đầu–cuối) trong text khớp tốt nhất với từ khóa câu hỏi.
+# vd: text dài + 'nghi phep' -> trả (start, end) quanh cụm khớp.
 def _find_match_span(text, question):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -184,6 +207,8 @@ def _find_match_span(text, question):
         return index_map[hit_index], index_map[end_index] + 1
     return None
 
+# def _extract_relevant_preview để cắt một đoạn preview quanh chỗ khớp (ưu tiên đoạn semantic nếu có), giới hạn max_chars.
+# vd: -> '...được nghỉ phép năm 12 ngày...' (đoạn quanh từ khóa, <=600 ký tự).
 def _extract_relevant_preview(text, question, *, semantic_chunk='', max_chars=600):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -213,6 +238,8 @@ def _extract_relevant_preview(text, question, *, semantic_chunk='', max_chars=60
         return semantic_plain[:max_chars].strip()
     return plain[:max_chars].strip()
 
+# def _semantic_bonus_for_rank để cộng điểm thưởng theo thứ hạng semantic (rank càng cao thì thưởng càng lớn).
+# vd: rank 0 (khớp nhất) -> cộng nhiều điểm; rank thấp -> cộng ít.
 def _semantic_bonus_for_rank(rank):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -225,6 +252,8 @@ def _semantic_bonus_for_rank(rank):
         return 0
     return max(0, 48 - int(rank) * 4)
 
+# def _similarity_expression để dựng biểu thức ORM tính độ tương đồng (similarity) giữa một cột và cụm từ truy vấn.
+# vd: similarity(title, 'hop dong') dùng để annotate điểm.
 def _similarity_expression(expression, phrase):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -237,6 +266,8 @@ def _similarity_expression(expression, phrase):
         return TrigramSimilarity(expression, Value(phrase, output_field=TextField()))
     return Value(0.0, output_field=FloatField())
 
+# def _unaccent_expr để bọc một biểu thức cột bằng UNACCENT (bỏ dấu) cho so khớp không dấu.
+# vd: -> UNACCENT(lower(title)) để so khớp không dấu.
 def _unaccent_expr(expression):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -247,6 +278,8 @@ def _unaccent_expr(expression):
     """
     return Lower(Unaccent(expression))
 
+# def _text_expr để dựng biểu thức text đã chuẩn hóa (unaccent + lower) cho một field phục vụ tìm kiếm.
+# vd: -> unaccent(lower(field)) cho field tìm kiếm.
 def _text_expr(field_name):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -261,6 +294,8 @@ def _text_expr(field_name):
         output_field=TextField(),
     )
 
+# def _space_expr để tạo biểu thức khoảng trắng dùng ghép/nối chuỗi trong truy vấn SQL.
+# vd: dùng nối 'title' + ' ' + 'description' khi tính similarity gộp.
 def _space_expr():
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -271,6 +306,8 @@ def _space_expr():
     """
     return Value(' ', output_field=TextField())
 
+# def _semantic_rank_map để chạy tìm kiếm semantic (vector) trên một collection và trả map {object_id: thứ hạng} cho fetch_k kết quả đầu.
+# vd: -> {5:0, 9:1, 12:2} (mẫu #5 khớp semantic nhất).
 def _semantic_rank_map(question, collection_name, *, fetch_k=64):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -318,7 +355,33 @@ def _semantic_rank_map(question, collection_name, *, fetch_k=64):
     )
     return rank_map
 
-def _progressive_semantic_hits(question, collection_name, base_qs, k):
+# def _semantic_collection_names để xác định danh sách collection vector cần tìm semantic theo phạm vi (công ty + legacy).
+# vd: user công ty 1 -> ['company_1_template_rag_kb','template_rag_kb'].
+def _semantic_collection_names(
+    base_qs,
+    collection_names_for_companies,
+    *,
+    user=None,
+    include_legacy=True,
+):
+    if user is not None:
+        company = get_user_company(user)
+        if company is None:
+            return []
+        return collection_names_for_companies([company.pk], include_legacy=include_legacy)
+    try:
+        company_ids = list(
+            base_qs.order_by().values_list('company_id', flat=True).distinct()
+        )
+    except Exception as exc:
+        _rag_search_debug(f'semantic_company_scope_failed | error={exc!r}')
+        company_ids = []
+    return collection_names_for_companies(company_ids, include_legacy=include_legacy)
+
+
+# def _progressive_semantic_hits để gom kết quả semantic từ nhiều collection theo kiểu tăng dần cho tới khi đủ k, chỉ lấy trong queryset mà user được phép truy cập.
+# vd: gom dần từ các collection tới khi đủ k=10 kết quả user được phép xem.
+def _progressive_semantic_hits(question, collection_names, base_qs, k):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
     Vai tro backend: Ham `_progressive_semantic_hits` la helper noi bo trong file `ai_engine/rag_search.py`, chiu trach nhiem thuc hien phan xu ly chuyen trach cua symbol hien tai trong mot luong backend nhieu buoc.
@@ -328,26 +391,42 @@ def _progressive_semantic_hits(question, collection_name, base_qs, k):
     """
     target_count = max(int(k or 1) * _SEMANTIC_TARGET_MULTIPLIER, _SEMANTIC_TARGET_MIN)
     accessible_hits = {}
+    if isinstance(collection_names, str):
+        collection_names = [collection_names]
     for fetch_k in _SEMANTIC_FETCH_STEPS:
-        raw_hits = _semantic_rank_map(question, collection_name, fetch_k=fetch_k)
-        if not raw_hits:
-            continue
-        accessible_map = base_qs.filter(pk__in=list(raw_hits.keys())).in_bulk()
-        for obj_id, obj in accessible_map.items():
-            hit = raw_hits.get(obj_id)
-            if hit is None:
+        for collection_priority, collection_name in enumerate(collection_names):
+            raw_hits = _semantic_rank_map(question, collection_name, fetch_k=fetch_k)
+            if not raw_hits:
                 continue
-            previous = accessible_hits.get(obj_id)
-            if previous is None or hit['rank'] < previous['rank']:
-                accessible_hits[obj_id] = hit
-        _rag_search_debug(
-            f'semantic_progressive | collection={collection_name} | fetch_k={fetch_k} | '
-            f'accessible={len(accessible_hits)} | target={target_count}'
-        )
+            accessible_map = base_qs.filter(pk__in=list(raw_hits.keys())).in_bulk()
+            for obj_id, obj in accessible_map.items():
+                hit = raw_hits.get(obj_id)
+                if hit is None:
+                    continue
+                ranked_hit = {
+                    **hit,
+                    'collection': collection_name,
+                    'collection_priority': collection_priority,
+                }
+                previous = accessible_hits.get(obj_id)
+                if previous is None or (
+                    collection_priority,
+                    hit['rank'],
+                ) < (
+                    previous.get('collection_priority', 999),
+                    previous['rank'],
+                ):
+                    accessible_hits[obj_id] = ranked_hit
+            _rag_search_debug(
+                f'semantic_progressive | collection={collection_name} | fetch_k={fetch_k} | '
+                f'accessible={len(accessible_hits)} | target={target_count}'
+            )
         if len(accessible_hits) >= target_count:
             break
     return accessible_hits
 
+# def _template_secondary_text để gom các trường phụ của mẫu (mô tả, danh mục, phòng ban…) thành text bổ trợ cho tìm kiếm.
+# vd: -> 'Don xin nghi | Nhan su | Phong HC' (mô tả + danh mục + phòng ban).
 def _template_secondary_text(template):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -379,6 +458,8 @@ def _template_secondary_text(template):
         if part
     ).strip()
 
+# def _document_secondary_text để gom các trường phụ của tài liệu thành text bổ trợ cho tìm kiếm.
+# vd: gom tiêu đề phụ/danh mục của văn bản cho tìm kiếm.
 def _document_secondary_text(document):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -402,6 +483,8 @@ def _document_secondary_text(document):
         if part
     ).strip()
 
+# def _template_content_for_search để lấy nội dung mẫu (đã bỏ HTML) dùng cho so khớp và preview.
+# vd: '<p>Kinh gui</p>' -> 'Kinh gui'.
 def _template_content_for_search(template):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -414,6 +497,8 @@ def _template_content_for_search(template):
     text = re.sub(r'\{\{\s*[\w.\-]+\s*\}\}', ' ', text)
     return re.sub(r'\s+', ' ', text).strip()
 
+# def _document_content_for_search để lấy nội dung tài liệu (đã bỏ HTML) dùng cho so khớp và preview.
+# vd: nội dung văn bản đã bỏ HTML.
 def _document_content_for_search(document):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -424,6 +509,8 @@ def _document_content_for_search(document):
     """
     return _strip_html_text(document.content or '')
 
+# def _relevance_score để tính điểm liên quan tổng hợp từ khớp tiêu đề, text phụ, nội dung và độ tương đồng semantic.
+# vd: khớp tiêu đề mạnh + semantic cao -> điểm tổng lớn, xếp trên.
 def _relevance_score(question, *, title='', secondary='', content='', title_similarity=0.0, secondary_similarity=0.0):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -472,6 +559,8 @@ def _relevance_score(question, *, title='', secondary='', content='', title_simi
     score += int(float(secondary_similarity or 0.0) * 40)
     return score
 
+# def _template_candidate_queryset để dựng queryset ứng viên mẫu theo từ khóa (lọc + annotate điểm tương đồng), giới hạn limit.
+# vd: 'nghi phep', limit 20 -> 20 mẫu ứng viên kèm điểm tương đồng.
 def _template_candidate_queryset(base_qs, question, limit):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -497,9 +586,11 @@ def _template_candidate_queryset(base_qs, question, limit):
             output_field=TextField(),
         )
     )
+    content_expr = _unaccent_expr(_text_expr('content'))
     qs = base_qs.annotate(
         search_title=title_expr,
         search_secondary=secondary_expr,
+        search_content=content_expr,
         title_similarity=_similarity_expression(title_expr, phrase),
         secondary_similarity=_similarity_expression(secondary_expr, phrase),
     )
@@ -508,13 +599,17 @@ def _template_candidate_queryset(base_qs, question, limit):
         filter_q = Q()
         if phrase:
             filter_q |= Q(search_title__contains=phrase) | Q(search_secondary__contains=phrase)
+            filter_q |= Q(search_content__contains=phrase)
             filter_q |= Q(title_similarity__gte=0.18) | Q(secondary_similarity__gte=0.12)
         for term in terms[:10]:
             filter_q |= Q(search_title__contains=term) | Q(search_secondary__contains=term)
+            filter_q |= Q(search_content__contains=term)
         qs = qs.filter(filter_q)
 
     return qs.order_by('-title_similarity', '-secondary_similarity', '-updated_at')[:limit]
 
+# def _document_candidate_queryset để dựng queryset ứng viên tài liệu theo từ khóa (lọc + annotate điểm), giới hạn limit.
+# vd: 'hop dong', limit 20 -> 20 văn bản ứng viên kèm điểm.
 def _document_candidate_queryset(base_qs, question, limit):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -540,9 +635,11 @@ def _document_candidate_queryset(base_qs, question, limit):
             output_field=TextField(),
         )
     )
+    content_expr = _unaccent_expr(_text_expr('content'))
     qs = base_qs.annotate(
         search_title=title_expr,
         search_secondary=secondary_expr,
+        search_content=content_expr,
         title_similarity=_similarity_expression(title_expr, phrase),
         secondary_similarity=_similarity_expression(secondary_expr, phrase),
     )
@@ -551,13 +648,17 @@ def _document_candidate_queryset(base_qs, question, limit):
         filter_q = Q()
         if phrase:
             filter_q |= Q(search_title__contains=phrase) | Q(search_secondary__contains=phrase)
+            filter_q |= Q(search_content__contains=phrase)
             filter_q |= Q(title_similarity__gte=0.18) | Q(secondary_similarity__gte=0.12)
         for term in terms[:10]:
             filter_q |= Q(search_title__contains=term) | Q(search_secondary__contains=term)
+            filter_q |= Q(search_content__contains=term)
         qs = qs.filter(filter_q)
 
     return qs.order_by('-title_similarity', '-secondary_similarity', '-updated_at')[:limit]
 
+# def _template_context để dựng khối ngữ cảnh + citation cho một mẫu khớp (tiêu đề, URL, đoạn preview).
+# vd: -> {'context':'[Mau: Don xin nghi] ...','citation':{title,url:'/templates/5'}}.
 def _template_context(template, question, semantic_chunk=''):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -573,6 +674,8 @@ def _template_context(template, question, semantic_chunk=''):
     )
     return f'[Mau van ban: {template.title}]\n{preview or template.title}'
 
+# def _document_context để dựng khối ngữ cảnh + citation cho một tài liệu khớp.
+# vd: -> {'context':'[Van ban: HD thue nha] ...','citation':{url:'/documents/9'}}.
 def _document_context(document, question, semantic_chunk=''):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -588,6 +691,8 @@ def _document_context(document, question, semantic_chunk=''):
     )
     return f'[Van ban: {document.title}]\n{preview or document.title}'
 
+# def _db_search_templates là tìm kiếm hybrid mẫu văn bản trong DB: kết hợp khớp từ khóa (SQL) và semantic (vector), chấm điểm, lọc theo ngưỡng và phạm vi truy cập của user, trả top-k ngữ cảnh + citations.
+# vd: 'mau don xin nghi' -> top-k mẫu liên quan (ngữ cảnh + citation) user được xem.
 def _db_search_templates(question, user, k):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -603,7 +708,17 @@ def _db_search_templates(question, user, k):
         .select_related('category', 'department', 'group')
     )
     lexical_candidates = list(_template_candidate_queryset(base_qs, question, limit=max(k * 12, 80)))
-    semantic_hits = _progressive_semantic_hits(question, TEMPLATE_RAG_COLLECTION, base_qs, k)
+    semantic_hits = _progressive_semantic_hits(
+        question,
+        _semantic_collection_names(
+            base_qs,
+            template_collection_names_for_companies,
+            user=user,
+            include_legacy=False,
+        ),
+        base_qs,
+        k,
+    )
     semantic_objects = base_qs.filter(pk__in=list(semantic_hits.keys())).in_bulk()
 
     merged_candidates = {template.pk: template for template in lexical_candidates}
@@ -694,6 +809,8 @@ def _db_search_templates(question, user, k):
     )
     return results
 
+# def _db_search_documents là tìm kiếm hybrid tài liệu trong DB: kết hợp khớp từ khóa và semantic, chấm điểm, lọc theo ngưỡng và quyền truy cập của user, trả top-k ngữ cảnh + citations.
+# vd: 'hop dong da ky' -> top-k văn bản liên quan user được xem.
 def _db_search_documents(question, user, k):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -703,9 +820,21 @@ def _db_search_documents(question, user, k):
     Tac dung: Don buoc tim kiem hoac loc du lieu theo cau hoi dau vao xuong service hoac engine de view khong phai tu trien khai lai logic ky thuat.
     """
     k = max(1, int(k or 1))
-    base_qs = get_accessible_documents(user).select_related('category', 'department', 'template')
+    base_qs = get_accessible_documents(user).select_related(
+        'category', 'department', 'template'
+    )
     lexical_candidates = list(_document_candidate_queryset(base_qs, question, limit=max(k * 12, 80)))
-    semantic_hits = _progressive_semantic_hits(question, DOCUMENT_RAG_COLLECTION, base_qs, k)
+    semantic_hits = _progressive_semantic_hits(
+        question,
+        _semantic_collection_names(
+            base_qs,
+            document_collection_names_for_companies,
+            user=user,
+            include_legacy=False,
+        ),
+        base_qs,
+        k,
+    )
     semantic_objects = base_qs.filter(pk__in=list(semantic_hits.keys())).in_bulk()
 
     merged_candidates = {document.pk: document for document in lexical_candidates}

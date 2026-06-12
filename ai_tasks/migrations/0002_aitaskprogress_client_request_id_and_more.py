@@ -4,6 +4,8 @@ import ai_tasks.models
 from django.db import migrations, models
 
 
+# class Migration là bước migration thay đổi cấu trúc CSDL (theo tên file: aitaskprogress client request id and more).
+# vd: chạy "python manage.py migrate" để áp dụng thay đổi schema này vào database.
 class Migration(migrations.Migration):
 
     dependencies = [

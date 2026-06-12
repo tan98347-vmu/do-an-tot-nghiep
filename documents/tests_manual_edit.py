@@ -12,7 +12,7 @@ from django.test import TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils import timezone
-from rest_framework.test import APIClient
+from word_ai.test_utils import PromptCheckedApiClient
 
 from accounts.models import Company, CompanyStatus, CompanyUserMembership
 from accounts.storage_paths import company_storage_slug
@@ -66,9 +66,8 @@ class DocumentManualEditTests(TestCase):
         self.addCleanup(self.storage_save_patch.stop)
         self.addCleanup(self.field_open_patch.stop)
 
-        self.client = APIClient()
         self.user = User.objects.create_user(username='manual-owner', password='secret')
-        self.client.force_authenticate(self.user)
+        self.client = PromptCheckedApiClient(self.user)
         self.document = Document.objects.create(
             title='Manual Edit Target',
             owner=self.user,

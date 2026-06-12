@@ -3,9 +3,11 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+
+from ..throttles import LoginIdentifierRateThrottle, LoginIpRateThrottle
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -20,6 +22,11 @@ from accounts.tenancy import (
 from ..serializers.auth import UserMeUpdateSerializer, UserSerializer
 
 
+# Là gì: `_ensure_signing_credential` là helper nội bộ của module `auth.py`, phục vụ nhóm đăng nhập, đăng xuất, làm mới phiên và thông tin tài khoản hiện tại.
+# Chức năng backend: Hàm bảo đảm điều kiện hoặc bản ghi cần thiết đã tồn tại; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ luồng xác thực trước khi người dùng vào ứng dụng.
+# Mối liên hệ: Hàm phối hợp với `ensure_user_signing_credential` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _ensure_signing_credential(user: User) -> None:
     try:
         from signing.internal_pki import ensure_user_signing_credential
@@ -29,6 +36,11 @@ def _ensure_signing_credential(user: User) -> None:
         pass
 
 
+# Là gì: `_serialize_login` là helper nội bộ của module `auth.py`, phục vụ nhóm đăng nhập, đăng xuất, làm mới phiên và thông tin tài khoản hiện tại.
+# Chức năng backend: Hàm chuyển đối tượng nội bộ thành dữ liệu có thể trả cho client; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ luồng xác thực trước khi người dùng vào ứng dụng.
+# Mối liên hệ: Hàm phối hợp với `timezone.now`, `membership.save`, `_ensure_signing_credential` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 def _serialize_login(user: User, *, membership=None) -> Response:
     if membership is not None:
         membership.last_login_at = timezone.now()
@@ -44,6 +56,11 @@ def _serialize_login(user: User, *, membership=None) -> Response:
     )
 
 
+# Là gì: `_company_login_identifier_matches` là helper nội bộ của module `auth.py`, phục vụ nhóm đăng nhập, đăng xuất, làm mới phiên và thông tin tài khoản hiện tại.
+# Chức năng backend: Hàm xử lý phần việc `company login identifier matches` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ luồng xác thực trước khi người dùng vào ứng dụng.
+# Mối liên hệ: Hàm phối hợp với `CompanyUserMembership.objects.none`, `CompanyUserMembership.objects.select_related.filter.filter.distinct`, `CompanyUserMembership.objects.select_related.filter.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _company_login_identifier_matches(identifier: str):
     if not identifier:
         return CompanyUserMembership.objects.none()
@@ -58,6 +75,11 @@ def _company_login_identifier_matches(identifier: str):
     ).distinct()
 
 
+# Là gì: `register` là endpoint REST của nhóm đăng nhập, đăng xuất, làm mới phiên và thông tin tài khoản hiện tại; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `register` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được luồng xác thực trước khi người dùng vào ứng dụng sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm được các endpoint hoặc helper cùng module gọi khi cần cùng quy tắc xử lý.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register(request):
@@ -67,8 +89,14 @@ def register(request):
     )
 
 
+# Là gì: `login_view` là endpoint REST của nhóm đăng nhập, đăng xuất, làm mới phiên và thông tin tài khoản hiện tại; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `login view` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được luồng xác thực trước khi người dùng vào ứng dụng sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `str.strip`, `request.data.get`, `str.strip.lower` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([LoginIpRateThrottle, LoginIdentifierRateThrottle])
 def login_view(request):
     identifier = str(
         request.data.get('identifier')
@@ -147,6 +175,11 @@ def login_view(request):
     )
 
 
+# Là gì: `logout_view` là endpoint REST của nhóm đăng nhập, đăng xuất, làm mới phiên và thông tin tài khoản hiện tại; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `logout view` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được luồng xác thực trước khi người dùng vào ứng dụng sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.data.get`, `RefreshToken.blacklist`, `RefreshToken` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_view(request):
@@ -159,6 +192,11 @@ def logout_view(request):
     return Response({'detail': 'Da dang xuat.'})
 
 
+# Là gì: `prefill_from_bio` là endpoint REST của nhóm đăng nhập, đăng xuất, làm mới phiên và thông tin tài khoản hiện tại; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tự động điền các trường còn trống từ ngữ cảnh có sẵn; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được luồng xác thực trước khi người dùng vào ứng dụng sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `str.strip`, `request.data.get`, `build_effective_ai_context.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def prefill_from_bio(request):
@@ -204,6 +242,11 @@ def prefill_from_bio(request):
         return Response({'detail': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+# Là gì: `social_google` là endpoint REST của nhóm đăng nhập, đăng xuất, làm mới phiên và thông tin tài khoản hiện tại; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `social google` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được luồng xác thực trước khi người dùng vào ứng dụng sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm được các endpoint hoặc helper cùng module gọi khi cần cùng quy tắc xử lý.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def social_google(request):
@@ -213,6 +256,11 @@ def social_google(request):
     )
 
 
+# Là gì: `social_facebook` là endpoint REST của nhóm đăng nhập, đăng xuất, làm mới phiên và thông tin tài khoản hiện tại; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `social facebook` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được luồng xác thực trước khi người dùng vào ứng dụng sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm được các endpoint hoặc helper cùng module gọi khi cần cùng quy tắc xử lý.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def social_facebook(request):
@@ -222,6 +270,11 @@ def social_facebook(request):
     )
 
 
+# Là gì: `me` là endpoint REST của nhóm đăng nhập, đăng xuất, làm mới phiên và thông tin tài khoản hiện tại; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `me` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được luồng xác thực trước khi người dùng vào ứng dụng sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_ensure_signing_credential`, `UserSerializer`, `UserMeUpdateSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def me(request):

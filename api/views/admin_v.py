@@ -1,9 +1,19 @@
 """
-Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
-Vai tro backend: File `api/views/admin_v.py` giu hoac ho tro luong backend cho cau hinh du an, anh xa route, thong ke dashboard, quan tri du lieu nen va API chung toan he thong.
-Vai tro cua no trong frontend: Cac man `/dashboard`, `/admin`, `/admin/ai-config`, `/admin/backup`, badge thong bao va shell dieu huong doc hoac chiu tac dong tu file nay.
-Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `my_tennis_club.settings`, `my_tennis_club.urls`, `api/urls.py`, `api/views/dashboard.py`, `api/views/notifications.py`, `accounts.models`.
-Tac dung: Giu cho cac man dieu phoi cap he thong co cung nguon cau hinh, cung route va cung so lieu nen khi frontend khoi chay.
+Hiện tại, trong admin_v.py, chỉ còn một chức năng chắc chắn được UI hiện tại sử dụng:
+
+  ### Danh sách model Ollama
+
+  GET /api/admin/ollama-models/
+
+  Hàm:
+
+  ollama_models()
+
+  Được màn hình cấu hình AI gọi để:
+
+  - Lấy danh sách model từ Ollama.
+  - Phân loại model chat và model embedding.
+  - Hiển thị chúng trong dropdown để admin lựa chọn.
 """
 
 import os
@@ -27,11 +37,21 @@ from accounts.tenancy import is_platform_admin
 from ..serializers.admin_s import UserAdminSerializer, UserGroupSerializer, UserGroupDetailSerializer, GlobalAIConfigSerializer, DepartmentSerializer
 
 
+# Là gì: `_platform_admin_only` là helper nội bộ của module `admin_v.py`, phục vụ nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ.
+# Chức năng backend: Hàm kiểm tra request hiện tại có quyền quản trị nền tảng hay không; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình quản trị hoặc API tương thích cũ.
+# Mối liên hệ: Hàm phối hợp với `is_platform_admin` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 def _platform_admin_only(request):
     if not is_platform_admin(request.user):
         return Response({'detail': 'Chi platform admin moi duoc thao tac.'}, status=status.HTTP_403_FORBIDDEN)
     return None
 
+# Là gì: `_col_idx` là helper nội bộ của module `admin_v.py`, phục vụ nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ.
+# Chức năng backend: Hàm tìm vị trí cột Excel dựa trên các từ khóa tiêu đề có thể thay đổi; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình quản trị hoặc API tương thích cũ.
+# Mối liên hệ: Hàm phối hợp với `str.lower.strip`, `unicodedata.normalize`, `join` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _col_idx(headers, *keywords):
     
 
@@ -42,6 +62,11 @@ def _col_idx(headers, *keywords):
     Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `my_tennis_club.settings`, `my_tennis_club.urls`, `api/urls.py`, `api/views/dashboard.py`, `api/views/notifications.py`, `accounts.models`. Thuong duoc cac ham public nhu `import_users_template`, `import_users_excel`, `user_list` goi lai.
     Tac dung: Co lap rieng buoc thuc hien phan xu ly chuyen trach cua symbol hien tai de cac endpoint cung file tai su dung dung mot quy tac.
     """
+    # Là gì: `norm` là hàm cục bộ bên trong `_col_idx`, chỉ phục vụ bước xử lý nội bộ của nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ.
+    # Chức năng backend: Hàm xử lý phần việc `norm` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình quản trị hoặc API tương thích cũ.
+    # Mối liên hệ: Hàm phối hợp với `str.lower.strip`, `str.lower`, `unicodedata.normalize` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def norm(s):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -61,6 +86,11 @@ def _col_idx(headers, *keywords):
                 return i
     return None
 
+# Là gì: `_cell` là helper nội bộ của module `admin_v.py`, phục vụ nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ.
+# Chức năng backend: Hàm đọc an toàn giá trị một ô trong hàng Excel và áp dụng giá trị mặc định; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình quản trị hoặc API tương thích cũ.
+# Mối liên hệ: Hàm phối hợp với `str.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _cell(row, idx, default=''):
     """
     Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -73,6 +103,11 @@ def _cell(row, idx, default=''):
         return default
     return str(row[idx]).strip()
 
+# Là gì: `import_users_template` là endpoint REST của nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc dữ liệu đầu vào và chuyển thành bản ghi hệ thống; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị hoặc API tương thích cũ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `openpyxl.Workbook`, `ws_nhom.append`, `wb.create_sheet` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def import_users_template(request):
@@ -152,6 +187,11 @@ def import_users_template(request):
     resp['Content-Disposition'] = 'attachment; filename="import_users_template.xlsx"'
     return resp
 
+# Là gì: `import_users_excel` là endpoint REST của nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc dữ liệu đầu vào và chuyển thành bản ghi hệ thống; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị hoặc API tương thích cũ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.FILES.get`, `openpyxl.load_workbook`, `iter_rows` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def import_users_excel(request):
@@ -316,6 +356,11 @@ def import_users_excel(request):
         'log': log,
     })
 
+# Là gì: `user_list` là endpoint REST của nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị hoặc API tương thích cũ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `User.objects.all.order_by.select_related`, `User.objects.all.order_by`, `UserAdminSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def user_list(request):
@@ -360,6 +405,11 @@ def user_list(request):
     except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+# Là gì: `user_detail` là endpoint REST của nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị hoặc API tương thích cũ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `UserAdminSerializer`, `user.delete` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def user_detail(request, pk):
@@ -405,6 +455,11 @@ def user_detail(request, pk):
         user.profile.save(update_fields=['chuc_danh'])
     return Response(UserAdminSerializer(user).data)
 
+# Là gì: `group_list` là endpoint REST của nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị hoặc API tương thích cũ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `UserGroup.objects.all`, `UserGroupSerializer`, `request.data.get.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def group_list(request):
@@ -432,6 +487,11 @@ def group_list(request):
     )
     return Response(UserGroupSerializer(group).data, status=status.HTTP_201_CREATED)
 
+# Là gì: `group_detail` là endpoint REST của nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị hoặc API tương thích cũ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `UserGroupDetailSerializer`, `group.delete` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def group_detail(request, pk):
@@ -459,6 +519,11 @@ def group_detail(request, pk):
     group.save()
     return Response(UserGroupSerializer(group).data)
 
+# Là gì: `group_members` là endpoint REST của nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `group members` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị hoặc API tương thích cũ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `group.memberships.select_related.all`, `group.memberships.select_related` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def group_members(request, pk):
@@ -499,6 +564,11 @@ def group_members(request, pk):
         membership.save()
     return Response({'detail': 'Đã thêm thành viên.'})
 
+# Là gì: `group_member_detail` là endpoint REST của nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị hoặc API tương thích cũ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `membership.delete`, `request.data.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def group_member_detail(request, pk, user_id):
@@ -524,6 +594,11 @@ def group_member_detail(request, pk, user_id):
     membership.save()
     return Response({'detail': 'Đã cập nhật vai trò.'})
 
+# Là gì: `ollama_models` là endpoint REST của nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `ollama models` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị hoặc API tương thích cũ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `urllib.request.urlopen`, `_json.loads`, `resp.read` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect lên tệp hoặc storage; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def ollama_models(request):
@@ -548,6 +623,11 @@ def ollama_models(request):
     except Exception as e:
         return Response({'chat_models': [], 'embed_models': [], 'error': str(e)})
 
+# Là gì: `ai_config` là endpoint REST của nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `ai config` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị hoặc API tương thích cũ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `GlobalAIConfig.get_config`, `GlobalAIConfigSerializer`, `serializer.is_valid` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def ai_config(request):
@@ -594,6 +674,11 @@ BACKUP_APPS = {
     'auth':               ['auth.user', 'auth.group', 'auth.permission'],
 }
 
+# Là gì: `backup_list` là endpoint REST của nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị hoặc API tương thích cũ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_platform_admin_only`, `os.makedirs`, `os.path.isdir` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def backup_list(request):
@@ -645,6 +730,11 @@ def backup_list(request):
         'backup_dir': BACKUP_DIR,
     })
 
+# Là gì: `backup_create` là endpoint REST của nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm kiểm tra đầu vào và tạo dữ liệu mới; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị hoặc API tương thích cũ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_platform_admin_only`, `os.makedirs`, `request.data.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect lên tệp hoặc storage; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def backup_create(request):
@@ -696,6 +786,11 @@ def backup_create(request):
     except Exception as e:
         return Response({'detail': f'Lỗi tạo backup: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+# Là gì: `backup_download` là endpoint REST của nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm chuẩn bị và trả tệp cho phía client tải xuống; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị hoặc API tương thích cũ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_platform_admin_only`, `os.path.join`, `os.path.isfile` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect lên tệp hoặc storage; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def backup_download(request, filename):
@@ -717,6 +812,11 @@ def backup_download(request, filename):
         raise Http404
     return FileResponse(open(fpath, 'rb'), as_attachment=True, filename=filename)
 
+# Là gì: `backup_delete` là endpoint REST của nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xóa hoặc đánh dấu xóa dữ liệu được chỉ định; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị hoặc API tương thích cũ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_platform_admin_only`, `os.path.join`, `os.path.isfile` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def backup_delete(request, filename):
@@ -739,6 +839,11 @@ def backup_delete(request, filename):
     os.remove(fpath)
     return Response({'detail': f'Đã xóa backup: {filename}'}, status=status.HTTP_200_OK)
 
+# Là gì: `company_context_read` là endpoint REST của nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc dữ liệu từ nguồn được chỉ định; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị hoặc API tương thích cũ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `GlobalAIConfig.get_config` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def company_context_read(request):
@@ -752,6 +857,11 @@ def company_context_read(request):
     config = GlobalAIConfig.get_config()
     return Response({'company_context': config.company_context or ''})
 
+# Là gì: `_normalize_group_name` là helper nội bộ của module `admin_v.py`, phục vụ nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ.
+# Chức năng backend: Hàm chuẩn hóa dữ liệu về định dạng thống nhất; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình quản trị hoặc API tương thích cũ.
+# Mối liên hệ: Hàm phối hợp với `join`, `str.strip.split`, `str.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _normalize_group_name(name):
     """
     Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -762,6 +872,11 @@ def _normalize_group_name(name):
     """
     return ' '.join(str(name or '').strip().split())
 
+# Là gì: `_find_duplicate_group` là helper nội bộ của module `admin_v.py`, phục vụ nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ.
+# Chức năng backend: Hàm xử lý phần việc `find duplicate group` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình quản trị hoặc API tương thích cũ.
+# Mối liên hệ: Hàm phối hợp với `_normalize_group_name.casefold`, `_normalize_group_name`, `UserGroup.objects.all` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _find_duplicate_group(name, *, exclude_id=None):
     """
     Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -781,6 +896,11 @@ def _find_duplicate_group(name, *, exclude_id=None):
             return group
     return None
 
+# Là gì: `_group_usage_counts` là helper nội bộ của module `admin_v.py`, phục vụ nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ.
+# Chức năng backend: Hàm xử lý phần việc `group usage counts` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình quản trị hoặc API tương thích cũ.
+# Mối liên hệ: Hàm phối hợp với `group.memberships.count`, `Document.objects.filter.count`, `DocumentTemplate.objects.filter.count` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _group_usage_counts(group):
     """
     Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -799,6 +919,11 @@ def _group_usage_counts(group):
         'pending_template_assignments': PendingTemplateAssignment.objects.filter(group=group).count(),
     }
 
+# Là gì: `group_list` là endpoint REST của nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị hoặc API tương thích cũ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `UserGroup.objects.all`, `UserGroupSerializer`, `_normalize_group_name` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def group_list(request):
@@ -827,6 +952,11 @@ def group_list(request):
     )
     return Response(UserGroupSerializer(group).data, status=status.HTTP_201_CREATED)
 
+# Là gì: `group_detail` là endpoint REST của nhóm quản trị hệ thống, cấu hình AI, import người dùng và backup kiểu cũ; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị hoặc API tương thích cũ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `UserGroupDetailSerializer`, `group.save` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def group_detail(request, pk):

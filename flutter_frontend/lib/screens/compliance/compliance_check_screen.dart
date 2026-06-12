@@ -1,3 +1,9 @@
+// === MÀN HÌNH KIỂM TRA TUÂN THỦ ===
+// Đối chiếu một văn bản/mẫu với bộ YÊU CẦU (prompt quy trình) và liệt kê mục đạt/thiếu.
+// - _pickTarget()/_TargetPickerDialog: chọn đối tượng kiểm (văn bản hoặc mẫu).
+// - _PromptSection: chọn prompt đã lưu (_SavedPromptBlock) hoặc nhập inline (_InlinePromptBlock, lưu qua _saveInlinePrompt); _checkPrompt kiểm an toàn prompt.
+// - _runCheck(): gọi complianceApiProvider chạy đối chiếu; _HistorySection xem lại qua complianceHistoryProvider.
+
 // r2/M4 — Screen "Kiem tra van ban theo quy trinh".
 //
 // Route: /compliance-check
@@ -14,8 +20,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+import '../../core/browser_alert.dart';
 import '../../models/compliance_result.dart';
 import '../../providers/compliance_provider.dart';
+import '../../providers/prompt_preflight_provider.dart';
 import '../../providers/prompts_provider.dart';
 import '../../widgets/ai/prompt_picker_dialog.dart';
 import '../../widgets/ai/save_prompt_dialog.dart';
@@ -46,6 +54,8 @@ class _ComplianceCheckScreenState extends ConsumerState<ComplianceCheckScreen> {
   final TextEditingController _inlinePromptCtrl = TextEditingController();
   ComplianceResult? _result;
   bool _loading = false;
+  bool _checkingPrompt = false;
+  String? _promptCheckToken;
   String? _error;
 
   @override
@@ -59,7 +69,12 @@ class _ComplianceCheckScreenState extends ConsumerState<ComplianceCheckScreen> {
       context,
       scope: 'compliance_check',
     );
-    if (p != null) setState(() => _selectedPrompt = p);
+    if (p != null) {
+      setState(() {
+        _selectedPrompt = p;
+        _promptCheckToken = null;
+      });
+    }
   }
 
   Future<void> _saveInlinePrompt() async {
@@ -77,6 +92,7 @@ class _ComplianceCheckScreenState extends ConsumerState<ComplianceCheckScreen> {
     setState(() {
       _selectedPrompt = saved;
       _promptMode = 'saved';
+      _promptCheckToken = null;
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Đã lưu prompt: ${saved.title}')),
@@ -89,11 +105,73 @@ class _ComplianceCheckScreenState extends ConsumerState<ComplianceCheckScreen> {
       _inlinePromptCtrl.text =
           existing.isEmpty ? text : '$existing\n- $text';
       _promptMode = 'inline';
+      _promptCheckToken = null;
     });
+  }
+
+  String get _currentPromptText {
+    if (_promptMode == 'inline') {
+      return _inlinePromptCtrl.text.trim();
+    }
+    final prompt = _selectedPrompt;
+    if (prompt == null) return '';
+    return [
+      (prompt.systemContent ?? '').trim(),
+      (prompt.rulesContent ?? '').trim(),
+    ].where((part) => part.isNotEmpty).join('\n\n');
+  }
+
+  Future<void> _checkPrompt() async {
+    final targetId = _targetId;
+    final promptText = _currentPromptText;
+    if (targetId == null) {
+      await showBrowserAlert(
+        context,
+        'Vui lòng chọn văn bản hoặc mẫu văn bản trước khi kiểm tra prompt.',
+      );
+      return;
+    }
+    if (promptText.isEmpty) {
+      await showBrowserAlert(
+        context,
+        'Vui lòng chọn hoặc nhập tiêu chí kiểm tra trước.',
+      );
+      return;
+    }
+    final targetType = _targetType;
+    setState(() {
+      _checkingPrompt = true;
+      _promptCheckToken = null;
+    });
+    final result = await checkPromptPreflight(
+      scope: 'compliance_check',
+      context: 'compliance_$targetType',
+      promptRole: 'criteria',
+      promptText: promptText,
+      targetId: targetId,
+    );
+    if (!mounted) return;
+    if (_targetType != targetType ||
+        _targetId != targetId ||
+        _currentPromptText != promptText) {
+      setState(() {
+        _checkingPrompt = false;
+        _promptCheckToken = null;
+      });
+      return;
+    }
+    setState(() {
+      _checkingPrompt = false;
+      _promptCheckToken = result.promptCheckToken;
+    });
+    if (!result.passed) {
+      await showBrowserAlert(context, promptPreflightFailureMessage(result));
+    }
   }
 
   bool _canRun() {
     if (_targetId == null || _loading) return false;
+    if ((_promptCheckToken ?? '').isEmpty) return false;
     if (_promptMode == 'saved') return _selectedPrompt != null;
     return _inlinePromptCtrl.text.trim().isNotEmpty;
   }
@@ -107,6 +185,7 @@ class _ComplianceCheckScreenState extends ConsumerState<ComplianceCheckScreen> {
       setState(() {
         _targetId = result.id;
         _targetLabel = result.label;
+        _promptCheckToken = null;
       });
     }
   }
@@ -147,6 +226,7 @@ class _ComplianceCheckScreenState extends ConsumerState<ComplianceCheckScreen> {
             targetType: _targetType,
             targetId: _targetId!,
             promptId: promptToUse.id,
+            promptCheckToken: _promptCheckToken!,
             force: force,
           );
       if (!mounted) return;
@@ -195,6 +275,7 @@ class _ComplianceCheckScreenState extends ConsumerState<ComplianceCheckScreen> {
                           _targetType = v ?? 'document';
                           _targetId = null;
                           _targetLabel = '';
+                          _promptCheckToken = null;
                         }),
                       ),
                       const Text('Văn bản'),
@@ -206,6 +287,7 @@ class _ComplianceCheckScreenState extends ConsumerState<ComplianceCheckScreen> {
                           _targetType = v ?? 'document';
                           _targetId = null;
                           _targetLabel = '';
+                          _promptCheckToken = null;
                         }),
                       ),
                       const Text('Mẫu văn bản'),
@@ -229,12 +311,45 @@ class _ComplianceCheckScreenState extends ConsumerState<ComplianceCheckScreen> {
               mode: _promptMode,
               selectedPrompt: _selectedPrompt,
               inlineCtrl: _inlinePromptCtrl,
-              onModeChanged: (m) => setState(() => _promptMode = m),
+              onModeChanged: (m) => setState(() {
+                _promptMode = m;
+                _promptCheckToken = null;
+              }),
               onPickSaved: _pickPrompt,
-              onClearSaved: () => setState(() => _selectedPrompt = null),
+              onClearSaved: () => setState(() {
+                _selectedPrompt = null;
+                _promptCheckToken = null;
+              }),
               onSaveInline: _saveInlinePrompt,
               onApplySuggestion: _applySuggestion,
-              onTextChanged: () => setState(() {}),
+              onTextChanged: () => setState(() => _promptCheckToken = null),
+            ),
+            const SizedBox(height: 10),
+            Center(
+              child: OutlinedButton.icon(
+                onPressed:
+                    _checkingPrompt || _loading || _currentPromptText.isEmpty
+                        ? null
+                        : _checkPrompt,
+                icon: _checkingPrompt
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        (_promptCheckToken ?? '').isEmpty
+                            ? Icons.fact_check_outlined
+                            : Icons.verified_user_outlined,
+                      ),
+                label: Text(
+                  _checkingPrompt
+                      ? 'Đang kiểm tra...'
+                      : (_promptCheckToken ?? '').isEmpty
+                          ? 'Check prompt'
+                          : 'Prompt đạt yêu cầu',
+                ),
+              ),
             ),
             const SizedBox(height: 16),
 

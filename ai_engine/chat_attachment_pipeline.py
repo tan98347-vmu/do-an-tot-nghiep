@@ -1,13 +1,19 @@
-"""Pipeline trich xuat noi dung tu attachment (PDF + anh) cho ChatAI / VoiceAI.
+"""
+chat_attachment_pipeline.py là gì?
 
-Khi user dinh kem PDF/anh vao mot turn ChatAI/VoiceAI, helper o day se:
-  1. Trich text raw tu PDF (qua `extract_pdf_text` cua rag_engine).
-  2. OCR text tu anh (qua `_extract_text_from_image_with_glm_ocr` cua api.views.ai_doc).
-  3. Ghep tat ca thanh mot khoi text duy nhat de truyen vao `extra_context`
-     cua `create_document_from_intent`.
+  ai_engine/chat_attachment_pipeline.py:1 là pipeline đọc nội dung các file PDF hoặc ảnh được đính kèm trong một lượt AI Assistant.
 
-Thiet ke per-turn: pipeline khong luu tru gi vao DB - bytes hoac path tam thoi
-duoc xu ly trong cung context request.
+  Nó không tạo văn bản, không lưu file và không trực tiếp gọi ChatAI để trả lời. Nhiệm vụ của nó là:
+
+  File PDF/ảnh
+      ↓
+  Trích xuất chữ
+      ↓
+  Cắt bớt nội dung quá dài
+      ↓
+  Ghép thành một chuỗi attachment_context
+      ↓
+  Đưa chuỗi này cho AI xử lý tiếp
 """
 
 from __future__ import annotations
@@ -19,6 +25,8 @@ from typing import List, Optional, Sequence
 logger = logging.getLogger('ai_engine.chat_attachment_pipeline')
 
 
+# def _truncate_text để cắt bớt văn bản về tối đa `limit` ký tự (mặc định 6000) và thêm dấu '[...cat bot...]' nếu vượt quá, tránh nhồi quá nhiều nội dung đính kèm vào ngữ cảnh LLM.
+# vd: text 8000 ký tự, limit 6000 -> trả 6000 ký tự đầu + '[...cat bot...]'.
 def _truncate_text(text: str, limit: int = 6000) -> str:
     text = str(text or '').strip()
     if len(text) <= limit:
@@ -26,6 +34,8 @@ def _truncate_text(text: str, limit: int = 6000) -> str:
     return text[:limit] + '\n[...cat bot...]'
 
 
+# def _safe_pdf_extract để trích text từ một file PDF đính kèm (qua extract_pdf_text của rag_engine); bọc try/except để lỗi đọc PDF không làm hỏng cả turn chat, trả chuỗi rỗng khi thất bại.
+# vd: PDF hợp lệ -> trả text; PDF hỏng/không đọc được -> log cảnh báo và trả ''.
 def _safe_pdf_extract(pdf_file_obj) -> str:
     try:
         from ai_engine.rag_engine import extract_pdf_text
@@ -36,6 +46,8 @@ def _safe_pdf_extract(pdf_file_obj) -> str:
         return ''
 
 
+# def _safe_image_extract để OCR text từ một ảnh đính kèm (qua _extract_text_from_image_with_glm_ocr); bọc try/except, trả chuỗi rỗng nếu OCR lỗi để không chặn luồng chat.
+# vd: ảnh CCCD -> trả text OCR; ảnh lỗi/định dạng lạ -> trả ''.
 def _safe_image_extract(image_file_obj, *, user) -> str:
     try:
         from api.views.ai_doc import _extract_text_from_image_with_glm_ocr
@@ -51,6 +63,8 @@ def _safe_image_extract(image_file_obj, *, user) -> str:
         return ''
 
 
+# def build_attachment_context để gộp nội dung trích/OCR từ tất cả PDF và ảnh đính kèm của một turn ChatAI/VoiceAI thành một khối text duy nhất (có nhãn từng attachment) làm extra_context; báo tiến độ qua task_id, trả chuỗi rỗng nếu không có hoặc không trích được gì.
+# vd: 1 PDF 'hopdong.pdf' + 1 ảnh 'cccd.jpg' -> '=== ATTACHMENT 1 (PDF: hopdong.pdf) ===... === ATTACHMENT 2 (IMAGE: cccd.jpg) ===...'.
 def build_attachment_context(
     *,
     user,
@@ -92,6 +106,8 @@ def build_attachment_context(
         except Exception:
             update_progress = None
 
+    # def _report là helper nội bộ để gửi tiến độ (phần trăm + nhãn bước) qua update_progress nếu có task_id; nuốt mọi lỗi để việc báo tiến độ không làm hỏng pipeline.
+    # vd: _report(20, 'Trich xuat PDF 1/2', 'hopdong.pdf') -> đẩy tiến độ 20% kèm nhãn cho client.
     def _report(percent: int, stage: str, detail: str = ''):
         if update_progress is not None:
             try:

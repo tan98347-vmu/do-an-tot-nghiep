@@ -1,8 +1,8 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH CỔNG KHÁCH — SINH VĂN BẢN (không cần đăng nhập) ===
+// Khách tải lên mẫu (_onTemplateFile 'guest/parse/'), file thông tin (_onInfoFile 'guest/parse-info/'), hoặc PDF (_onPdfFile 'guest/parse-pdf/').
+// - _generate 'guest/generate/' tạo văn bản từ các nguồn trên rồi mở /guest/document.
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:html' as html;
@@ -14,24 +14,15 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
 
-// Mục đích: Lớp `_GuestTemplateMode` triển khai phần việc `Guest Template Mode` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Chế độ mẫu khách: dùng biến có sẵn / tự nhận diện biến.
 
 enum _GuestTemplateMode { existingVariables, autoDetect }
 
-// Mục đích: Lớp `_FilePicker` triển khai phần việc `File Picker` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Bộ chọn 1 file (web) qua input HTML.
 
 class _FilePicker {
   late final html.FileUploadInputElement _el;
-  // Mục đích: Phương thức `Function` triển khai phần việc `Function` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Callback khi người dùng chọn được file.
 
   void Function(html.File)? onFile;
 
@@ -48,25 +39,16 @@ class _FilePicker {
     });
   }
 
-  // Mục đích: Phương thức `trigger` triển khai phần việc `trigger` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Kích hoạt hộp thoại chọn file.
 
   void trigger() => _el.click();
 
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Gỡ input file khỏi DOM.
 
   void dispose() => _el.remove();
 }
 
-// Mục đích: Hàm `_readBytes` triển khai phần việc `read Bytes` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là hàm thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Đọc bytes 1 file (web FileReader).
 
 Future<Uint8List?> _readBytes(html.File file) {
   final completer = Completer<Uint8List?>();
@@ -85,10 +67,7 @@ Future<Uint8List?> _readBytes(html.File file) {
   return completer.future;
 }
 
-// Mục đích: Widget `GuestAiScreen` triển khai phần việc `Guest Ai Screen` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn CHATAI/SINH VĂN BẢN CHO KHÁCH (cổng guest).
 
 class GuestAiScreen extends StatefulWidget {
   const GuestAiScreen({super.key});
@@ -97,10 +76,7 @@ class GuestAiScreen extends StatefulWidget {
   State<GuestAiScreen> createState() => _GuestAiScreenState();
 }
 
-// Mục đích: Widget `_GuestAiScreenState` triển khai phần việc `Guest Ai Screen State` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn khách: chọn mẫu/PDF/ảnh, sinh văn bản không cần đăng nhập.
 
 class _GuestAiScreenState extends State<GuestAiScreen> {
   late final _templatePicker = _FilePicker(accept: '.docx');
@@ -128,10 +104,7 @@ class _GuestAiScreenState extends State<GuestAiScreen> {
   String? _pdfPreview;
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở màn: khởi tạo bộ chọn file.
 
   void initState() {
     super.initState();
@@ -141,10 +114,7 @@ class _GuestAiScreenState extends State<GuestAiScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Rời màn: dọn bộ chọn file.
 
   void dispose() {
     _templatePicker.dispose();
@@ -156,10 +126,7 @@ class _GuestAiScreenState extends State<GuestAiScreen> {
     super.dispose();
   }
 
-  // Mục đích: Phương thức `_clearImportedTemplateState` triển khai phần việc `clear Imported Template State` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Xóa trạng thái mẫu đã nhập (giữ/đổi chế độ).
 
   void _clearImportedTemplateState({bool keepTemplateMode = true}) {
     for (final controller in _controllers.values) {
@@ -187,10 +154,7 @@ class _GuestAiScreenState extends State<GuestAiScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_onTemplateFile` triển khai phần việc `on Template File` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khi chọn file mẫu DOCX -> nhập & (nếu cần) nhận diện biến.
 
   Future<void> _onTemplateFile(html.File file) async {
     final bytes = await _readBytes(file);
@@ -270,10 +234,7 @@ class _GuestAiScreenState extends State<GuestAiScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_onInfoFile` triển khai phần việc `on Info File` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khi chọn file thông tin -> trích dữ liệu điền biến.
 
   Future<void> _onInfoFile(html.File file) async {
     final bytes = await _readBytes(file);
@@ -317,10 +278,7 @@ class _GuestAiScreenState extends State<GuestAiScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_onPdfFile` triển khai phần việc `on Pdf File` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khi chọn file PDF -> trích dữ liệu điền biến.
 
   Future<void> _onPdfFile(html.File file) async {
     final bytes = await _readBytes(file);
@@ -385,10 +343,7 @@ class _GuestAiScreenState extends State<GuestAiScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_generate` triển khai phần việc `generate` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút Sinh văn bản: gọi API tạo văn bản khách từ mẫu + dữ liệu đã nhập.
 
   Future<void> _generate() async {
     if (_templateBytes == null || _generating) return;
@@ -437,20 +392,14 @@ class _GuestAiScreenState extends State<GuestAiScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_resetTemplate` triển khai phần việc `reset Template` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đặt lại mẫu (chọn mẫu khác).
 
   void _resetTemplate() {
     _clearImportedTemplateState();
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng màn khách: chọn mẫu/nguồn dữ liệu + nút sinh + kết quả.
 
   Widget build(BuildContext context) {
     final hasTemplate = _templateBytes != null;
@@ -814,20 +763,14 @@ class _GuestAiScreenState extends State<GuestAiScreen> {
   }
 }
 
-// Mục đích: Lớp `_Panel` triển khai phần việc `Panel` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget khung panel có viền/tiêu đề.
 
 class _Panel extends StatelessWidget {
   final Widget child;
   const _Panel({required this.child});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng panel.
 
   Widget build(BuildContext context) {
     return Container(
@@ -849,20 +792,14 @@ class _Panel extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_SectionTitle` triển khai phần việc `Section Title` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget tiêu đề một mục.
 
 class _SectionTitle extends StatelessWidget {
   final String text;
   const _SectionTitle(this.text);
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng tiêu đề mục.
 
   Widget build(BuildContext context) {
     return Text(
@@ -872,10 +809,7 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_HeroBadge` triển khai phần việc `Hero Badge` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget badge nổi bật đầu màn.
 
 class _HeroBadge extends StatelessWidget {
   final IconData icon;
@@ -883,10 +817,7 @@ class _HeroBadge extends StatelessWidget {
   const _HeroBadge({required this.icon, required this.label});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng hero badge.
 
   Widget build(BuildContext context) {
     return Container(
@@ -914,10 +845,7 @@ class _HeroBadge extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_InfoStrip` triển khai phần việc `Info Strip` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget dải thông tin/hướng dẫn.
 
 class _InfoStrip extends StatelessWidget {
   final IconData icon;
@@ -925,10 +853,7 @@ class _InfoStrip extends StatelessWidget {
   const _InfoStrip({required this.icon, required this.label});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng dải thông tin.
 
   Widget build(BuildContext context) {
     return Container(
@@ -950,20 +875,14 @@ class _InfoStrip extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_ErrorBanner` triển khai phần việc `Error Banner` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget banner lỗi.
 
 class _ErrorBanner extends StatelessWidget {
   final String message;
   const _ErrorBanner(this.message);
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng banner lỗi.
 
   Widget build(BuildContext context) {
     return Container(
@@ -990,10 +909,7 @@ class _ErrorBanner extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_StatusRow` triển khai phần việc `Status Row` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget dòng trạng thái (icon + text).
 
 class _StatusRow extends StatelessWidget {
   final String label;
@@ -1001,10 +917,7 @@ class _StatusRow extends StatelessWidget {
   const _StatusRow({required this.label, required this.value});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/guest/guest_ai_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng dòng trạng thái.
 
   Widget build(BuildContext context) {
     return Padding(

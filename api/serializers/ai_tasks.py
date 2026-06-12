@@ -3,10 +3,14 @@ from rest_framework import serializers
 from ai_tasks.models import AITaskProgress
 
 
+# class AITaskProgressSerializer là serializer định nghĩa dữ liệu vào/ra (AITaskProgress).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class AITaskProgressSerializer(serializers.ModelSerializer):
     is_terminal = serializers.BooleanField(read_only=True)
     is_dismissed = serializers.SerializerMethodField()
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         model = AITaskProgress
         fields = (
@@ -21,5 +25,7 @@ class AITaskProgressSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
+    # def get_is_dismissed để lấy is dismissed (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_is_dismissed(self, obj: AITaskProgress) -> bool:
         return obj.is_dismissed

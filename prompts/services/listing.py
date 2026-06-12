@@ -32,6 +32,8 @@ PROMPT_VISIBILITY_VALUES = {Prompt.VISIBILITY_PRIVATE, Prompt.VISIBILITY_GROUP, 
 PROMPT_SOURCE_VALUES = {Prompt.SOURCE_CURATED, Prompt.SOURCE_USER_INLINE, Prompt.SOURCE_IMPORTED}
 
 
+# def _as_list lấy giá trị filter dạng danh sách từ query params (hỗ trợ getlist hoặc tách theo dấu phẩy), bỏ phần tử rỗng.
+# vd: ?scope=a,b&scope=c -> ['a','b','c'].
 def _as_list(params: Any, key: str) -> list[str]:
     if hasattr(params, 'getlist'):
         values = params.getlist(key)
@@ -47,6 +49,8 @@ def _as_list(params: Any, key: str) -> list[str]:
     return normalized
 
 
+# def _parse_date_param đọc tham số ngày dạng YYYY-MM-DD từ query; rỗng -> None; sai định dạng -> ValidationError.
+# vd: created_from='2026-06-01' -> date(2026,6,1).
 def _parse_date_param(params: Any, key: str) -> date | None:
     raw = str(params.get(key, '') or '').strip()
     if not raw:
@@ -57,10 +61,14 @@ def _parse_date_param(params: Any, key: str) -> date | None:
         raise ValidationError({key: 'Gia tri phai theo dinh dang YYYY-MM-DD.'}) from exc
 
 
+# def _parse_flag đọc tham số cờ boolean từ query (nhận 1/true/yes/on là True).
+# vd: review_mode='true' -> True.
 def _parse_flag(params: Any, key: str) -> bool:
     return str(params.get(key, '') or '').strip().lower() in {'1', 'true', 'yes', 'on'}
 
 
+# def _validated_scope_filters lấy và kiểm tra danh sách scope filter; scope lạ (không thuộc USAGE_SCOPES) -> ValidationError.
+# vd: scope='template_fill' hợp lệ; scope='abc' -> báo lỗi 'Scope khong hop le'.
 def _validated_scope_filters(params: Any) -> list[str]:
     scopes = _as_list(params, 'scope')
     invalid_scopes = [scope for scope in scopes if scope not in USAGE_SCOPES]
@@ -76,6 +84,8 @@ def _validated_scope_filters(params: Any) -> list[str]:
     return scopes
 
 
+# def _reviewable_prompt_queryset trả các prompt CẦN user này duyệt: admin -> mọi prompt pending/pending_leader; trưởng nhóm -> prompt pending_leader thuộc nhóm mình; người khác -> rỗng.
+# vd: trưởng nhóm 'Phòng A' -> các prompt của nhóm A đang chờ duyệt.
 def _reviewable_prompt_queryset(user) -> Prompt.objects.none().__class__:
     queryset = Prompt.objects.none()
     if user.is_superuser or user.is_staff:
@@ -94,6 +104,8 @@ def _reviewable_prompt_queryset(user) -> Prompt.objects.none().__class__:
     return queryset
 
 
+# def build_prompt_list_queryset dựng queryset danh sách prompt theo nhiều bộ lọc từ query params: review_mode (hàng chờ duyệt) hoặc phạm vi user được xem; lọc theo scope / q (tìm nhiều field) / status / visibility / owner(mine|shared) / shared_with_me / source / category / group / khoảng ngày, rồi sắp xếp theo sort. Mỗi tham số sai -> ValidationError.
+# vd: ?owner=mine&status=approved&sort=usage_desc -> prompt của tôi đã duyệt, sắp theo lượt dùng giảm dần.
 def build_prompt_list_queryset(user, params: Any):
     review_mode = _parse_flag(params, 'review_mode')
     queryset = _reviewable_prompt_queryset(user) if review_mode else get_accessible_prompts(user)

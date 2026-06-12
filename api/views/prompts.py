@@ -14,6 +14,14 @@ from accounts.permissions import (
     can_edit_prompt,
     get_accessible_prompts,
 )
+from api.security.prompt_guard import (
+    VERDICT_BLOCK,
+    prompt_check_expected_payload,
+    prompt_quality_suggestions,
+    run_prompt_preflight,
+    sign_prompt_check_token,
+)
+from api.security.prompt_preflight_llm import LLM_PREFLIGHT_LAYER
 from prompts.models import (
     PROMPT_STATUS_APPROVED,
     PROMPT_STATUS_PENDING,
@@ -32,10 +40,20 @@ from ..serializers.prompts import (
 )
 
 
+# Là gì: `_prompt_serializer_context` là helper nội bộ của module `prompts.py`, phục vụ nhóm tạo, sửa, chia sẻ và sử dụng prompt.
+# Chức năng backend: Hàm xử lý phần việc `prompt serializer context` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ thư viện prompt và các bộ chọn prompt.
+# Mối liên hệ: Hàm được các endpoint hoặc helper cùng module gọi khi cần cùng quy tắc xử lý.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _prompt_serializer_context(request):
     return {'request': request}
 
 
+# Là gì: `_validated_scope_filters` là helper nội bộ của module `prompts.py`, phục vụ nhóm tạo, sửa, chia sẻ và sử dụng prompt.
+# Chức năng backend: Hàm xử lý phần việc `validated scope filters` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ thư viện prompt và các bộ chọn prompt.
+# Mối liên hệ: Hàm phối hợp với `str.strip`, `request.query_params.getlist`, `ValidationError` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _validated_scope_filters(request):
     scopes = [
         str(scope or '').strip()
@@ -55,6 +73,11 @@ def _validated_scope_filters(request):
     return scopes
 
 
+# Là gì: `prompt_scope_list` là endpoint REST của nhóm tạo, sửa, chia sẻ và sử dụng prompt; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được thư viện prompt và các bộ chọn prompt sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `USAGE_SCOPES.items` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def prompt_scope_list(request):
@@ -66,6 +89,140 @@ def prompt_scope_list(request):
     })
 
 
+# Là gì: `prompt_check` là endpoint REST của nhóm tạo, sửa, chia sẻ và sử dụng prompt; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm kiểm tra điều kiện và trả kết quả để bước sau quyết định; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được thư viện prompt và các bộ chọn prompt sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `str.strip`, `request.data.get`, `USAGE_SCOPES.keys` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def prompt_check(request):
+    scope = str(request.data.get('scope') or '').strip()
+    context = str(request.data.get('context') or '').strip()
+    prompt_role = str(request.data.get('prompt_role') or '').strip()
+    prompt_text = str(request.data.get('prompt_text') or '').strip()
+    target_id = request.data.get('target_id')
+
+    allowed_scopes = {*USAGE_SCOPES.keys(), 'saved_prompt'}
+    if scope not in allowed_scopes:
+        return Response(
+            {
+                'verdict': 'block',
+                'reason': f'scope phai thuoc {sorted(allowed_scopes)}',
+                'flags': ['invalid_scope'],
+                'suggestions': prompt_quality_suggestions(
+                    scope=scope,
+                    context=context,
+                    prompt_role=prompt_role,
+                ),
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if not context:
+        return Response(
+            {
+                'verdict': 'block',
+                'reason': 'context la bat buoc.',
+                'flags': ['missing_context'],
+                'suggestions': prompt_quality_suggestions(
+                    scope=scope,
+                    context=context,
+                    prompt_role=prompt_role,
+                ),
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if not prompt_role:
+        return Response(
+            {
+                'verdict': 'block',
+                'reason': 'prompt_role la bat buoc.',
+                'flags': ['missing_prompt_role'],
+                'suggestions': prompt_quality_suggestions(
+                    scope=scope,
+                    context=context,
+                    prompt_role=prompt_role,
+                ),
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    final, audit = run_prompt_preflight(
+        prompt_text,
+        request.user,
+        scope=scope,
+        context=context,
+        prompt_role=prompt_role,
+        include_llm=True,
+    )
+    fallback_suggestions = prompt_quality_suggestions(
+        scope=scope,
+        context=context,
+        prompt_role=prompt_role,
+    )
+    suggestions = final.suggestions or fallback_suggestions
+    llm_result = next(
+        (
+            result
+            for result in audit
+            if result.layer == LLM_PREFLIGHT_LAYER
+        ),
+        None,
+    )
+    llm_review = llm_result.metadata if llm_result is not None else {}
+    rules_passed = not any(
+        result.verdict == VERDICT_BLOCK
+        for result in audit
+        if result.layer != LLM_PREFLIGHT_LAYER
+    )
+    checks = {
+        'rules': 'pass' if rules_passed else 'block',
+        'llm': (
+            'pass'
+            if llm_result is not None and llm_result.verdict != VERDICT_BLOCK
+            else 'block' if llm_result is not None else 'not_run'
+        ),
+    }
+    if final.verdict == VERDICT_BLOCK:
+        return Response(
+            {
+                'verdict': 'block',
+                'reason': final.reason or 'Prompt không đạt yêu cầu.',
+                'flags': final.flags,
+                'suggestions': suggestions,
+                'incident_id': final.incident_id,
+                'checks': checks,
+                'llm_review': llm_review,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    payload = prompt_check_expected_payload(
+        user_id=request.user.pk,
+        scope=scope,
+        context=context,
+        prompt_role=prompt_role,
+        prompt_text=prompt_text,
+        target_id=target_id,
+    )
+    return Response(
+        {
+            'verdict': 'pass',
+            'prompt_check_token': sign_prompt_check_token(payload),
+            'message': 'Prompt có thể sử dụng.',
+            'flags': final.flags,
+            'suggestions': [],
+            'checks': checks,
+            'llm_review': llm_review,
+        }
+    )
+
+
+# Là gì: `prompt_list_create` là endpoint REST của nhóm tạo, sửa, chia sẻ và sử dụng prompt; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp, đồng thời kiểm tra đầu vào và tạo dữ liệu mới; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được thư viện prompt và các bộ chọn prompt sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `build_prompt_list_queryset`, `PromptListSerializer`, `_prompt_serializer_context` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def prompt_list_create(request):
@@ -85,6 +242,11 @@ def prompt_list_create(request):
     return Response(detail.data, status=status.HTTP_201_CREATED)
 
 
+# Là gì: `prompt_detail` là endpoint REST của nhóm tạo, sửa, chia sẻ và sử dụng prompt; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được thư viện prompt và các bộ chọn prompt sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `get_accessible_prompts`, `PromptDetailSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def prompt_detail(request, pk):
@@ -116,6 +278,11 @@ def prompt_detail(request, pk):
     return Response(detail.data)
 
 
+# Là gì: `prompt_submit` là endpoint REST của nhóm tạo, sửa, chia sẻ và sử dụng prompt; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm gửi dữ liệu vào bước xử lý hoặc phê duyệt tiếp theo; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được thư viện prompt và các bộ chọn prompt sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `can_edit_prompt`, `resolve_prompt_status_on_create` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def prompt_submit(request, pk):
@@ -136,6 +303,11 @@ def prompt_submit(request, pk):
     return Response(serializer.data)
 
 
+# Là gì: `prompt_approve` là endpoint REST của nhóm tạo, sửa, chia sẻ và sử dụng prompt; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm chấp thuận yêu cầu và chuyển trạng thái nghiệp vụ; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được thư viện prompt và các bộ chọn prompt sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `can_approve_prompt`, `timezone.now` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def prompt_approve(request, pk):
@@ -152,6 +324,11 @@ def prompt_approve(request, pk):
     return Response(serializer.data)
 
 
+# Là gì: `prompt_reject` là endpoint REST của nhóm tạo, sửa, chia sẻ và sử dụng prompt; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm từ chối yêu cầu và ghi nhận lý do; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được thư viện prompt và các bộ chọn prompt sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `can_approve_prompt`, `str.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def prompt_reject(request, pk):
@@ -171,6 +348,11 @@ def prompt_reject(request, pk):
     return Response(serializer.data)
 
 
+# Là gì: `prompts_pending_review` là endpoint REST của nhóm tạo, sửa, chia sẻ và sử dụng prompt; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `prompts pending review` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được thư viện prompt và các bộ chọn prompt sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `Prompt.objects.none`, `Prompt.objects.filter`, `UserGroupMembership.objects.filter.values_list` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def prompts_pending_review(request):
@@ -202,6 +384,11 @@ def prompts_pending_review(request):
     return Response(serializer.data)
 
 
+# Là gì: `prompts_recent_used` là endpoint REST của nhóm tạo, sửa, chia sẻ và sử dụng prompt; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `prompts recent used` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được thư viện prompt và các bộ chọn prompt sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `strip`, `request.GET.get`, `get_accessible_prompts.filter.annotate.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def prompts_recent_used(request):

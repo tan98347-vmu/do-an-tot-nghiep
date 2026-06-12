@@ -1,5 +1,7 @@
 from __future__ import annotations
-
+'''
+assistant_quick_sign.py không có thuật toán ký riêng. Nó tái sử dụng chính services.py → pki.py → internal_pki.py, vì vậy chữ ký tạo bằng Quick Sign vẫn là chữ ký PKCS#7 giống luồng ký thông thường.
+'''
 import logging
 from dataclasses import dataclass
 

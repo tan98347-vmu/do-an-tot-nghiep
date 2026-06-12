@@ -1,4 +1,0 @@
-interface:
-  display_name: "Bug Fix Triage"
-  short_description: "Turn stacktraces into clean, targeted fixes"
-  default_prompt: "Use $bug-fix-triage to analyze this error or stacktrace, locate the real cause, choose the right repo skill, and apply a minimal clean fix."

@@ -1,3 +1,6 @@
+// === TAB HOẠT ĐỘNG CÔNG TY (trong chi tiết công ty) ===
+// Hiển thị nhật ký hoạt động gần đây của công ty (companyActivityProvider) dạng danh sách _ActivityTile.
+
 // r5/M9 — Tab Hoat dong: timeline 20 entry gan nhat.
 
 import 'package:flutter/material.dart';

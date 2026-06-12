@@ -1,8 +1,11 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH ĐIỀN THÔNG TIN & SINH VĂN BẢN TỪ MẪU ===
+// Hiển thị các biến của mẫu (templateDetailProvider) để điền tay hoặc tự động:
+// - 'Điền từ hồ sơ' (_doPrefill -> 'prefill-profile-async'), 'Điền từ ngữ cảnh công ty' (_doPrefillCompany -> 'prefill-company-async').
+// - 'Trích xuất từ PDF' (_extractFromPdf -> 'extract-pdf-async'), từ ảnh/camera OCR (_pickImageFromSource -> 'extract-image-async').
+// - Tùy chỉnh prompt + 'Check prompt' (kiểm an toàn) + xem trước (_showPreview 'ai/doc/preview/').
+// - _createDocument: POST 'ai/doc/create-async/' rồi mở /documents/<id>. recentPromptsProvider gợi ý prompt gần đây.
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
 import 'dart:async';
 import 'dart:html' as html;
 import 'dart:typed_data';
@@ -14,44 +17,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
-import '../../core/iframe_blocker.dart';
+import '../../core/browser_alert.dart';
 import '../../core/run_ai_task.dart';
 import '../../providers/documents_provider.dart';
+import '../../providers/prompt_preflight_provider.dart';
 import '../../providers/prompts_provider.dart';
 import '../../providers/recent_prompts_provider.dart';
 import '../../providers/templates_provider.dart';
 import '../../widgets/ai/prompt_picker_dialog.dart';
 import '../../widgets/ai/prompt_preview_dialog.dart';
-// === BEGIN R4: PromptToggleSection import ===
-import '../../widgets/ai/prompt_toggle_section.dart';
-// === END R4 ===
 import '../../widgets/ai/save_prompt_dialog.dart';
 
-// Mục đích: Lớp `_ImagePickSource` triển khai phần việc `Image Pick Source` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Nguồn chọn ảnh để trích thông tin: chụp camera / chọn từ thư viện.
 
 enum _ImagePickSource { camera, library }
 
-// Mục đích: Widget `AiDocFillScreen` triển khai phần việc `Ai Doc Fill Screen` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn ĐIỀN & SINH VĂN BẢN TỪ MẪU — ConsumerStatefulWidget; nhận templateId (+ prefill).
 
 class AiDocFillScreen extends ConsumerStatefulWidget {
   final int templateId;
   final bool prefill;
+  // Widget màn ĐIỀN THÔNG TIN & SINH VĂN BẢN TỪ MẪU; nhận templateId (+ prefill tùy chọn).
   const AiDocFillScreen({super.key, required this.templateId, this.prefill = false});
 
   @override
   ConsumerState<AiDocFillScreen> createState() => _AiDocFillScreenState();
 }
 
-// Mục đích: Widget `_AiDocFillScreenState` triển khai phần việc `Ai Doc Fill Screen State` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn điền: controller từng biến, ảnh/PDF nguồn, prompt tùy chỉnh, trạng thái tác vụ AI.
 
 class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
   final _titleCtrl = TextEditingController();
@@ -72,24 +65,18 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
   bool _extractingImage = false;
   int _previewCounter = 0;
   String? _previewToken;
+  String? _promptCheckToken;
+  bool _checkingPrompt = false;
   bool _saveAsPrompt = false;
 
-  // Mục đích: Phương thức `_supportsDirectCameraCapture` triển khai phần việc `supports Direct Camera Capture` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Trình duyệt/thiết bị có hỗ trợ chụp ảnh trực tiếp từ camera không (quyết định hiện nút chụp).
   bool _supportsDirectCameraCapture() {
     final userAgent = html.window.navigator.userAgent.toLowerCase();
     return RegExp(r'android|iphone|ipad|ipod').hasMatch(userAgent);
   }
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Mở màn: nạp mẫu + biến, khởi tạo controller cho từng biến, nạp prompt gần đây.
   void initState() {
     super.initState();
     if (widget.prefill) {
@@ -97,11 +84,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_resetTemplateState` triển khai phần việc `reset Template State` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Reset toàn bộ state khi đổi mẫu (controller biến, ảnh/PDF đã chọn, token check prompt).
   void _resetTemplateState() {
     for (final controller in _varCtrls.values) {
       controller.dispose();
@@ -116,6 +99,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     _ocrImageName = null;
     _ocrImageSourceLabel = null;
     _previewCounter = 0;
+    _promptCheckToken = null;
     _saving = false;
     _prefilling = false;
     _prefillingCompany = false;
@@ -125,11 +109,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `didUpdateWidget` triển khai phần việc `did Update Widget` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Khi đổi templateId (điều hướng sang mẫu khác) -> reset state và nạp lại mẫu.
   void didUpdateWidget(covariant AiDocFillScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.templateId == widget.templateId && oldWidget.prefill == widget.prefill) {
@@ -141,22 +121,14 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_fmtElapsed` triển khai phần việc `fmt Elapsed` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Định dạng thời gian đã trôi của tác vụ AI (mm:ss) để hiển thị tiến độ.
   String _fmtElapsed(Duration duration) {
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '${duration.inHours > 0 ? '${duration.inHours.toString().padLeft(2, '0')}:' : ''}$minutes:$seconds';
   }
 
-  // Mục đích: Phương thức `_logAiFlow` triển khai phần việc `log Ai Flow` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Ghi log mốc thời gian các bước luồng AI (prefill/extract/create) để chẩn đoán.
   void _logAiFlow(String flow, String message, Stopwatch stopwatch, [Map<String, Object?> extra = const {}]) {
     final suffix = extra.entries
         .where((entry) => entry.value != null)
@@ -167,9 +139,11 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     );
   }
 
+  // Tạo Options Dio (timeout dài, content-type) cho các request AI nặng.
   Options _aiRequestOptions({String? contentType}) =>
       ApiClient.ollamaOptions(contentType: contentType);
 
+  // Bọc 1 tác vụ AI: bấm giờ + log + xử lý hủy/lỗi chung.
   Future<T> _runTimedAiTask<T>({
     required String flow,
     required Future<T> Function(Stopwatch stopwatch) action,
@@ -195,11 +169,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Dựng màn: danh sách ô nhập biến + nút điền tự động (hồ sơ/công ty), trích từ PDF/ảnh, ô prompt tùy chỉnh, nút Xem trước & Tạo văn bản.
   Widget build(BuildContext context) {
     // Lắng nghe provider để widget tự động dựng lại khi dữ liệu hoặc trạng thái thay đổi.
 
@@ -541,7 +511,11 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
-                        onPressed: _saving ? null : () => _createDoc(tmpl),
+                        onPressed: _saving ||
+                                (_extraRulesCtrl.text.trim().isNotEmpty &&
+                                    (_promptCheckToken ?? '').isEmpty)
+                            ? null
+                            : () => _createDoc(tmpl),
                         icon: _saving
                             ? const SizedBox(width: 18, height: 18,
                                 child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
@@ -668,7 +642,11 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
                         ),
                         const SizedBox(width: 12),
                         FilledButton.icon(
-                          onPressed: _saving ? null : () => _createDoc(tmpl),
+                          onPressed: _saving ||
+                                  (_extraRulesCtrl.text.trim().isNotEmpty &&
+                                      (_promptCheckToken ?? '').isEmpty)
+                              ? null
+                              : () => _createDoc(tmpl),
                           icon: _saving
                               ? const SizedBox(width: 18, height: 18,
                                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
@@ -879,11 +857,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
 
   // ── Preview ────────────────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_showPreview` triển khai phần việc `show Preview` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nút Xem trước: hiển thị bản xem trước văn bản với giá trị biến hiện tại.
   Future<void> _showPreview(dynamic tmpl) async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
 
@@ -921,10 +895,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_openPreviewDialog` triển khai phần việc `open Preview Dialog` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở dialog xem trước nội dung văn bản (HTML) phóng to.
 
   void _openPreviewDialog(String htmlContent, String title) {
     final viewKey = 'doc-preview-${widget.templateId}-${_previewCounter++}';
@@ -968,7 +939,10 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
                 ),
               ]),
             ),
-            Expanded(child: IframeBlocker(child: HtmlElementView(viewType: viewKey))),
+            // Không bọc IframeBlocker ở đây: iframe NÀY chính là nội dung của dialog
+            // xem trước, nên không được tạm ẩn khi dialog mở (nếu bọc sẽ luôn hiện
+            // placeholder "tạm ẩn"). Các màn khác vẫn giữ IframeBlocker như cũ.
+            Expanded(child: HtmlElementView(viewType: viewKey)),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(
@@ -992,10 +966,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
 
   // ── Prefill from profile ───────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_doPrefill` triển khai phần việc `do Prefill` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Điền tự động từ hồ sơ (phương thức cũ, hiện không dùng).
 
   // ignore: unused_element
   Future<void> _doPrefill() async {
@@ -1062,10 +1033,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
 
   // ── Prefill from company context ──────────────────────────────────────────
 
-  // Mục đích: Phương thức `_doPrefillCompany` triển khai phần việc `do Prefill Company` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Điền tự động từ ngữ cảnh công ty (phương thức cũ, hiện không dùng).
 
   // ignore: unused_element
   Future<void> _doPrefillCompany() async {
@@ -1138,11 +1106,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
 
   // ── PDF extraction ────────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_pickPdf` triển khai phần việc `pick Pdf` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nút chọn file PDF nguồn để trích thông tin điền biến.
   Future<void> _pickPdf() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -1156,11 +1120,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_extractFromPdf` triển khai phần việc `extract From Pdf` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Trích thông tin từ PDF đã chọn (OCR/đọc text) -> điền vào các biến.
   Future<void> _extractFromPdf(dynamic tmpl) async {
     if (_pdfFile == null || _pdfFile!.bytes == null) return;
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -1223,11 +1183,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
 
   // ── Create document ───────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_showImageSourcePicker` triển khai phần việc `show Image Source Picker` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Mở lựa chọn nguồn ảnh (chụp camera / chọn từ máy) để trích thông tin.
   Future<void> _showImageSourcePicker() async {
     final source = await showModalBottomSheet<_ImagePickSource>(
       context: context,
@@ -1264,10 +1220,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_pickImageFromSource` triển khai phần việc `pick Image From Source` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Chọn ảnh từ nguồn (camera/thư viện) để trích thông tin điền biến.
 
   Future<void> _pickImageFromSource(_ImagePickSource source) async {
     if (source == _ImagePickSource.camera && !_supportsDirectCameraCapture()) {
@@ -1345,11 +1298,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_clearSelectedImage` triển khai phần việc `clear Selected Image` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Xóa ảnh đang chọn (hủy trích từ ảnh).
   void _clearSelectedImage() {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
 
@@ -1360,21 +1309,13 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_looksLikeHtmlPayload` triển khai phần việc `looks Like Html Payload` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Đoán chuỗi trả về có phải HTML (trang lỗi) thay vì dữ liệu hợp lệ không.
   bool _looksLikeHtmlPayload(String value) {
     final normalized = value.trimLeft().toLowerCase();
     return normalized.startsWith('<!doctype html') || normalized.startsWith('<html');
   }
 
-  // Mục đích: Phương thức `_sanitizeUiErrorMessage` triển khai phần việc `sanitize Ui Error Message` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Làm sạch thông báo lỗi trước khi hiển thị cho người dùng (bỏ HTML/kỹ thuật).
   String _sanitizeUiErrorMessage(String value, {required String fallback}) {
     final trimmed = value.trim();
     if (trimmed.isEmpty) return fallback;
@@ -1387,11 +1328,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     return trimmed;
   }
 
-  // Mục đích: Phương thức `_extractDioMessage` triển khai phần việc `extract Dio Message` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Rút thông điệp lỗi gọn từ lỗi Dio để hiển thị.
   String _extractDioMessage(Object error, {required String fallback}) {
     if (error is DioException) {
       final data = error.response?.data;
@@ -1410,6 +1347,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     return fallback;
   }
 
+  // Rút thông điệp lỗi cụ thể cho thao tác sinh văn bản (prefill/extract/create).
   String _extractAiDocActionError(
     Object error, {
     required String fallback,
@@ -1450,6 +1388,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     return (applied: applied, skipped: skipped);
   }
 
+  // Lấy map biến->giá trị từ kết quả tác vụ AI (để đổ vào controller).
   Map<String, dynamic> _taskVariables(Map<String, dynamic> result) {
     final raw = result['variables'];
     if (raw is Map) {
@@ -1458,6 +1397,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     return Map<String, dynamic>.from(result);
   }
 
+  // Báo snackbar khi người dùng hủy tác vụ AI đang chạy.
   void _showTaskCancelledSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1468,6 +1408,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     );
   }
 
+  // Thực thi điền từ hồ sơ qua AI task (có tiến độ/hủy).
   Future<void> _runProfilePrefill() async {
     setState(() => _prefilling = true);
     try {
@@ -1523,6 +1464,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     }
   }
 
+  // Thực thi điền từ ngữ cảnh công ty qua AI task (có tiến độ/hủy).
   Future<void> _runCompanyPrefill() async {
     setState(() => _prefillingCompany = true);
     try {
@@ -1578,11 +1520,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_extractFromImage` triển khai phần việc `extract From Image` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Trích thông tin từ ảnh đã chọn (OCR) -> điền vào các biến.
   Future<void> _extractFromImage(dynamic tmpl) async {
     if (_ocrImageBytes == null || _ocrImageName == null) return;
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -1666,10 +1604,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_buildImageExtractionPanel` triển khai phần việc `build Image Extraction Panel` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Panel chọn ảnh + nút trích thông tin từ ảnh (OCR).
 
   Widget _buildImageExtractionPanel(dynamic tmpl, {required bool compact}) {
     final titleStyle = compact
@@ -1789,11 +1724,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_downloadDocx` triển khai phần việc `download Docx` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Tải file DOCX của văn bản vừa tạo về máy.
   Future<void> _downloadDocx(int docId, String title) async {
     try {
       // Gọi API hoặc tác vụ bất đồng bộ rồi chờ kết quả trước khi cập nhật giao diện.
@@ -1814,11 +1745,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_createDoc` triển khai phần việc `create Doc` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nút TẠO VĂN BẢN: (kiểm prompt tùy chỉnh nếu có + kiểm định dạng biến/cảnh báo) rồi gọi tạo bất đồng bộ, xong mở /documents/<id>.
   Future<void> _createDoc(dynamic tmpl) async {
     if (_titleCtrl.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1915,6 +1842,86 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
       final vars = <String, String>{};
       _varCtrls.forEach((k, ctrl) => vars[k] = ctrl.text);
       debugPrint('[create-ai-document] step=collect-variables | variable_count=${vars.length}');
+      final extraRules = _extraRulesCtrl.text.trim();
+      if (extraRules.isNotEmpty && (_promptCheckToken ?? '').isEmpty) {
+        await showBrowserAlert(
+          context,
+          'Hãy bấm "Check prompt" và sửa yêu cầu bổ sung nếu cần trước khi tạo văn bản.',
+        );
+        setState(() => _saving = false);
+        return;
+      }
+
+      // Kiem tra dinh dang bien bang LLM (CHI canh bao, KHONG chan tao). Rieng
+      // luong sinh van ban tu mau. LLM loi -> available=false: bao nhe roi tao tiep.
+      bool acceptInvalidVariables = false;
+      final varCheck = await checkVariableFormats(
+        templateId: widget.templateId,
+        variables: vars,
+      );
+      if (!mounted) return;
+      if (varCheck.hasIssues) {
+        final proceed = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            title: const Row(children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 26),
+              SizedBox(width: 8),
+              Expanded(child: Text('Một số biến có thể chưa hợp lệ')),
+            ]),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('AI nhận thấy các biến sau có thể chưa đúng với kiểu biến:'),
+                  const SizedBox(height: 8),
+                  ...varCheck.issues.map((issue) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('• ${issue.name}: "${issue.value}"',
+                                style: const TextStyle(fontWeight: FontWeight.bold)),
+                            if (issue.reason.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 12),
+                                child: Text(issue.reason),
+                              ),
+                          ],
+                        ),
+                      )),
+                  const SizedBox(height: 4),
+                  const Text('Bạn có chắc chắn bỏ qua và tiếp tục tạo văn bản?'),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Sửa lại'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Bỏ qua & tiếp tục'),
+              ),
+            ],
+          ),
+        );
+        if (proceed != true) {
+          setState(() => _saving = false);
+          return;
+        }
+        acceptInvalidVariables = true;
+      } else if (!varCheck.available && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Không kiểm tra được định dạng biến, vẫn tạo bình thường.'),
+          ),
+        );
+      }
+
       final result = await _runTimedAiTask<Map<String, dynamic>>(
         flow: 'create-ai-document',
         action: (stopwatch) async {
@@ -1928,7 +1935,6 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
           _logAiFlow('create-ai-document', 'sending request', stopwatch);
           // Gọi API hoặc tác vụ bất đồng bộ rồi chờ kết quả trước khi cập nhật giao diện.
 
-          final extraRules = _extraRulesCtrl.text.trim();
           final promptName = _promptNameCtrl.text.trim();
           final response = await runAITask(
             context: context,
@@ -1937,9 +1943,12 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
               'template_id': widget.templateId,
               'variables': vars,
               'doc_title': _titleCtrl.text,
+              if (acceptInvalidVariables) 'accept_invalid_variables': true,
               if (_selectedPromptId != null) 'prompt_id': _selectedPromptId,
               if (_parentDocumentId != null) 'parent_document_id': _parentDocumentId,
               if (extraRules.isNotEmpty) 'user_extra_rules': extraRules,
+              if (extraRules.isNotEmpty && _promptCheckToken != null)
+                'prompt_check_token': _promptCheckToken,
               if (extraRules.isNotEmpty && _previewToken != null) 'preview_token': _previewToken,
               if (extraRules.isNotEmpty && _saveAsPrompt && promptName.isNotEmpty)
                 'save_as_prompt_title': promptName,
@@ -1960,6 +1969,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
       debugPrint('[create-ai-document] result | document_id=$docId | has_file=$hasFile');
       _parentDocumentId = null;
       _previewToken = null;
+      _promptCheckToken = null;
       if (!mounted) return;
       refreshDocumentCollections(ref);
       ref.invalidate(recentPromptsProvider);
@@ -2021,6 +2031,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     }
   }
 
+  // Xem trước prompt cuối cùng sẽ gửi cho AI (gồm rule tùy chỉnh).
   Future<void> _openPromptPreview(dynamic tmpl) async {
     final rules = _extraRulesCtrl.text.trim();
     final name = _promptNameCtrl.text.trim();
@@ -2049,6 +2060,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     }
   }
 
+  // Chọn 1 prompt đã lưu để áp vào ô prompt tùy chỉnh.
   Future<void> _pickSavedPrompt() async {
     final prompt = await PromptPickerDialog.show(
       context,
@@ -2062,6 +2074,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     });
   }
 
+  // Lưu prompt tùy chỉnh hiện tại để tái dùng lần sau.
   Future<void> _saveCurrentPrompt() async {
     final rules = _extraRulesCtrl.text.trim();
     if (rules.isEmpty) {
@@ -2094,18 +2107,52 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
     );
   }
 
-  Widget _buildExtraRulesBlock(dynamic tmpl) {
-    // === BEGIN R4: wrap editor in PromptToggleSection ===
-    return PromptToggleSection(
-      storageKey: 'prompt_toggle_ai_doc_fill',
-      labelHidden: 'Tùy chỉnh prompt',
-      labelShown: 'Ẩn tùy chỉnh',
-      child: _buildExtraRulesInnerCard(tmpl),
+  // Hủy hiệu lực token đã kiểm prompt khi prompt tùy chỉnh bị sửa (bắt kiểm lại).
+  void _invalidateExtraPromptChecks() {
+    _previewToken = null;
+    _promptCheckToken = null;
+  }
+
+  // Nút 'Kiểm tra prompt': chạy kiểm an toàn prompt tùy chỉnh, lấy prompt_check_token/preview_token.
+  Future<void> _checkExtraRulesPrompt() async {
+    final rules = _extraRulesCtrl.text.trim();
+    if (rules.isEmpty) {
+      await showBrowserAlert(context, 'Vui lòng nhập yêu cầu bổ sung trước khi kiểm tra prompt.');
+      return;
+    }
+    setState(() {
+      _checkingPrompt = true;
+      _promptCheckToken = null;
+    });
+    final result = await checkPromptPreflight(
+      scope: 'template_fill',
+      context: 'ai_doc_fill',
+      promptRole: 'extra_instruction',
+      promptText: rules,
+      targetId: widget.templateId,
     );
+    if (!mounted) return;
+    if (_extraRulesCtrl.text.trim() != rules) {
+      setState(() {
+        _checkingPrompt = false;
+        _promptCheckToken = null;
+      });
+      return;
+    }
+    setState(() {
+      _checkingPrompt = false;
+      _promptCheckToken = result.promptCheckToken;
+    });
+    if (!result.passed) {
+      await showBrowserAlert(context, promptPreflightFailureMessage(result));
+    }
+  }
+
+  Widget _buildExtraRulesBlock(dynamic tmpl) {
+    return _buildExtraRulesInnerCard(tmpl);
   }
 
   Widget _buildExtraRulesInnerCard(dynamic tmpl) {
-    // === END R4 ===
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
@@ -2117,7 +2164,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
               children: [
                 Icon(Icons.tune, size: 18, color: Colors.blue),
                 SizedBox(width: 8),
-                Text('Yêu cầu bổ sung cho AI (tuỳ chọn)',
+                Text('Tùy chỉnh prompt và kiểm tra trước khi tạo',
                     style: TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
@@ -2144,7 +2191,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
                             setState(() {
                               _selectedPromptId = null;
                               _promptNameCtrl.clear();
-                              _previewToken = null;
+                              _invalidateExtraPromptChecks();
                             });
                           },
                     icon: const Icon(Icons.close, size: 16),
@@ -2172,7 +2219,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
             _RecentPromptPicker(
               onSelected: (p) {
                 setState(() {
-                  _previewToken = null;
+                  _invalidateExtraPromptChecks();
                   if (p != null) {
                     _extraRulesCtrl.text =
                         p.rulesContent.isNotEmpty ? p.rulesContent : p.rulesContentPreview;
@@ -2194,13 +2241,37 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
               ),
               onChanged: (_) {
                 setState(() {
-                  if (_previewToken != null) _previewToken = null;
+                  _invalidateExtraPromptChecks();
                   if (_extraRulesCtrl.text.trim().isEmpty && _saveAsPrompt) {
                     _saveAsPrompt = false;
                     _promptNameCtrl.clear();
                   }
                 });
               },
+            ),
+            OutlinedButton.icon(
+              onPressed: _saving || _checkingPrompt || _extraRulesCtrl.text.trim().isEmpty
+                  ? null
+                  : _checkExtraRulesPrompt,
+              icon: _checkingPrompt
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      (_promptCheckToken ?? '').isEmpty
+                          ? Icons.fact_check_outlined
+                          : Icons.verified_user_outlined,
+                      size: 16,
+                    ),
+              label: Text(
+                _checkingPrompt
+                    ? 'Đang kiểm tra...'
+                    : (_promptCheckToken ?? '').isEmpty
+                        ? 'Check prompt'
+                        : 'Prompt đạt yêu cầu',
+              ),
             ),
             const SizedBox(height: 8),
             Container(
@@ -2231,7 +2302,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
                             setState(() {
                               _saveAsPrompt = v;
                               if (!v) _promptNameCtrl.clear();
-                              _previewToken = null;
+                              _invalidateExtraPromptChecks();
                             });
                           },
                   ),
@@ -2264,7 +2335,11 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
                 ElevatedButton.icon(
                   icon: const Icon(Icons.preview, size: 16),
                   label: const Text('Xem prompt cuối & Tạo văn bản'),
-                  onPressed: _saving ? null : () => _openPromptPreview(tmpl),
+                  onPressed: _saving ||
+                          (_extraRulesCtrl.text.trim().isNotEmpty &&
+                              (_promptCheckToken ?? '').isEmpty)
+                      ? null
+                      : () => _openPromptPreview(tmpl),
                 ),
                 const SizedBox(width: 8),
                 if (_extraRulesCtrl.text.trim().isEmpty)
@@ -2281,11 +2356,7 @@ class _AiDocFillScreenState extends ConsumerState<AiDocFillScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/ai_doc/ai_doc_fill_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Rời màn: giải phóng các controller biến + tài nguyên.
   void dispose() {
     _titleCtrl.dispose();
     _extraRulesCtrl.dispose();
@@ -2319,6 +2390,7 @@ class _RecentPromptPickerState extends ConsumerState<_RecentPromptPicker> {
     super.dispose();
   }
 
+  // Định dạng mốc thời gian của prompt đã lưu để hiển thị.
   String _formatTime(String? iso) {
     if (iso == null || iso.isEmpty) return '';
     try {
@@ -2333,6 +2405,7 @@ class _RecentPromptPickerState extends ConsumerState<_RecentPromptPicker> {
     }
   }
 
+  // Màu badge theo phạm vi hiển thị của prompt (riêng tư/nhóm/công khai).
   Color _visibilityColor(String v) {
     switch (v) {
       case 'public':
@@ -2344,6 +2417,7 @@ class _RecentPromptPickerState extends ConsumerState<_RecentPromptPicker> {
     }
   }
 
+  // Nhãn phạm vi hiển thị của prompt đã lưu.
   String _visibilityLabel(String v) {
     switch (v) {
       case 'public':
@@ -2355,6 +2429,7 @@ class _RecentPromptPickerState extends ConsumerState<_RecentPromptPicker> {
     }
   }
 
+  // Lọc danh sách prompt đã lưu theo tìm kiếm/tag/phạm vi.
   List<RecentPromptItem> _applyFilters(List<RecentPromptItem> list) {
     final q = _searchCtrl.text.trim().toLowerCase();
     final filtered = list.where((p) {
@@ -2386,6 +2461,7 @@ class _RecentPromptPickerState extends ConsumerState<_RecentPromptPicker> {
     return filtered;
   }
 
+  // Gom tập tag từ danh sách prompt (cho bộ lọc tag).
   List<String> _collectTags(List<RecentPromptItem> list) {
     final set = <String>{};
     for (final p in list) {
@@ -2397,12 +2473,14 @@ class _RecentPromptPickerState extends ConsumerState<_RecentPromptPicker> {
     return tags;
   }
 
+  // Đang có bộ lọc prompt nào được bật không (để hiện nút xóa lọc).
   bool _hasActiveFilter() =>
       _searchCtrl.text.trim().isNotEmpty ||
       _visibilityFilter != 'all' ||
       _ownerFilter != 'all' ||
       _selectedTag != null;
 
+  // Xóa toàn bộ bộ lọc prompt đã lưu.
   void _resetFilters() {
     setState(() {
       _searchCtrl.clear();
@@ -2413,6 +2491,7 @@ class _RecentPromptPickerState extends ConsumerState<_RecentPromptPicker> {
     });
   }
 
+  // Dựng thanh lọc cho danh sách prompt đã lưu (tìm/tag/phạm vi).
   Widget _buildFilterBar(List<RecentPromptItem> allList, int filteredCount) {
     final tags = _collectTags(allList);
     return Padding(
@@ -2553,6 +2632,7 @@ class _RecentPromptPickerState extends ConsumerState<_RecentPromptPicker> {
     );
   }
 
+  // Dựng 1 dòng prompt đã lưu trong danh sách chọn.
   Widget _buildPromptItem(RecentPromptItem p) {
     final selected = p.id == _selectedId;
     return InkWell(

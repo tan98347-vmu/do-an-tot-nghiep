@@ -1,8 +1,9 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH HỎI ĐÁP TÀI LIỆU (RAG) + LỊCH SỬ ===
+// Hỏi đáp dựa trên mẫu/văn bản đã đánh chỉ mục, trả lời kèm trích dẫn nguồn.
+// - Sidebar phiên (_RagSidebar/_RagSessionList): _loadSessions() GET 'ai/rag/sessions/'; chọn phiên -> _loadMessages() GET '.../messages/'.
+// - _send(): POST 'ai/rag/query/' với câu hỏi + chế độ nguồn (_changeMode: mẫu/văn bản). _newConversation(): mở phiên mới.
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -15,10 +16,7 @@ import '../../models/chat.dart';
 import '../../widgets/ai/chat_history_manager_dialog.dart';
 import '../../widgets/ai/citation_sections.dart';
 
-// Mục đích: Widget `RagHistoryScreen` triển khai phần việc `Rag History Screen` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn HỎI ĐÁP RAG / LỊCH SỬ (StatefulWidget).
 
 class RagHistoryScreen extends StatefulWidget {
   const RagHistoryScreen({super.key});
@@ -27,10 +25,7 @@ class RagHistoryScreen extends StatefulWidget {
   State<RagHistoryScreen> createState() => _RagHistoryScreenState();
 }
 
-// Mục đích: Widget `_RagHistoryScreenState` triển khai phần việc `Rag History Screen State` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn RAG: phiên hỏi đáp, tin nhắn, gửi câu hỏi, đổi chế độ.
 
 class _RagHistoryScreenState extends State<RagHistoryScreen> {
   final _composerCtrl = TextEditingController();
@@ -51,10 +46,7 @@ class _RagHistoryScreenState extends State<RagHistoryScreen> {
   String get _featureKey => ConversationBootstrapStore.ragFeatureForMode(_mode);
 
   @override
-  // Mục đích: Phương thức `didChangeDependencies` triển khai phần việc `did Change Dependencies` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khi vào màn/đổi tham số -> nạp phiên (theo deep-link).
 
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -81,10 +73,7 @@ class _RagHistoryScreenState extends State<RagHistoryScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Rời màn: dọn controller.
 
   void dispose() {
     _composerCtrl.dispose();
@@ -92,10 +81,7 @@ class _RagHistoryScreenState extends State<RagHistoryScreen> {
     super.dispose();
   }
 
-  // Mục đích: Phương thức `_loadSessions` triển khai phần việc `load Sessions` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nạp danh sách phiên hỏi đáp RAG.
 
   Future<void> _loadSessions({int? preferredSessionId}) async {
     if (!mounted) return;
@@ -160,10 +146,7 @@ class _RagHistoryScreenState extends State<RagHistoryScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_loadMessages` triển khai phần việc `load Messages` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nạp tin nhắn của 1 phiên (có thể focus 1 tin).
 
   Future<void> _loadMessages(int sessionId, {int? focusMessageId}) async {
     if (!mounted) return;
@@ -200,10 +183,7 @@ class _RagHistoryScreenState extends State<RagHistoryScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_send` triển khai phần việc `send` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút Gửi: gửi câu hỏi RAG và nhận trả lời kèm trích dẫn.
 
   Future<void> _send() async {
     final text = _composerCtrl.text.trim();
@@ -276,10 +256,7 @@ class _RagHistoryScreenState extends State<RagHistoryScreen> {
     setState(() => _sending = false);
   }
 
-  // Mục đích: Phương thức `_newConversation` triển khai phần việc `new Conversation` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tạo phiên hỏi đáp mới.
 
   Future<void> _newConversation() async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -293,10 +270,7 @@ class _RagHistoryScreenState extends State<RagHistoryScreen> {
     await ConversationBootstrapStore.rememberSession(_featureKey, null);
   }
 
-  // Mục đích: Phương thức `_changeMode` triển khai phần việc `change Mode` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đổi chế độ hỏi đáp (phạm vi tìm kiếm).
 
   void _changeMode(String mode) {
     if (_mode == mode) return;
@@ -316,10 +290,7 @@ class _RagHistoryScreenState extends State<RagHistoryScreen> {
     _loadSessions();
   }
 
-  // Mục đích: Phương thức `_openHistorySheet` triển khai phần việc `open History Sheet` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở bảng lịch sử phiên (mobile).
 
   void _openHistorySheet() {
     final strings = AppStrings.of(context);
@@ -346,10 +317,7 @@ class _RagHistoryScreenState extends State<RagHistoryScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_selfRoute` triển khai phần việc `self Route` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Sinh route tới chính màn này (giữ phiên/tin nhắn).
 
   String _selfRoute({
     String? modeOverride,
@@ -375,10 +343,7 @@ class _RagHistoryScreenState extends State<RagHistoryScreen> {
     return Uri(path: '/rag', queryParameters: params).toString();
   }
 
-  // Mục đích: Phương thức `_scrollToBottom` triển khai phần việc `scroll To Bottom` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Cuộn xuống tin mới nhất.
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -391,10 +356,7 @@ class _RagHistoryScreenState extends State<RagHistoryScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_scrollToMessage` triển khai phần việc `scroll To Message` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Cuộn tới 1 tin nhắn cụ thể.
 
   void _scrollToMessage(int? messageId) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -403,10 +365,7 @@ class _RagHistoryScreenState extends State<RagHistoryScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_readableError` triển khai phần việc `readable Error` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đổi lỗi thành thông điệp dễ đọc.
 
   String _readableError(Object error) {
     if (error is DioException) {
@@ -418,10 +377,7 @@ class _RagHistoryScreenState extends State<RagHistoryScreen> {
     return 'Đã xảy ra lỗi: $error';
   }
 
-  // Mục đích: Phương thức `_showError` triển khai phần việc `show Error` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Hiện thông báo lỗi.
 
   void _showError(String message) {
     ScaffoldMessenger.of(context)
@@ -429,10 +385,7 @@ class _RagHistoryScreenState extends State<RagHistoryScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khung màn RAG: chọn bố cục mobile/desktop.
 
   Widget build(BuildContext context) {
     final isWide = MediaQuery.sizeOf(context).width >= 1100;
@@ -462,10 +415,7 @@ class _RagHistoryScreenState extends State<RagHistoryScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_buildMobileLayout` triển khai phần việc `build Mobile Layout` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Bố cục mobile: hội thoại toàn màn.
 
   Widget _buildMobileLayout() {
     final strings = AppStrings.of(context);
@@ -526,10 +476,7 @@ class _RagHistoryScreenState extends State<RagHistoryScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_buildConversation` triển khai phần việc `build Conversation` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khung hội thoại RAG: tin nhắn + trích dẫn + ô hỏi.
 
   Widget _buildConversation({required bool showHeader}) {
     final strings = AppStrings.of(context);
@@ -748,10 +695,7 @@ class _RagHistoryScreenState extends State<RagHistoryScreen> {
   }
 }
 
-// Mục đích: Lớp `_RagSidebar` triển khai phần việc `Rag Sidebar` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Thanh bên: danh sách phiên RAG + tạo mới.
 
 class _RagSidebar extends StatelessWidget {
   final String mode;
@@ -775,10 +719,7 @@ class _RagSidebar extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng thanh bên RAG.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -843,10 +784,7 @@ class _RagSidebar extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_RagSessionList` triển khai phần việc `Rag Session List` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Danh sách phiên hỏi đáp.
 
 class _RagSessionList extends StatelessWidget {
   final List<ChatSession> sessions;
@@ -864,10 +802,7 @@ class _RagSessionList extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng danh sách phiên.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -967,10 +902,7 @@ class _RagSessionList extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_RagEmptyState` triển khai phần việc `Rag Empty State` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Trạng thái trống khi chưa hỏi gì.
 
 class _RagEmptyState extends StatelessWidget {
   final String mode;
@@ -978,10 +910,7 @@ class _RagEmptyState extends StatelessWidget {
   const _RagEmptyState({required this.mode});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/rag/rag_history_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng trạng thái trống.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);

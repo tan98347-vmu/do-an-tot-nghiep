@@ -3,6 +3,8 @@
 from django.db import migrations
 
 
+# class Migration là bước migration thay đổi cấu trúc CSDL (theo tên file: rename ai engine co target  d779ca idx ai engine c target  615408 idx).
+# vd: chạy "python manage.py migrate" để áp dụng thay đổi schema này vào database.
 class Migration(migrations.Migration):
 
     dependencies = [

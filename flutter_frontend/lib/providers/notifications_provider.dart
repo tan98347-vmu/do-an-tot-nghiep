@@ -7,7 +7,7 @@ final notificationsProvider =
     FutureProvider.autoDispose<List<AggregateNotificationItem>>((ref) async {
   final resp = await ApiClient().dio.get(
     'notifications/aggregate/',
-    queryParameters: {'limit': 30},
+    queryParameters: {'limit': 100},
   );
   return (resp.data as List)
       .map(

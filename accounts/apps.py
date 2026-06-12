@@ -1,9 +1,5 @@
 """
-Thuoc chuc nang nao: Khoi dong app tai khoan, ho so nguoi dung va nen phan quyen dung chung.
-Vai tro backend: File nay dang ky cau hinh app `accounts` de Django biet thoi diem nap signal va cac side effect can thiet cho user profile, ma nhan vien va credential ky so noi bo.
-Vai tro cua no trong frontend: Frontend thay doi gian tiep qua viec API dang nhap, ho so va cac badge quyen chi hoat dong dung khi app `accounts` da nap day du signal ngay tu luc backend start.
-Moi lien he voi nhung ham / source khac: Ket noi truc tiep voi `accounts.signals`, `accounts.models`, `accounts.permissions`, `api/serializers/auth.py` va luong tao credential trong `signing.internal_pki`.
-Tac dung: Bao dam app tai khoan khong chi co model ma con kich hoat dung cac hook can chay ngay khi Django khoi dong.
+cấu hình một app Django cho quản lý tài khoản và hồ sơ người dùng, bao gồm metadata và logic khởi động để đảm bảo rằng các tín hiệu liên quan đến việc tạo hồ sơ người dùng và chứng chỉ ký số được đăng ký đúng cách khi ứng dụng được tải.
 """
 
 from django.apps import AppConfig

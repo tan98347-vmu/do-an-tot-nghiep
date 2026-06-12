@@ -21,6 +21,11 @@ PEER_ACTIVE = 'active'
 PEER_REJECTED = 'rejected'
 
 
+# Là gì: `get_owner_groups_ids` là hàm điều phối nghiệp vụ của module `peer_share.py`, thuộc nhóm chuẩn hóa và áp dụng quyền chia sẻ ngang hàng.
+# Chức năng backend: Hàm đọc và trả về dữ liệu cần thiết; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các thao tác chia sẻ tài liệu, mẫu và prompt.
+# Mối liên hệ: Hàm phối hợp với `UserGroupMembership.objects.filter.values_list`, `UserGroupMembership.objects.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def get_owner_groups_ids(owner) -> list[int]:
     return list(
         UserGroupMembership.objects.filter(user=owner)
@@ -28,6 +33,11 @@ def get_owner_groups_ids(owner) -> list[int]:
     )
 
 
+# Là gì: `can_approve_peer_share` là hàm điều phối nghiệp vụ của module `peer_share.py`, thuộc nhóm chuẩn hóa và áp dụng quyền chia sẻ ngang hàng.
+# Chức năng backend: Hàm chấp thuận yêu cầu và chuyển trạng thái nghiệp vụ, đồng thời thiết lập hoặc cập nhật quyền chia sẻ tài nguyên; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các thao tác chia sẻ tài liệu, mẫu và prompt.
+# Mối liên hệ: Hàm phối hợp với `get_user_company`, `get_owner_groups_ids`, `UserGroupMembership.objects.filter.exists` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def can_approve_peer_share(viewer, owner) -> tuple[bool, str]:
     """Viewer la leader cua it nhat 1 nhom cua owner, hoac la superuser."""
     if not viewer or not viewer.is_authenticated:
@@ -52,6 +62,11 @@ def can_approve_peer_share(viewer, owner) -> tuple[bool, str]:
     return True, ''
 
 
+# Là gì: `validate_user_ids_in_company` là hàm điều phối nghiệp vụ của module `peer_share.py`, thuộc nhóm chuẩn hóa và áp dụng quyền chia sẻ ngang hàng.
+# Chức năng backend: Hàm kiểm tra dữ liệu theo các quy tắc nghiệp vụ; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các thao tác chia sẻ tài liệu, mẫu và prompt.
+# Mối liên hệ: Hàm phối hợp với `CompanyUserMembership.objects.filter.values_list`, `CompanyUserMembership.objects.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def validate_user_ids_in_company(user_ids: Iterable[int], company) -> tuple[list[int], list[int]]:
     """Tach user_ids thanh (valid_in_company, invalid)."""
     ids = [int(uid) for uid in user_ids if uid is not None]
@@ -66,6 +81,11 @@ def validate_user_ids_in_company(user_ids: Iterable[int], company) -> tuple[list
     return valid_ids, invalid
 
 
+# Là gì: `replace_audience` là hàm điều phối nghiệp vụ của module `peer_share.py`, thuộc nhóm chuẩn hóa và áp dụng quyền chia sẻ ngang hàng.
+# Chức năng backend: Hàm xử lý phần việc `replace audience` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các thao tác chia sẻ tài liệu, mẫu và prompt.
+# Mối liên hệ: Hàm phối hợp với `ids.remove`, `transaction.atomic`, `audience_model.objects.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect ghi cơ sở dữ liệu.
 def replace_audience(entity, audience_model, user_ids: Iterable[int], added_by, fk_name: str):
     """
     Replace toan bo audience cua entity.
@@ -95,6 +115,11 @@ def replace_audience(entity, audience_model, user_ids: Iterable[int], added_by, 
             )
 
 
+# Là gì: `set_peer_status` là hàm điều phối nghiệp vụ của module `peer_share.py`, thuộc nhóm chuẩn hóa và áp dụng quyền chia sẻ ngang hàng.
+# Chức năng backend: Hàm thiết lập giá trị hoặc trạng thái theo đầu vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các thao tác chia sẻ tài liệu, mẫu và prompt.
+# Mối liên hệ: Hàm phối hợp với `timezone.now`, `entity.save` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect ghi cơ sở dữ liệu.
 def set_peer_status(entity, status: str, approver=None, note: str = ''):
     entity.peer_share_status = status
     if status == PEER_ACTIVE:

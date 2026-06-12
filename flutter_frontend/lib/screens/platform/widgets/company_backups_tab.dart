@@ -1,3 +1,6 @@
+// === TAB SAO LƯU CÔNG TY (trong chi tiết công ty, platform-admin) ===
+// Hiển thị bản backup gần nhất (_LastBackupCard) + trạng thái (_StatusChip); dẫn tới trang quản trị (/admin).
+
 // r5/M9 + M10 — Tab Backup: hien thi last_backup + badge ma hoa/ky so.
 
 import 'package:flutter/material.dart';

@@ -1,8 +1,16 @@
 """Aggregate stats cho 1 company — dashboard platform admin (r5/M9).
+• accounts/services/company_stats.py dùng để tổng hợp số liệu chi tiết của một công ty cho màn hình quản trị Platform Admin.
 
-API duy nhat: `compute_company_stats(company) -> dict`.
-Co cache 5 phut bang `django.core.cache`. Khi can luc nao bypass cache
-(vi du goi tu management command), truyen `bypass_cache=True`.
+  File: accounts/services/company_stats.py:1
+
+  ## Luồng Hoạt Động
+
+  Flutter Platform Admin
+  → API chi tiết công ty
+  → compute_company_stats(company)
+  → truy vấn nhiều app và quét media
+  → cache kết quả 5 phút
+  → trả dictionary/JSON
 """
 
 from datetime import timedelta
@@ -17,14 +25,14 @@ from django.utils import timezone
 CACHE_TTL_SECONDS = 300
 CACHE_KEY_PREFIX = 'r5_company_stats'
 
-
+# def _safe_count để thực hiện đếm số lượng bản ghi trong một queryset một cách an toàn, tránh các lỗi có thể xảy ra khi truy vấn cơ sở dữ liệu. Nó cố gắng gọi phương thức count() trên queryset và trả về kết quả dưới dạng số nguyên. Nếu có bất kỳ lỗi nào xảy ra trong quá trình này (ví dụ: lỗi kết nối cơ sở dữ liệu, lỗi truy vấn không hợp lệ), nó sẽ bắt ngoại lệ và trả về 0 thay vì gây ra lỗi, giúp đảm bảo rằng hệ thống vẫn hoạt động ổn định ngay cả khi có sự cố với truy vấn cơ sở dữ liệu.
 def _safe_count(qs) -> int:
     try:
         return int(qs.count())
     except Exception:
         return 0
 
-
+# def _media_company_dir để trả về đường dẫn đến thư mục media của công ty nếu tồn tại. Nó sử dụng hàm company_storage_slug để xác định slug của công ty, sau đó xây dựng đường dẫn đến thư mục media dựa trên MEDIA_ROOT và cấu trúc lưu trữ đã định nghĩa. Nếu thư mục công ty tồn tại, nó sẽ trả về đối tượng Path tương ứng; nếu không tồn tại hoặc nếu có lỗi xảy ra, nó sẽ trả về None, cho biết rằng không thể xác định thư mục media cho công ty đó.
 def _media_company_dir(company) -> Optional[Path]:
     """Tra ve thu muc media/companies/<slug> neu ton tai."""
     try:
@@ -36,7 +44,7 @@ def _media_company_dir(company) -> Optional[Path]:
     company_dir = media_root / 'companies' / slug
     return company_dir if company_dir.exists() else None
 
-
+# def _compute_storage_total_bytes để tính tổng dung lượng lưu trữ của một công ty bằng cách quét qua tất cả các file trong thư mục media của công ty và cộng dồn kích thước của chúng. Nó sử dụng hàm _media_company_dir để lấy đường dẫn đến thư mục media của công ty, sau đó sử dụng phương thức rglob để tìm tất cả các file trong thư mục đó và cộng dồn kích thước của chúng bằng cách gọi stat().st_size. Nếu thư mục công ty không tồn tại hoặc nếu có lỗi xảy ra trong quá trình quét và tính toán, nó sẽ trả về 0, cho biết rằng không có dung lượng lưu trữ nào được sử dụng hoặc không thể xác định được dung lượng lưu trữ cho công ty đó.
 def _compute_storage_total_bytes(company_dir: Optional[Path]) -> int:
     if company_dir is None or not company_dir.exists():
         return 0
@@ -52,7 +60,7 @@ def _compute_storage_total_bytes(company_dir: Optional[Path]) -> int:
         pass
     return total
 
-
+# def _compute_storage_by_subdir để phân loại dung lượng lưu trữ theo cấp-1 subdir trong cấu trúc lưu trữ của công ty. Nó lấy đường dẫn đến thư mục media của công ty, sau đó quét qua tất cả các thư mục con cấp 1 và tính tổng dung lượng của các file trong mỗi thư mục con đó. Kết quả là một dictionary với tên thư mục con làm khóa và tổng dung lượng lưu trữ của các file trong thư mục đó làm giá trị. Nếu thư mục công ty không tồn tại hoặc nếu có lỗi xảy ra trong quá trình quét và tính toán, nó sẽ trả về một dictionary rỗng, cho biết rằng không thể xác định được phân loại dung lượng lưu trữ cho công ty đó.
 def _compute_storage_by_subdir(company_dir: Optional[Path]) -> dict:
     """Phan loai dung luong theo cap-1 subdir trong companies/<slug>/."""
     if company_dir is None or not company_dir.exists():
@@ -77,7 +85,7 @@ def _compute_storage_by_subdir(company_dir: Optional[Path]) -> dict:
         pass
     return result
 
-
+# def _serialize_company để chuyển đổi đối tượng Company thành một dictionary có cấu trúc dữ liệu đơn giản, bao gồm các trường thông tin cơ bản của công ty như id, code, slug, name, status, description, industry, address, email, phone, website, company_context, created_at và updated_at. Nó sử dụng getattr để lấy giá trị của các trường có thể không tồn tại và đảm bảo rằng chúng luôn có giá trị hợp lệ (ví dụ: chuỗi rỗng hoặc None). Kết quả của hàm này là một dictionary chứa thông tin chi tiết về công ty được chuẩn hóa và dễ dàng sử dụng trong các phần khác của hệ thống.
 def _serialize_company(company) -> dict:
     """Field thuc te ton tai trong Company model (xem accounts/models.py:27)."""
     return {
@@ -97,7 +105,7 @@ def _serialize_company(company) -> dict:
         'updated_at': company.updated_at.isoformat() if getattr(company, 'updated_at', None) else None,
     }
 
-
+# def _compute_counts để tính toán các số liệu thống kê cơ bản cho một công ty, bao gồm số lượng người dùng, phòng ban, vị trí, mẫu tài liệu, tài liệu, prompts và bản sao lưu liên quan đến công ty đó. Nó thực hiện các truy vấn cơ sở dữ liệu để đếm số lượng bản ghi tương ứng với công ty và trả về một dictionary chứa các số liệu thống kê này. Nếu có lỗi xảy ra trong quá trình truy vấn cơ sở dữ liệu, nó sẽ trả về 0 cho các số liệu thống kê tương ứng, đảm bảo rằng hệ thống vẫn hoạt động ổn định ngay cả khi có sự cố với truy vấn cơ sở dữ liệu.
 def _compute_counts(company) -> dict:
     from documents.models import Document
     from document_templates.models import DocumentTemplate
@@ -129,7 +137,7 @@ def _compute_counts(company) -> dict:
         'backups': backup_count,
     }
 
-
+# def _compute_last_backup để lấy thông tin về bản sao lưu (backup) gần nhất của một công ty. Nó truy vấn cơ sở dữ liệu để tìm bản sao lưu mới nhất dựa trên trường created_at, sau đó trả về một dictionary chứa các thông tin chi tiết về bản sao lưu đó, bao gồm id, name, status, kind, size_bytes, created_at, completed_at, is_encrypted, signature_status và has_signature. Nếu không tìm thấy bản sao lưu nào hoặc nếu có lỗi xảy ra trong quá trình truy vấn cơ sở dữ liệu, nó sẽ trả về None, cho biết rằng không có thông tin về bản sao lưu nào có sẵn cho công ty đó.
 def _compute_last_backup(company) -> Optional[dict]:
     try:
         from company_backups.models import CompanyBackup
@@ -155,7 +163,7 @@ def _compute_last_backup(company) -> Optional[dict]:
         'has_signature': bool(getattr(last, 'signature_path', '')),
     }
 
-
+# def _compute_extended_counts để tính toán các số liệu thống kê mở rộng cho một công ty, bao gồm số lượng người dùng hoạt động trong 30 ngày qua, số lượng tài liệu và mẫu tài liệu mới được tạo trong 30 ngày qua, số lượng cuộc gọi AI trong 30 ngày qua và tổng số cuộc gọi AI, cũng như phân loại số lượng tài liệu và mẫu tài liệu theo trạng thái. Nó thực hiện các truy vấn cơ sở dữ liệu để đếm số lượng bản ghi tương ứng với các tiêu chí này và trả về một dictionary chứa các số liệu thống kê mở rộng này. Nếu có lỗi xảy ra trong quá trình truy vấn cơ sở dữ liệu, nó sẽ trả về 0 hoặc một dictionary rỗng cho các số liệu thống kê tương ứng, đảm bảo rằng hệ thống vẫn hoạt động ổn định ngay cả khi có sự cố với truy vấn cơ sở dữ liệu.
 def _compute_extended_counts(company) -> dict:
     """Stats them: active users 30d, doc/template moi 30d, AI usage, status breakdown."""
     from documents.models import Document
@@ -251,7 +259,7 @@ def _compute_extended_counts(company) -> dict:
         'documents_by_status': _by_status(docs_qs, 'status'),
     }
 
-
+# def _compute_org_tree để xây dựng cây tổ chức 3 tầng cho một công ty, bao gồm công ty, phòng ban (và vị trí) và thành viên. Cấu trúc cây được xây dựng dựa trên các mô hình Department, DepartmentMembership và CompanyUserMembership, cũng như thông tin về vị trí của người dùng nếu có. Kết quả là một dictionary chứa cấu trúc cây tổ chức, với mỗi node đại diện cho một công ty, phòng ban hoặc thành viên, cùng với các thông tin chi tiết như id, name, subtitle và role. Nếu có lỗi xảy ra trong quá trình truy vấn cơ sở dữ liệu hoặc xây dựng cây tổ chức, nó sẽ trả về một cấu trúc cây rỗng hoặc không đầy đủ, đảm bảo rằng hệ thống vẫn hoạt động ổn định ngay cả khi có sự cố với dữ liệu tổ chức của công ty đó.
 def _compute_org_tree(company) -> dict:
     """Cay to chuc 3 tang: Company -> Department (+ Position) -> Member.
 
@@ -366,7 +374,7 @@ def _compute_org_tree(company) -> dict:
         },
     }
 
-
+# def compute_company_stats để tính toán các số liệu thống kê tổng hợp cho một công ty, bao gồm thông tin chi tiết về công ty, số lượng người dùng, phòng ban, vị trí, mẫu tài liệu, tài liệu, prompts và bản sao lưu, cũng như phân loại dung lượng lưu trữ và cây tổ chức. Kết quả được lưu vào cache trong 5 phút để tối ưu hiệu suất khi truy cập lại trong khoảng thời gian đó. Nếu bypass_cache được đặt thành True, nó sẽ bỏ qua cache và tính toán lại số liệu thống kê mới nhất từ cơ sở dữ liệu và hệ thống file.
 def compute_company_stats(company, *, bypass_cache: bool = False) -> dict:
     """Tinh aggregate stats cho 1 company. Cache 5 phut.
 
@@ -399,6 +407,6 @@ def compute_company_stats(company, *, bypass_cache: bool = False) -> dict:
     cache.set(cache_key, result, CACHE_TTL_SECONDS)
     return result
 
-
+# def invalidate_company_stats để xóa cache của số liệu thống kê công ty khi có sự thay đổi dữ liệu liên quan đến công ty đó, đảm bảo rằng lần truy cập tiếp theo sẽ tính toán lại số liệu thống kê mới nhất từ cơ sở dữ liệu và hệ thống file. Nó sử dụng cache.delete với khóa cache được xây dựng dựa trên tiền tố CACHE_KEY_PREFIX và primary key của công ty để xóa cache tương ứng.
 def invalidate_company_stats(company_pk: int) -> None:
     cache.delete(f'{CACHE_KEY_PREFIX}:{company_pk}')

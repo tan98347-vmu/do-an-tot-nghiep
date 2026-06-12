@@ -1,3 +1,8 @@
+// === MÀN HÌNH YÊU CẦU PHÊ DUYỆT (đang chờ) ===
+// Dành cho trưởng nhóm/admin: liệt kê các mẫu/văn bản/prompt chia sẻ nhóm/công khai đang CHỜ DUYỆT.
+// - Dữ liệu lấy qua pendingApprovalsListProvider; lọc theo loại đối tượng (_buildFilterBar, _entityLabel).
+// - Mỗi thẻ _PendingCard cho Duyệt/Từ chối: _act() -> _update() gọi API duyệt tương ứng.
+
 // Inbox "Yeu cau chia se cho duyet" - gop tat ca grant pending cho duyet
 // tu ca 3 entity (template / document / prompt).
 
@@ -10,6 +15,7 @@ import '../../widgets/sharing/grant_status_badge.dart';
 
 String _fmtTime(DateTime dt) {
   final l = dt.toLocal();
+  // Helper format số về 2 chữ số (dùng hiển thị thời gian).
   String two(int n) => n.toString().padLeft(2, '0');
   return '${two(l.day)}/${two(l.month)}/${l.year} ${two(l.hour)}:${two(l.minute)}';
 }
@@ -22,6 +28,7 @@ String _entityLabel(String entityType) => switch (entityType) {
     };
 
 class PendingShareApprovalsScreen extends ConsumerStatefulWidget {
+  // Widget màn YÊU CẦU PHÊ DUYỆT đang chờ (mẫu/văn bản/prompt chia sẻ).
   const PendingShareApprovalsScreen({super.key});
 
   @override
@@ -34,14 +41,17 @@ class _PendingShareApprovalsScreenState
   final _searchCtrl = TextEditingController();
   PendingApprovalsFilter _filter = const PendingApprovalsFilter();
 
+  // Rời màn: dọn tài nguyên.
   @override
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
   }
 
+  // Đổi bộ lọc loại đối tượng (mẫu/văn bản/prompt) đang xem.
   void _update(PendingApprovalsFilter next) => setState(() => _filter = next);
 
+  // Dựng màn: thanh lọc + danh sách yêu cầu chờ duyệt (pendingApprovalsListProvider); mỗi mục là _PendingCard.
   @override
   Widget build(BuildContext context) {
     final asyncItems = ref.watch(pendingApprovalsListProvider(_filter));
@@ -167,6 +177,7 @@ class _PendingShareApprovalsScreenState
 
 class _PendingCard extends ConsumerStatefulWidget {
   final PendingItem item;
+  // Thẻ 1 yêu cầu chờ duyệt: thông tin đối tượng + nút Duyệt / Từ chối.
   const _PendingCard({required this.item});
 
   @override
@@ -177,6 +188,7 @@ class _PendingCardState extends ConsumerState<_PendingCard> {
   final _noteCtrl = TextEditingController();
   bool _busy = false;
 
+  // Duyệt (approve) hoặc Từ chối yêu cầu chia sẻ -> gọi API tương ứng rồi làm mới danh sách.
   Future<void> _act(bool approve) async {
     setState(() => _busy = true);
     final key = SharingKey(widget.item.entityType, widget.item.entityId);

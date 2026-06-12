@@ -3,10 +3,14 @@ from __future__ import annotations
 from django.core.management.base import BaseCommand
 
 
+# def _normalize_text chuẩn hóa text để dò scope: trim, hạ chữ thường, gộp khoảng trắng thừa.
+# vd: '  Tóm   TẮT ' -> 'tóm tắt'.
 def _normalize_text(value) -> str:
     return ' '.join(str(value or '').strip().lower().split())
 
 
+# def _detect_usage_scopes đoán usage_scope của một prompt cũ bằng heuristic từ khóa trong title/category/tags/nội dung (summary, word_ai_edit, chat, compliance_check); không khớp gì -> ['template_fill']; trả về theo thứ tự cố định.
+# vd: prompt chứa từ 'tom tat' -> ['summary'].
 def _detect_usage_scopes(prompt) -> list[str]:
     haystack = ' | '.join(
         _normalize_text(value)
@@ -41,13 +45,19 @@ def _detect_usage_scopes(prompt) -> list[str]:
     return ordered
 
 
+# class Command là lệnh quản trị 'backfill_prompt_scope': điền usage_scope cho các prompt cũ (dữ liệu trước khi có field này) dựa trên heuristic.
+# vd: python manage.py backfill_prompt_scope --dry-run.
 class Command(BaseCommand):
     help = 'Backfill Prompt.usage_scope cho du lieu cu theo heuristics title/category/tags.'
 
+    # def add_arguments khai báo --batch (kích thước lô iterator) và --dry-run (chỉ đếm, không ghi).
+    # vd: --batch 1000 --dry-run.
     def add_arguments(self, parser):
         parser.add_argument('--batch', type=int, default=500)
         parser.add_argument('--dry-run', action='store_true')
 
+    # def handle duyệt mọi prompt theo lô; prompt còn để mặc định ['template_fill'] thì đoán lại scope và cập nhật (trừ khi --dry-run); in tiến độ + tổng processed/updated.
+    # vd: prompt tag 'summary' đang scope mặc định -> cập nhật usage_scope=['summary'].
     def handle(self, *args, **options):
         from prompts.models import Prompt
 

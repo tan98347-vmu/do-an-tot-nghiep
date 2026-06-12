@@ -1,8 +1,9 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH DANH SÁCH VĂN BẢN ===
+// Hiển thị theo nhóm/tab (của tôi / chia sẻ nhóm / công khai / yêu thích / lưu trữ — documentCollectionProvider).
+// - Tìm kiếm/lọc (theo chủ sở hữu, nhóm, khoảng ngày — _matchDate; admin lọc thêm _loadAdminFilterData từ 'admin/users|groups/').
+// - Thao tác: mở chi tiết (/documents/<id>), upload DOCX (_showUploadDocxDialog 'documents/upload/'), lưu trữ/yêu thích/xóa (_canDeleteDocument). Thẻ _DocCard + badge trạng thái/phạm vi.
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
@@ -15,36 +16,30 @@ import '../../providers/auth_provider.dart';
 import '../../providers/documents_provider.dart';
 import '../../models/document.dart';
 import '../../models/user.dart';
+import '../../widgets/common/record_code_label.dart';
 import '../../widgets/common/view_mode_toggle.dart';
 
-// Mục đích: Lớp `_SimpleItem` triển khai phần việc `Simple Item` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Mục đơn giản (id + nhãn) cho dropdown lọc.
 
 class _SimpleItem {
   final int id;
   final String label;
+  // Mục đơn giản (id + nhãn) dùng cho dropdown lọc.
   const _SimpleItem(this.id, this.label);
 }
 
-// Mục đích: Widget `DocumentListScreen` triển khai phần việc `Document List Screen` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn DANH SÁCH VĂN BẢN theo nhóm — ConsumerStatefulWidget; nhận group.
 
 class DocumentListScreen extends ConsumerStatefulWidget {
   final String group;
+  // Widget màn DANH SÁCH VĂN BẢN theo nhóm; nhận group (của tôi/phòng ban/dùng chung/...).
   const DocumentListScreen({super.key, required this.group});
 
   @override
   ConsumerState<DocumentListScreen> createState() => _DocumentListScreenState();
 }
 
-// Mục đích: Widget `_DocumentListScreenState` triển khai phần việc `Document List Screen State` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn danh sách: bộ lọc, tìm kiếm, chọn nhiều, dữ liệu lọc admin.
 
 class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
   final _searchCtrl = TextEditingController();
@@ -73,27 +68,32 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
   bool _adminFiltersLoaded = false;
 
   AppStrings get _strings => AppStrings.of(context);
+  // Chọn chuỗi VI/EN (i18n).
   String _tr(String vi, String en) => _strings.pick(vi, en);
 
+  // Nhãn ô tìm kiếm tùy theo nhóm đang xem.
   String _searchFieldLabelText() => switch (widget.group) {
-        'private' => _tr('Tên / số hiệu / mẫu nguồn của tôi',
-            'My document title / number / source template'),
-        'group' => _tr('Tên / số hiệu văn bản trong nhóm',
-            'Group document title / number'),
-        'public' => _tr('Tên / số hiệu văn bản công khai',
-            'Public document title / number'),
-        'favorite' => _tr('Tên / số hiệu văn bản yêu thích',
-            'Favorite document title / number'),
-        'archived' => _tr('Tên / số hiệu văn bản lưu trữ',
-            'Archived document title / number'),
-        'admin' => _tr('Tên / số hiệu văn bản trong hệ thống',
-            'System document title / number'),
-        _ => _tr('Tên / số hiệu văn bản', 'Document title / number'),
+        'private' => _tr('Tên / mã hệ thống / số hiệu / mẫu nguồn của tôi',
+            'My document title / system code / number / source template'),
+        'group' => _tr('Tên / mã hệ thống / số hiệu văn bản trong nhóm',
+            'Group document title / system code / number'),
+        'public' => _tr('Tên / mã hệ thống / số hiệu văn bản công khai',
+            'Public document title / system code / number'),
+        'favorite' => _tr('Tên / mã hệ thống / số hiệu văn bản yêu thích',
+            'Favorite document title / system code / number'),
+        'archived' => _tr('Tên / mã hệ thống / số hiệu văn bản lưu trữ',
+            'Archived document title / system code / number'),
+        'admin' => _tr('Tên / mã hệ thống / số hiệu văn bản trong hệ thống',
+            'System document title / system code / number'),
+        _ => _tr('Tên / mã hệ thống / số hiệu văn bản',
+            'Document title / system code / number'),
       };
 
+  // Nhãn ô lọc theo chủ sở hữu tùy nhóm.
   String _ownerFieldLabelText() =>
       _isAdminView ? _tr('Chủ sở hữu', 'Owner') : _tr('Người tạo', 'Creator');
 
+  // Tóm tắt bộ lọc đang áp (hiển thị trên thanh lọc).
   String _filterSummaryTextLocalized() => switch (widget.group) {
         'private' => _tr(
             'Tab này là không gian văn bản của bạn, bộ lọc ưu tiên tên, mã, trạng thái, nguồn gốc và mức chia sẻ.',
@@ -117,17 +117,20 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
             'Use the attribute filters to narrow down the right documents.'),
       };
 
+  // Tiêu đề màn theo nhóm đang xem.
   String _groupTitleText() => switch (widget.group) {
         'private' => _tr('Văn bản của tôi', 'My documents'),
         'group' => _tr('Đã chia sẻ trong nhóm', 'Shared in my groups'),
         'public' => _tr('Đã chia sẻ công khai', 'Publicly shared documents'),
         'favorite' => _tr('Văn bản yêu thích', 'Favorite documents'),
-        'peer' => _tr('Văn bản chia sẻ cho đồng nghiệp', 'Documents shared with me'),
+        'peer' =>
+          _tr('Văn bản chia sẻ cho đồng nghiệp', 'Documents shared with me'),
         'archived' => _tr('Đã lưu trữ', 'Archived documents'),
         'admin' => _tr('Tất cả văn bản (Admin)', 'All documents (Admin)'),
         _ => _tr('Quản lý văn bản', 'Document management'),
       };
 
+  // Phụ đề màn theo nhóm đang xem.
   String _groupSubtitleText() => switch (widget.group) {
         'private' => _tr(
             'Theo dõi các văn bản riêng của bạn và tải lên tài liệu Word mới',
@@ -139,8 +142,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
             'Documents publicly shared across the system'),
         'favorite' => _tr('Danh sách văn bản bạn đã đánh dấu yêu thích',
             'Documents you bookmarked as favorites'),
-        'peer' => _tr(
-            'Văn bản được đồng nghiệp chia sẻ riêng cho bạn',
+        'peer' => _tr('Văn bản được đồng nghiệp chia sẻ riêng cho bạn',
             'Documents peers shared directly with you'),
         'archived' =>
           _tr('Các văn bản bạn đã lưu trữ', 'Documents you archived'),
@@ -151,11 +153,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
       };
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Mở màn: nạp danh sách văn bản của nhóm + dữ liệu lọc (admin).
   void initState() {
     super.initState();
     // Đọc provider theo nhu cầu hành động mà không buộc widget đăng ký rebuild liên tục.
@@ -164,11 +162,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     if (user?.isSuperuser == true) _loadAdminFilterData();
   }
 
-  // Mục đích: Phương thức `_loadAdminFilterData` triển khai phần việc `load Admin Filter Data` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nạp dữ liệu cho bộ lọc nâng cao của admin (nhóm/người dùng).
   Future<void> _loadAdminFilterData() async {
     try {
       // Gọi API hoặc tác vụ bất đồng bộ rồi chờ kết quả trước khi cập nhật giao diện.
@@ -200,11 +194,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Rời màn: dọn controller tìm kiếm.
   void dispose() {
     _searchCtrl.dispose();
     _ownerCtrl.dispose();
@@ -212,11 +202,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     super.dispose();
   }
 
-  // Mục đích: Phương thức `_onSearchChanged` triển khai phần việc `on Search Changed` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Lọc danh sách theo từ khóa (debounce).
   void _onSearchChanged(String v) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
@@ -226,17 +212,14 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     });
   }
 
+  // Lọc danh sách theo chủ sở hữu.
   void _onOwnerChanged(String v) {
     setState(() => _ownerQuery = v.toLowerCase().trim());
   }
 
   String get _serverSearchQuery => _search.trim();
 
-  // Mục đích: Phương thức `_showUploadDocxDialog` triển khai phần việc `show Upload Docx Dialog` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nút Tải lên DOCX: mở hộp thoại upload file DOCX thành văn bản.
   Future<void> _showUploadDocxDialog() async {
     final titleCtrl = TextEditingController();
     PlatformFile? pickedFile;
@@ -388,11 +371,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_resetFilters` triển khai phần việc `reset Filters` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Xóa toàn bộ bộ lọc.
   void _resetFilters() {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
 
@@ -413,11 +392,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_hasActiveFilter` triển khai phần việc `has Active Filter` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Đang có bộ lọc nào bật không (để hiện nút xóa lọc).
   bool _hasActiveFilter() =>
       _search.isNotEmpty ||
       _ownerQuery.isNotEmpty ||
@@ -445,11 +420,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     return count;
   }
 
-  // Mục đích: Phương thức `_matchDate` triển khai phần việc `match Date` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Kiểm 1 ngày có nằm trong khoảng lọc [từ, đến] không.
   bool _matchDate(String? dateStr, DateTime? from, DateTime? to) {
     if (from == null && to == null) return true;
     if (dateStr == null || dateStr.isEmpty) return false;
@@ -463,6 +434,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     }
   }
 
+  // Áp toàn bộ điều kiện lọc lên danh sách văn bản.
   List<Document> _filter(List<Document> all) {
     return all.where((d) {
       if (_visFilter.isNotEmpty && d.visibility != _visFilter) return false;
@@ -488,17 +460,16 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
   bool get _showOwnerFilter => widget.group != 'private';
 
   String get _searchFieldLabel => switch (widget.group) {
-        'private' => 'Tên / số hiệu / mẫu nguồn của tôi',
-        'group' => 'Tên / số hiệu văn bản trong nhóm',
-        'public' => 'Tên / số hiệu văn bản công khai',
-        'favorite' => 'Tên / số hiệu văn bản yêu thích',
-        'archived' => 'Tên / số hiệu văn bản lưu trữ',
-        'admin' => 'Tên / số hiệu văn bản trong hệ thống',
-        _ => 'Tên / số hiệu văn bản',
+        'private' => 'Tên / mã hệ thống / số hiệu / mẫu nguồn của tôi',
+        'group' => 'Tên / mã hệ thống / số hiệu văn bản trong nhóm',
+        'public' => 'Tên / mã hệ thống / số hiệu văn bản công khai',
+        'favorite' => 'Tên / mã hệ thống / số hiệu văn bản yêu thích',
+        'archived' => 'Tên / mã hệ thống / số hiệu văn bản lưu trữ',
+        'admin' => 'Tên / mã hệ thống / số hiệu văn bản trong hệ thống',
+        _ => 'Tên / mã hệ thống / số hiệu văn bản',
       };
 
-  String get _ownerFieldLabel =>
-      _isAdminView ? 'Chủ sở hữu' : 'Người tạo';
+  String get _ownerFieldLabel => _isAdminView ? 'Chủ sở hữu' : 'Người tạo';
 
   String get _filterSummaryText => switch (widget.group) {
         'private' =>
@@ -513,15 +484,10 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
           'Tab này đã là kho lưu trữ, bộ lọc ưu tiên tên mã, người tạo, trạng thái và mức chia sẻ.',
         'admin' =>
           'Tab này dành cho quản trị, bộ lọc ưu tiên tên mã, chủ sở hữu, phòng ban, trạng thái và nguồn gốc.',
-        _ =>
-          'Dùng bộ lọc theo thuộc tính để khoanh đúng văn bản cần tìm.',
+        _ => 'Dùng bộ lọc theo thuộc tính để khoanh đúng văn bản cần tìm.',
       };
 
-  // Mục đích: Phương thức `_canDeleteDocument` triển khai phần việc `can Delete Document` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Kiểm user có quyền xóa văn bản này không (cho nút xóa).
   bool _canDeleteDocument(Document d, AppUser? user) {
     return d.canDelete;
   }
@@ -534,20 +500,12 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
         groupId: _adminGroupIdFilter,
       );
 
-  // Mục đích: Phương thức `_refreshDocuments` triển khai phần việc `refresh Documents` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Làm mới danh sách văn bản từ server.
   void _refreshDocuments() {
     ref.invalidate(documentCollectionProvider(_collectionParams));
   }
 
-  // Mục đích: Phương thức `_toggleDocumentSelection` triển khai phần việc `toggle Document Selection` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Chọn/bỏ chọn 1 văn bản (chế độ chọn nhiều).
   void _toggleDocumentSelection(int id, bool selected) {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
 
@@ -560,11 +518,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_toggleSelectAllDocuments` triển khai phần việc `toggle Select All Documents` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Chọn/bỏ chọn tất cả văn bản đang lọc.
   void _toggleSelectAllDocuments(List<Document> filtered, AppUser? user) {
     final deletableIds = filtered
         .where((d) => _canDeleteDocument(d, user))
@@ -584,11 +538,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_bulkDeleteDocuments` triển khai phần việc `bulk Delete Documents` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nút Xóa nhiều: xóa hàng loạt văn bản đã chọn (có xác nhận).
   Future<void> _bulkDeleteDocuments(BuildContext context) async {
     if (_selectedDocIds.isEmpty || _bulkDeleting) return;
 
@@ -654,11 +604,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Dựng màn: thanh tìm/lọc + lưới văn bản (mỗi mục là _DocCard) + thao tác chọn nhiều.
   Widget build(BuildContext context) {
     // Lắng nghe provider để widget tự động dựng lại khi dữ liệu hoặc trạng thái thay đổi.
 
@@ -874,8 +820,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                                   child: Text(strings.ui('Sinh bởi AI'))),
                               DropdownMenuItem(
                                   value: 'uploaded',
-                                  child: Text(
-                                      strings.ui('Tải lên thủ công'))),
+                                  child: Text(strings.ui('Tải lên thủ công'))),
                             ],
                             onChanged: (v) =>
                                 setState(() => _sourceFilter = v ?? ''),
@@ -1625,7 +1570,8 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                               size: 18,
                             ),
                             label: Text(allVisibleSelected
-                                ? strings.pick('Bỏ chọn tất cả', 'Clear selection')
+                                ? strings.pick(
+                                    'Bỏ chọn tất cả', 'Clear selection')
                                 : strings.pick('Chọn tất cả', 'Select all')),
                           ),
                           if (_selectedDocIds.isNotEmpty) ...[
@@ -1650,7 +1596,8 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                           const SizedBox(width: 8),
                           ViewModeToggle(
                             value: _viewMode,
-                            onChanged: (value) => setState(() => _viewMode = value),
+                            onChanged: (value) =>
+                                setState(() => _viewMode = value),
                             cardLabel: strings.ui('Dạng thẻ'),
                             listLabel: strings.ui('Dạng danh sách'),
                           ),
@@ -1846,8 +1793,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
   String get _groupTitle => switch (widget.group) {
         'private' => 'Văn bản đã được tạo bởi người dùng',
         'group' => 'Văn bản đã được chia sẻ trong nhóm',
-        'public' =>
-          'Văn bản đã được chia sẻ với tất cả mọi người',
+        'public' => 'Văn bản đã được chia sẻ với tất cả mọi người',
         'favorite' => 'Văn bản yêu thích',
         'archived' => 'Văn bản đã lưu trữ',
         'admin' => 'Tất cả văn bản (Admin)',
@@ -1856,24 +1802,19 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
 
   String get _groupSubtitle => switch (widget.group) {
         'private' => 'Những văn bản riêng do bạn tạo ra',
-        'group' =>
-          'Văn bản đã được chia sẻ với những người trong cùng nhóm',
+        'group' => 'Văn bản đã được chia sẻ với những người trong cùng nhóm',
         'public' =>
           'Văn bản đã được phê duyệt và chia sẻ với toàn bộ người dùng',
         'favorite' => 'Các văn bản bạn đã đánh dấu yêu thích',
         'archived' => 'Văn bản đã được chuyển vào lưu trữ',
-        'admin' =>
-          'Xem và quản lý tất cả văn bản của mọi người dùng',
+        'admin' => 'Xem và quản lý tất cả văn bản của mọi người dùng',
         _ => 'Tất cả văn bản bạn có quyền truy cập',
       };
 }
 
 // ─── Card ──────────────────────────────────────────────────────────────────
 
-// Mục đích: Lớp `_DocCard` triển khai phần việc `Doc Card` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Thẻ 1 văn bản trong lưới (ConsumerWidget).
 
 class _DocCard extends ConsumerWidget {
   final Document doc;
@@ -1885,6 +1826,7 @@ class _DocCard extends ConsumerWidget {
   final bool selectionEnabled;
   final ValueChanged<bool?> onSelectedChanged;
 
+  // Thẻ 1 văn bản: tiêu đề, trạng thái, nguồn, nút yêu thích/lưu trữ/xóa; bấm mở chi tiết.
   const _DocCard({
     required this.doc,
     required this.searchQuery,
@@ -1896,29 +1838,17 @@ class _DocCard extends ConsumerWidget {
     required this.onSelectedChanged,
   });
 
-  // Mục đích: Phương thức `_canDelete` triển khai phần việc `can Delete` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Kiểm quyền xóa văn bản (trong thẻ).
   bool _canDelete(Document d, AppUser? user) {
     return d.canDelete;
   }
 
-  // Mục đích: Phương thức `_refreshCollections` triển khai phần việc `refresh Collections` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Làm mới các danh sách văn bản (provider) sau thao tác.
   void _refreshCollections(WidgetRef ref) {
     refreshDocumentCollections(ref);
   }
 
-  // Mục đích: Phương thức `_delete` triển khai phần việc `delete` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Xóa văn bản (trong thẻ) -> thùng rác.
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -1947,25 +1877,19 @@ class _DocCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Đã xóa văn bản.'),
-              backgroundColor: Colors.green),
+              content: Text('Đã xóa văn bản.'), backgroundColor: Colors.green),
         );
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Lỗi xóa: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Lỗi xóa: $e'), backgroundColor: Colors.red),
         );
       }
     }
   }
 
-  // Mục đích: Phương thức `_archive` triển khai phần việc `archive` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Lưu trữ văn bản (trong thẻ).
   Future<void> _archive(BuildContext context, WidgetRef ref) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -2001,18 +1925,13 @@ class _DocCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Lỗi lưu trữ: $e'),
-              backgroundColor: Colors.red),
+              content: Text('Lỗi lưu trữ: $e'), backgroundColor: Colors.red),
         );
       }
     }
   }
 
-  // Mục đích: Phương thức `_toggleFavorite` triển khai phần việc `toggle Favorite` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Bật/tắt yêu thích văn bản (trong thẻ).
   Future<void> _toggleFavorite(BuildContext context, WidgetRef ref) async {
     try {
       // Gọi API hoặc tác vụ bất đồng bộ rồi chờ kết quả trước khi cập nhật giao diện.
@@ -2023,37 +1942,27 @@ class _DocCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Lỗi yêu thích: $e'),
-              backgroundColor: Colors.red),
+              content: Text('Lỗi yêu thích: $e'), backgroundColor: Colors.red),
         );
       }
     }
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng thẻ văn bản: tiêu đề, trạng thái, nguồn, nút yêu thích/lưu trữ/xóa; bấm mở chi tiết.
 
   Widget build(BuildContext context, WidgetRef ref) {
     final canDelete = _canDelete(doc, currentUser);
     final isPhone = MediaQuery.sizeOf(context).width < 760;
     final useCompactLayout = compact || isPhone;
-    // Mục đích: Phương thức `selectionBox` triển khai phần việc `selection Box` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-    // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-    // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-    // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+    // Ô checkbox chọn văn bản (chế độ chọn nhiều).
 
     Widget selectionBox() => Checkbox(
           value: selected,
           onChanged: selectionEnabled ? onSelectedChanged : null,
           visualDensity: VisualDensity.compact,
         );
-    // Mục đích: Phương thức `actionRow` triển khai phần việc `action Row` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-    // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-    // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-    // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+    // Hàng nút thao tác nhanh trong thẻ văn bản.
 
     Widget actionRow() => Row(
           mainAxisSize: MainAxisSize.min,
@@ -2116,9 +2025,8 @@ class _DocCard extends ConsumerWidget {
                       : Icons.star_outline_rounded,
                   color: doc.isFavorite ? Colors.amber.shade600 : null,
                 ),
-                title: Text(doc.isFavorite
-                    ? 'Bỏ yêu thích'
-                    : 'Đánh dấu yêu thích'),
+                title: Text(
+                    doc.isFavorite ? 'Bỏ yêu thích' : 'Đánh dấu yêu thích'),
               ),
             ),
             if (currentUser?.id == doc.ownerId &&
@@ -2208,6 +2116,8 @@ class _DocCard extends ConsumerWidget {
                             ),
                             maxLines: 2,
                           ),
+                          const SizedBox(height: 5),
+                          RecordCodeLabel(code: doc.recordCode),
                           const SizedBox(height: 6),
                           Wrap(
                             spacing: 8,
@@ -2313,6 +2223,8 @@ class _DocCard extends ConsumerWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 5),
+              RecordCodeLabel(code: doc.recordCode, compact: true),
               // Doc number
               if (doc.docNumber != null && doc.docNumber!.isNotEmpty) ...[
                 const SizedBox(height: 4),
@@ -2387,6 +2299,7 @@ class _DocCard extends ConsumerWidget {
         _ => Icons.description_outlined,
       };
 
+  // Màu badge theo nguồn tạo văn bản (mẫu/upload/AI...).
   Color _sourceColor(String? src) => switch (src) {
         'generated' => Colors.purple,
         'uploaded' => Colors.teal,
@@ -2396,19 +2309,13 @@ class _DocCard extends ConsumerWidget {
 
 // ─── Chips ─────────────────────────────────────────────────────────────────
 
-// Mục đích: Lớp `_StatusChip` triển khai phần việc `Status Chip` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget chip trạng thái văn bản.
 
 class _StatusChip extends StatelessWidget {
   final String status;
   const _StatusChip({required this.status});
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chip trạng thái.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -2431,19 +2338,13 @@ class _StatusChip extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_VisChip` triển khai phần việc `Vis Chip` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget chip phạm vi hiển thị.
 
 class _VisChip extends StatelessWidget {
   final String visibility;
   const _VisChip({required this.visibility});
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chip phạm vi.
 
   Widget build(BuildContext context) {
     final (icon, color) = switch (visibility) {
@@ -2455,10 +2356,7 @@ class _VisChip extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_SigningChip` triển khai phần việc `Signing Chip` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget chip trạng thái ký của văn bản.
 
 class _SigningChip extends StatelessWidget {
   final String status;
@@ -2466,10 +2364,7 @@ class _SigningChip extends StatelessWidget {
   const _SigningChip({required this.status});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chip trạng thái ký.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -2500,10 +2395,7 @@ class _SigningChip extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_QuickChip` triển khai phần việc `Quick Chip` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget chip lọc nhanh.
 
 class _QuickChip extends StatelessWidget {
   final String label;
@@ -2519,10 +2411,7 @@ class _QuickChip extends StatelessWidget {
       this.icon});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chip lọc nhanh.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -2559,10 +2448,7 @@ class _QuickChip extends StatelessWidget {
 
 // ─── Date Range Row ─────────────────────────────────────────────────────────
 
-// Mục đích: Lớp `_DateRangeRow` triển khai phần việc `Date Range Row` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget chọn khoảng ngày (từ - đến) trong bộ lọc.
 
 class _DateRangeRow extends StatelessWidget {
   final String label;
@@ -2581,27 +2467,16 @@ class _DateRangeRow extends StatelessWidget {
     required this.onToPick,
   });
 
-  // Mục đích: Phương thức `_fmt` triển khai phần việc `fmt` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Định dạng ngày 'từ' trong bộ lọc.
   String _fmt(DateTime? d) => d == null
       ? 'Từ ngày'
       : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
-  // Mục đích: Phương thức `_fmtTo` triển khai phần việc `fmt To` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Định dạng ngày 'đến' trong bộ lọc.
   String _fmtTo(DateTime? d) => d == null
       ? 'Đến ngày'
       : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
-  // Mục đích: Phương thức `_pick` triển khai phần việc `pick` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở lịch chọn 1 mốc ngày cho bộ lọc.
 
   Future<void> _pick(
       BuildContext context, DateTime? cur, void Function(DateTime?) cb) async {
@@ -2615,10 +2490,7 @@ class _DateRangeRow extends StatelessWidget {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng hàng chọn khoảng ngày.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -2686,10 +2558,7 @@ class _DateRangeRow extends StatelessWidget {
 
 // ─── Highlight Text ─────────────────────────────────────────────────────────
 
-// Mục đích: Lớp `_HighlightText` triển khai phần việc `Highlight Text` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget tô sáng phần text khớp từ khóa tìm kiếm.
 
 class _HighlightText extends StatelessWidget {
   final String text;
@@ -2705,10 +2574,7 @@ class _HighlightText extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/document_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng text có tô sáng đoạn khớp.
 
   Widget build(BuildContext context) {
     if (query.isEmpty) {

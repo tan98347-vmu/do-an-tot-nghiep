@@ -5,6 +5,8 @@ import documents.manual_edit_models
 import documents.models
 
 
+# class Migration là bước migration thay đổi cấu trúc CSDL (theo tên file: alter document output file and more).
+# vd: chạy "python manage.py migrate" để áp dụng thay đổi schema này.
 class Migration(migrations.Migration):
 
     dependencies = [

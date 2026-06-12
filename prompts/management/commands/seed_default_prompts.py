@@ -70,9 +70,13 @@ DEFAULT_PROMPTS = (
 )
 
 
+# class Command là lệnh quản trị 'seed_default_prompts': tạo sẵn bộ prompt mẫu (curated) theo từng scope cho mỗi công ty đang active.
+# vd: python manage.py seed_default_prompts -> tạo các prompt 'Template Fill...', 'Summary...', 'Word AI Edit...'.
 class Command(BaseCommand):
     help = 'Seed prompt mac dinh cho cac scope template_fill, summary, word_ai_edit, chat.'
 
+    # def handle duyệt từng công ty active (qua một owner đại diện) và update_or_create các prompt mẫu trong DEFAULT_PROMPTS (đặt approved/public/curated); in số tạo mới/cập nhật.
+    # vd: công ty A -> tạo/cập nhật các prompt seed gắn owner đại diện của A.
     def handle(self, *args, **options):
         memberships = (
             CompanyUserMembership.objects

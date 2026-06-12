@@ -1,3 +1,7 @@
+// === MÀN HÌNH QUẢN LÝ CÔNG TY (platform-admin) ===
+// Liệt kê công ty ('platform/companies/'); tạo (_showCompanyDialog/_showBootstrapDialog), import hàng loạt từ Excel (_pickAndPreviewCompanyImport 'company-imports/preview/' -> commit).
+// - Tải workbook mẫu/credentials, cấu hình AI cho công ty (_showAiConfigDialog 'ai-config/'), thùng rác công ty (/platform/companies/trash). Mở chi tiết (/platform/companies/<id>).
+
 // ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
 
 import 'dart:html' as html;

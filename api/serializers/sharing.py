@@ -20,6 +20,8 @@ from sharing.constants import (
 from sharing.models import ShareGrant
 
 
+# def serialize_user_brief để tuần tự hóa user brief (trong serializer).
+# vd: nhận tham số đầu vào -> trả cấu trúc dữ liệu/chuỗi đã dựng.
 def serialize_user_brief(user):
     if user is None:
         return None
@@ -34,6 +36,8 @@ def serialize_user_brief(user):
     }
 
 
+# def serialize_group_brief để tuần tự hóa group brief (trong serializer).
+# vd: nhận tham số đầu vào -> trả cấu trúc dữ liệu/chuỗi đã dựng.
 def serialize_group_brief(group):
     if group is None:
         return None
@@ -43,6 +47,8 @@ def serialize_group_brief(group):
     }
 
 
+# class ShareGrantSerializer là serializer định nghĩa dữ liệu vào/ra (ShareGrant).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class ShareGrantSerializer(serializers.ModelSerializer):
     target_user_info = serializers.SerializerMethodField()
     target_group_info = serializers.SerializerMethodField()
@@ -50,6 +56,8 @@ class ShareGrantSerializer(serializers.ModelSerializer):
     approved_by_info = serializers.SerializerMethodField()
     required_approver = serializers.SerializerMethodField()
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         model = ShareGrant
         fields = (
@@ -80,18 +88,28 @@ class ShareGrantSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at',
         )
 
+    # def get_target_user_info để lấy target user info (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_target_user_info(self, obj):
         return serialize_user_brief(obj.target_user)
 
+    # def get_target_group_info để lấy target group info (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_target_group_info(self, obj):
         return serialize_group_brief(obj.target_group)
 
+    # def get_submitted_by_info để lấy submitted by info (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_submitted_by_info(self, obj):
         return serialize_user_brief(obj.submitted_by)
 
+    # def get_approved_by_info để lấy approved by info (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_approved_by_info(self, obj):
         return serialize_user_brief(obj.approved_by)
 
+    # def get_required_approver để lấy required approver (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_required_approver(self, obj):
         # Suy ra tu trang thai duyet THUC TE de luon nhat quan voi
         # sharing.services._initial_approval_status (vd: dong nghiep khac nhom
@@ -105,6 +123,8 @@ class ShareGrantSerializer(serializers.ModelSerializer):
         return 'none'
 
 
+# class ShareGrantCreateSerializer là serializer định nghĩa dữ liệu vào/ra (ShareGrantCreate).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class ShareGrantCreateSerializer(serializers.Serializer):
     scope = serializers.ChoiceField(choices=[s for s, _ in SCOPE_CHOICES])
     permission_level = serializers.ChoiceField(choices=[p for p, _ in PERMISSION_CHOICES])
@@ -112,6 +132,8 @@ class ShareGrantCreateSerializer(serializers.Serializer):
     target_group = serializers.IntegerField(required=False, allow_null=True)
     auto_submit = serializers.BooleanField(default=True)
 
+    # def validate để kiểm tra hợp lệ (trong serializer).
+    # vd: dữ liệu sai -> báo lỗi/False; hợp lệ -> True hoặc giá trị đã chuẩn hóa.
     def validate(self, attrs):
         scope = attrs.get('scope')
         if scope == SCOPE_GROUP and not attrs.get('target_group'):

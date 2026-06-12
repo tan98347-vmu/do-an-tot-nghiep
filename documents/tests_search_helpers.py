@@ -51,3 +51,15 @@ class DocumentSearchHelpersTests(TestCase):
 
     def test_search_documents_returns_empty_for_short_queries(self):
         self.assertEqual(search_documents(self.user, 'a'), [])
+
+    def test_search_documents_matches_record_code(self):
+        document = Document.objects.create(
+            company=self.company,
+            owner=self.user,
+            title='Van ban trung ten',
+        )
+
+        results = search_documents(self.user, document.record_code)
+
+        self.assertEqual([item['id'] for item in results], [document.id])
+        self.assertEqual(results[0]['record_code'], document.record_code)

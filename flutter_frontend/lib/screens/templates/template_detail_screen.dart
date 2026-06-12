@@ -1,8 +1,9 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH CHI TIẾT MẪU VĂN BẢN ===
+// Xem nội dung + xem trước PDF (auto-reload), danh sách biến, version (templateVersionsProvider).
+// - Thao tác: dùng mẫu sinh văn bản (/ai-doc/<id>), sửa (/templates/<id>/edit), sửa thủ công Collabora (/manual-edit), yêu thích ('favorite/').
+// - Quy trình duyệt: gửi duyệt/duyệt/từ chối ('submit'/'approve'/'reject'); đánh dấu đã đọc thông báo ('notifications/read-template/'). Provider: templateDetailProvider, currentUserProvider.
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
 import 'dart:async';
 import 'dart:html' as html;
 import 'dart:typed_data';
@@ -20,10 +21,7 @@ import '../../providers/notifications_provider.dart';
 import '../../widgets/pdf/web_pdf_frame.dart';
 import '../../widgets/sharing/unified_share_sheet.dart';
 
-// Mục đích: Widget `TemplateDetailScreen` triển khai phần việc `Template Detail Screen` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn CHI TIẾT MẪU VĂN BẢN (ConsumerStatefulWidget); nhận id mẫu.
 
 class TemplateDetailScreen extends ConsumerStatefulWidget {
   final int id;
@@ -34,10 +32,7 @@ class TemplateDetailScreen extends ConsumerStatefulWidget {
       _TemplateDetailScreenState();
 }
 
-// Mục đích: Widget `_TemplateDetailScreenState` triển khai phần việc `Template Detail Screen State` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn chi tiết mẫu: giữ xem trước HTML/PDF, trạng thái duyệt/thông báo và thao tác trên mẫu.
 
 class _TemplateDetailScreenState extends ConsumerState<TemplateDetailScreen>
     with SingleTickerProviderStateMixin {
@@ -64,10 +59,7 @@ class _TemplateDetailScreenState extends ConsumerState<TemplateDetailScreen>
   Timer? _previewAutoReloadTimer;
   Future<void> Function()? _previewAutoReloadAction;
 
-  // Mục đích: Phương thức `_revokePreviewPdfUrl` triển khai phần việc `revoke Preview Pdf Url` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Thu hồi URL blob PDF xem trước (giải phóng bộ nhớ).
 
   void _revokePreviewPdfUrl() {
     final current = _previewPdfUrl;
@@ -93,10 +85,7 @@ class _TemplateDetailScreenState extends ConsumerState<TemplateDetailScreen>
     });
   }
 
-  // Mục đích: Phương thức `_openPreviewPdfInNewTab` triển khai phần việc `open Preview Pdf In New Tab` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở PDF xem trước ở tab trình duyệt mới.
 
   void _openPreviewPdfInNewTab() {
     final current = _previewPdfUrl;
@@ -104,10 +93,7 @@ class _TemplateDetailScreenState extends ConsumerState<TemplateDetailScreen>
     html.window.open(current, '_blank');
   }
 
-  // Mục đích: Phương thức `_resetTemplatePreviewState` triển khai phần việc `reset Template Preview State` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Reset trạng thái xem trước mẫu khi đổi/tải lại.
 
   void _resetTemplatePreviewState() {
     _stopPreviewAutoReload();
@@ -133,10 +119,7 @@ class _TemplateDetailScreenState extends ConsumerState<TemplateDetailScreen>
     };
   }
 
-  // Mục đích: Phương thức `_refreshTemplateCollections` triển khai phần việc `refresh Template Collections` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Làm mới các danh sách mẫu (provider) sau thao tác.
 
   void _refreshTemplateCollections() {
     ref.invalidate(templateDetailProvider(widget.id));
@@ -147,10 +130,7 @@ class _TemplateDetailScreenState extends ConsumerState<TemplateDetailScreen>
     ref.invalidate(templatesProvider('favorite'));
   }
 
-  // Mục đích: Phương thức `_reviewStorageKey` triển khai phần việc `review Storage Key` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Sinh key lưu cục bộ đánh dấu đã đọc kết quả duyệt của 1 mẫu.
 
   String _reviewStorageKey(int templateId) =>
       'template_review_seen:$templateId';
@@ -163,10 +143,7 @@ class _TemplateDetailScreenState extends ConsumerState<TemplateDetailScreen>
     return '$action@$at';
   }
 
-  // Mục đích: Phương thức `_hasUnreadReviewForOwner` triển khai phần việc `has Unread Review For Owner` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Chủ mẫu có thông báo duyệt/từ chối chưa đọc không (để hiện chấm đỏ).
 
   bool _hasUnreadReviewForOwner(dynamic tmpl, dynamic user) {
     if (user == null || user.id != tmpl.ownerId) return false;
@@ -175,10 +152,7 @@ class _TemplateDetailScreenState extends ConsumerState<TemplateDetailScreen>
     return html.window.localStorage[_reviewStorageKey(tmpl.id)] != token;
   }
 
-  // Mục đích: Phương thức `_markReviewSeen` triển khai phần việc `mark Review Seen` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đánh dấu chủ mẫu đã xem kết quả duyệt (lưu cục bộ).
 
   void _markReviewSeen(dynamic tmpl, dynamic user) {
     if (user == null || user.id != tmpl.ownerId) return;
@@ -188,10 +162,7 @@ class _TemplateDetailScreenState extends ConsumerState<TemplateDetailScreen>
     _lastMarkedReviewToken = token;
   }
 
-  // Mục đích: Phương thức `_markTemplateNotificationsRead` triển khai phần việc `mark Template Notifications Read` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đánh dấu đã đọc thông báo của mẫu trên server ('notifications/read-template/').
 
   void _markTemplateNotificationsRead(dynamic tmpl, dynamic user) {
     if (user == null || user.id != tmpl.ownerId) return;
@@ -240,10 +211,7 @@ class _TemplateDetailScreenState extends ConsumerState<TemplateDetailScreen>
     }
   }
 
-  // Mục đích: Phương thức `_previewNoticeFromError` triển khai phần việc `preview Notice From Error` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đổi lỗi tải xem trước thành dòng thông báo nhẹ trên UI.
 
   String _previewNoticeFromError(Object error) {
     if (error is DioException) {
@@ -262,10 +230,7 @@ class _TemplateDetailScreenState extends ConsumerState<TemplateDetailScreen>
     );
   }
 
-  // Mục đích: Phương thức `_previewLoadErrorMessage` triển khai phần việc `preview Load Error Message` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Thông điệp lỗi khi tải PDF xem trước thất bại.
 
   String _previewLoadErrorMessage(Object error) {
     if (error is DioException) {
@@ -282,10 +247,7 @@ class _TemplateDetailScreenState extends ConsumerState<TemplateDetailScreen>
     );
   }
 
-  // Mục đích: Phương thức `_loadTemplateContentPreview` triển khai phần việc `load Template Content Preview` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nạp nội dung xem trước (HTML) của mẫu.
 
   Future<void> _loadTemplateContentPreview(tmpl, {bool force = false}) async {
     if (_contentLoading) return;
@@ -384,10 +346,7 @@ class _TemplateDetailScreenState extends ConsumerState<TemplateDetailScreen>
   }
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở màn: bật auto-reload xem trước, đánh dấu đã đọc thông báo mẫu.
 
   void initState() {
     super.initState();
@@ -395,10 +354,7 @@ class _TemplateDetailScreenState extends ConsumerState<TemplateDetailScreen>
   }
 
   @override
-  // Mục đích: Phương thức `didUpdateWidget` triển khai phần việc `did Update Widget` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khi đổi id (sang mẫu khác) -> nạp lại dữ liệu.
 
   void didUpdateWidget(covariant TemplateDetailScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -407,10 +363,7 @@ class _TemplateDetailScreenState extends ConsumerState<TemplateDetailScreen>
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Rời màn: dừng auto-reload, thu hồi URL PDF, dọn tài nguyên.
 
   void dispose() {
     _stopPreviewAutoReload();
@@ -422,10 +375,7 @@ class _TemplateDetailScreenState extends ConsumerState<TemplateDetailScreen>
     super.dispose();
   }
 
-  // Mục đích: Phương thức `_readerHtml` triển khai phần việc `reader Html` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng HTML hiển thị nội dung mẫu trong khung đọc.
 
   String _readerHtml(String rawHtml, {required bool isCompact}) {
     final readerCss = '''
@@ -465,10 +415,7 @@ p, li, span, div {
     return '<html><head>$viewport$readerCss</head><body>$rawHtml</body></html>';
   }
 
-  // Mục đích: Phương thức `_buildTemplateHtmlFrame` triển khai phần việc `build Template Html Frame` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng khung hiển thị nội dung HTML của mẫu.
 
   Widget _buildTemplateHtmlFrame({
     required String htmlContent,
@@ -489,10 +436,7 @@ p, li, span, div {
     return IframeBlocker(child: HtmlElementView(viewType: viewKey));
   }
 
-  // Mục đích: Phương thức `_buildTemplatePdfFrame` triển khai phần việc `build Template Pdf Frame` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng khung iframe xem trước PDF của mẫu (auto-reload).
 
   Widget _buildTemplatePdfFrame({
     required String pdfUrl,
@@ -505,10 +449,7 @@ p, li, span, div {
     );
   }
 
-  // Mục đích: Phương thức `_openTemplateContentPreviewDialog` triển khai phần việc `open Template Content Preview Dialog` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở dialog xem trước nội dung mẫu phóng to.
 
   Future<void> _openTemplateContentPreviewDialog(tmpl) async {
     await _loadTemplateContentPreview(tmpl, force: true);
@@ -569,10 +510,7 @@ p, li, span, div {
     );
   }
 
-  // Mục đích: Phương thức `_toggleFavorite` triển khai phần việc `toggle Favorite` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút Yêu thích: bật/tắt đánh dấu yêu thích mẫu ('favorite/').
 
   Future<void> _toggleFavorite(int tmplId, bool isFav) async {
     try {
@@ -585,10 +523,7 @@ p, li, span, div {
     }
   }
 
-  // Mục đích: Phương thức `_exportDocx` triển khai phần việc `export Docx` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút Xuất DOCX: tải file DOCX của mẫu về máy ('export/').
 
   Future<void> _exportDocx(tmpl) async {
     if (tmpl.sourceType == 'docx' && tmpl.hasDocxSource != true) {
@@ -620,10 +555,7 @@ p, li, span, div {
     }
   }
 
-  // Mục đích: Phương thức `_delete` triển khai phần việc `delete` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút Xóa: chuyển mẫu vào thùng rác (có xác nhận).
 
   Future<void> _delete(int tmplId) async {
     final ok = await showDialog<bool>(
@@ -701,10 +633,7 @@ p, li, span, div {
     }
   }
 
-  // Mục đích: Phương thức `_submitForApproval` triển khai phần việc `submit For Approval` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút Gửi duyệt: gửi mẫu cho người duyệt ('submit').
 
   Future<void> _submitForApproval(int tmplId) async {
     final noteCtrl = TextEditingController();
@@ -755,10 +684,7 @@ p, li, span, div {
     }
   }
 
-  // Mục đích: Phương thức `_approve` triển khai phần việc `approve` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút Duyệt: phê duyệt mẫu ('approve').
 
   Future<void> _approve(int tmplId) async {
     final noteCtrl = TextEditingController();
@@ -810,10 +736,7 @@ p, li, span, div {
     }
   }
 
-  // Mục đích: Phương thức `_reject` triển khai phần việc `reject` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút Từ chối: từ chối mẫu kèm lý do ('reject').
 
   Future<void> _reject(int tmplId) async {
     final reasonCtrl = TextEditingController();
@@ -892,10 +815,7 @@ p, li, span, div {
     }
   }
 
-  // Mục đích: Phương thức `_restoreVersion` triển khai phần việc `restore Version` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khôi phục mẫu về 1 phiên bản cũ.
 
   Future<void> _restoreVersion(int tmplId, int verId) async {
     final ok = await showDialog<bool>(
@@ -930,10 +850,7 @@ p, li, span, div {
     }
   }
 
-  // Mục đích: Phương thức `_showSnack` triển khai phần việc `show Snack` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Hiện snackbar thông báo (thường/lỗi).
 
   void _showSnack(String msg, {bool error = false}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -946,10 +863,7 @@ p, li, span, div {
     context.go('/templates/$templateId/manual-edit?return_to=$returnTo');
   }
 
-  // Mục đích: Phương thức `_buildTemplateContentView` triển khai phần việc `build Template Content View` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng khu vực nội dung mẫu: khung đọc HTML / xem trước PDF.
 
   Widget _buildTemplateContentView(tmpl) {
     final hasContent =
@@ -1142,10 +1056,7 @@ p, li, span, div {
         height: 150, child: Center(child: CircularProgressIndicator()));
   }
 
-  // Mục đích: Phương thức `_showPreviewDialog` triển khai phần việc `show Preview Dialog` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở dialog xem trước (chọn loại nội dung).
 
   void _showPreviewDialog(
       BuildContext context, String title, List<String> variables) {
@@ -1153,10 +1064,7 @@ p, li, span, div {
     _showIframePreviewDialog(context, title, variables);
   }
 
-  // Mục đích: Phương thức `_showIframePreviewDialog` triển khai phần việc `show Iframe Preview Dialog` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở dialog xem trước bằng iframe (PDF/HTML).
 
   Future<void> _showIframePreviewDialog(
       BuildContext context, String title, List<String> variables) async {
@@ -1235,7 +1143,9 @@ p, li, span, div {
                   ),
                 ]),
               ),
-              Expanded(child: IframeBlocker(child: HtmlElementView(viewType: viewKey))),
+              Expanded(
+                  child:
+                      IframeBlocker(child: HtmlElementView(viewType: viewKey))),
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -1262,10 +1172,7 @@ p, li, span, div {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khung màn chi tiết mẫu (AppBar + tab Nội dung/Phiên bản + banner duyệt + các nút thao tác).
 
   Widget build(BuildContext context) {
     // Lắng nghe provider để widget tự động dựng lại khi dữ liệu hoặc trạng thái thay đổi.
@@ -1507,10 +1414,7 @@ p, li, span, div {
     );
   }
 
-  // Mục đích: Phương thức `_buildReturnBanner` triển khai phần việc `build Return Banner` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Banner 'quay lại nơi đã đến' (deep-link returnTo).
 
   Widget _buildReturnBanner(
       BuildContext context, String returnTo, String returnLabel) {
@@ -1535,10 +1439,7 @@ p, li, span, div {
     );
   }
 
-  // Mục đích: Phương thức `_buildApprovalBanner` triển khai phần việc `build Approval Banner` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Banner quy trình duyệt mẫu (gửi duyệt/duyệt/từ chối) — bản cũ.
 
   Widget _buildApprovalBanner(BuildContext context, tmpl, dynamic user,
       bool isOwner, bool isSuperuser) {
@@ -1675,10 +1576,7 @@ p, li, span, div {
     return const SizedBox.shrink();
   }
 
-  // Mục đích: Phương thức `_buildApprovalBannerV2` triển khai phần việc `build Approval Banner V2` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Banner quy trình duyệt mẫu (bản mới, hiển thị theo trạng thái + vai trò).
 
   Widget _buildApprovalBannerV2(BuildContext context, tmpl, dynamic user,
       bool isOwner, bool isSuperuser) {
@@ -1866,10 +1764,7 @@ p, li, span, div {
     return _buildApprovalBanner(context, tmpl, user, isOwner, isSuperuser);
   }
 
-  // Mục đích: Phương thức `_buildContentTab` triển khai phần việc `build Content Tab` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tab Nội dung: thông tin mẫu + danh sách biến + xem trước.
 
   Widget _buildContentTab(BuildContext context, tmpl) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -1974,6 +1869,7 @@ p, li, span, div {
                         .titleSmall
                         ?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
+                _InfoRow(_pick('Mã hệ thống', 'System code'), tmpl.recordCode),
                 _InfoRow(_pick('Trạng thái', 'Status'),
                     _strings.ui(tmpl.statusLabel)),
                 _InfoRow(_pick('Hiển thị', 'Visibility'),
@@ -2086,10 +1982,7 @@ p, li, span, div {
     );
   }
 
-  // Mục đích: Phương thức `_buildVersionsTab` triển khai phần việc `build Versions Tab` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tab Phiên bản: liệt kê version của mẫu + xem/so sánh/khôi phục/ẩn.
 
   Widget _buildVersionsTab(BuildContext context, int tmplId) {
     // Lắng nghe provider để widget tự động dựng lại khi dữ liệu hoặc trạng thái thay đổi.
@@ -2171,12 +2064,47 @@ p, li, span, div {
                     ),
                   ],
                 ]),
-                subtitle: Text(
-                  '${ver.createdByName ?? ''} — $dateStr'
-                  '${ver.changeNote?.isNotEmpty == true ? '\n${ver.changeNote}' : ''}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 2),
+                    // Dòng riêng: thông tin người chỉnh sửa phiên bản.
+                    Row(children: [
+                      Icon(Icons.person_outline,
+                          size: 13, color: Colors.grey.shade600),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          ver.createdByName?.trim().isNotEmpty == true
+                              ? ver.createdByName!.trim()
+                              : _pick('Không rõ người chỉnh sửa',
+                                  'Unknown editor'),
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w500),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 2),
+                    Row(children: [
+                      Icon(Icons.schedule,
+                          size: 13, color: Colors.grey.shade500),
+                      const SizedBox(width: 4),
+                      Text(dateStr,
+                          style: TextStyle(
+                              fontSize: 11.5, color: Colors.grey.shade600)),
+                    ]),
+                    if (ver.changeNote?.isNotEmpty == true) ...[
+                      const SizedBox(height: 2),
+                      Text(ver.changeNote!,
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade600)),
+                    ],
+                  ],
                 ),
-                isThreeLine: ver.changeNote?.isNotEmpty == true,
+                isThreeLine: true,
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -2231,10 +2159,7 @@ p, li, span, div {
 
   // ── XEM TRƯỚC NỘI DUNG PHIÊN BẢN ────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_showVersionPreview` triển khai phần việc `show Version Preview` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Xem trước nội dung 1 phiên bản mẫu.
 
   void _showVersionPreview(BuildContext context, TemplateVersion ver) {
     showDialog(
@@ -2326,10 +2251,7 @@ p, li, span, div {
 
   // ── SO SÁNH DIFF ──────────────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_showVersionDiff` triển khai phần việc `show Version Diff` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // So sánh khác biệt giữa hai phiên bản mẫu (diff).
 
   Future<void> _showVersionDiff(
       BuildContext context, int tmplId, TemplateVersion ver) async {
@@ -2460,10 +2382,7 @@ p, li, span, div {
 
   /// Render một dòng diff theo phong cách GitHub:
   /// gutter (±/space) màu đậm hơn, nội dung có nền màu tương ứng.
-  // Mục đích: Phương thức `_buildDiffLine` triển khai phần việc `build Diff Line` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng 1 dòng trong khung so sánh diff.
 
   Widget _buildDiffLine(String line) {
     // File headers (--- / +++)
@@ -2528,10 +2447,7 @@ p, li, span, div {
     );
   }
 
-  // Mục đích: Phương thức `_ghDiffRow` triển khai phần việc `gh Diff Row` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng 1 hàng diff kiểu GitHub (số dòng + nội dung +/-).
 
   Widget _ghDiffRow({
     required Color gutterBg,
@@ -2581,10 +2497,7 @@ p, li, span, div {
     );
   }
 
-  // Mục đích: Phương thức `_diffLegend` triển khai phần việc `diff Legend` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chú thích màu cho khung diff (thêm/xóa).
 
   Widget _diffLegend(Color bg, Color fg, String label) {
     return Row(mainAxisSize: MainAxisSize.min, children: [
@@ -2603,10 +2516,7 @@ p, li, span, div {
 
   // ── ẨN / HIỆN PHIÊN BẢN ─────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_toggleHideVersion` triển khai phần việc `toggle Hide Version` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Ẩn/hiện 1 phiên bản trong danh sách version.
 
   Future<void> _toggleHideVersion(
       int tmplId, int verId, bool isOwnerOrStaff) async {
@@ -2630,10 +2540,7 @@ p, li, span, div {
   }
 }
 
-// Mục đích: Lớp `_MetaChip` triển khai phần việc `Meta Chip` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget chip metadata (icon + nhãn) của mẫu.
 
 class _MetaChip extends StatelessWidget {
   final IconData icon;
@@ -2643,10 +2550,7 @@ class _MetaChip extends StatelessWidget {
       {required this.icon, required this.label, required this.color});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chip metadata.
 
   Widget build(BuildContext context) {
     return Row(mainAxisSize: MainAxisSize.min, children: [
@@ -2657,10 +2561,7 @@ class _MetaChip extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_InfoRow` triển khai phần việc `Info Row` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget dòng thông tin (nhãn + giá trị).
 
 class _InfoRow extends StatelessWidget {
   final String label;
@@ -2668,10 +2569,7 @@ class _InfoRow extends StatelessWidget {
   const _InfoRow(this.label, this.value);
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/templates/template_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng 1 dòng thông tin.
 
   Widget build(BuildContext context) {
     return Padding(

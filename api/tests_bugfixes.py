@@ -1,11 +1,30 @@
 """Integration tests cho cac fix trong danh_sach_loi_he_thong.md (bug 6, 9, 5, 3)."""
 
+import json
+import shutil
+import uuid
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
+
+from django.conf import settings
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from accounts.models import Company, CompanyStatus, CompanyUserMembership
+from accounts.storage_paths import company_storage_slug
+from ai_engine.models import ChatSession
 from documents.models import Document
 from document_templates.models import DocumentTemplate
+
+
+class _FakeLlm:
+    def __init__(self, content='OK'):
+        self.content = content
+
+    def invoke(self, _messages):
+        return SimpleNamespace(content=self.content)
 
 
 class TemplateDeleteInUseTests(TestCase):
@@ -105,6 +124,93 @@ class DocxTemplateVariableDetectionTests(TestCase):
             detected,
             {'Ten_Doi_Tac', 'Ten_Nguoi_Dai_Dien', 'Chuc_vu'},
         )
+
+
+class AiDocCreateCompanyStorageTests(TestCase):
+    def setUp(self):
+        self.company = Company.objects.create(
+            code='vnnet-test',
+            slug='vnnet-test',
+            name='VNNET Test',
+            status=CompanyStatus.ACTIVE,
+        )
+        self.user = User.objects.create_user(username='vnnet_user', password='secret')
+        CompanyUserMembership.objects.create(
+            company=self.company,
+            user=self.user,
+            local_username='vnnet_user',
+            role='company_user',
+            is_active=True,
+        )
+        self.template = DocumentTemplate.objects.create(
+            owner=self.user,
+            company=self.company,
+            title='Mau sinh van ban',
+            content='Xin chao {{ ho_ten }}',
+            source_type=DocumentTemplate.SOURCE_MANUAL,
+            visibility=DocumentTemplate.VISIBILITY_PRIVATE,
+            status='approved',
+        )
+
+    def test_generated_document_file_uses_current_company_storage_prefix(self):
+        self.client.force_login(self.user)
+        payload = {
+            'template_id': self.template.pk,
+            'variables': {'ho_ten': 'Nguyen Van A'},
+            'doc_title': 'Van ban VNNET',
+        }
+        media_root = Path(settings.BASE_DIR) / '.codex-tmp-pyc' / f'test-api-ai-doc-{uuid.uuid4().hex}'
+        media_root.mkdir(parents=True, exist_ok=True)
+        try:
+            with override_settings(MEDIA_ROOT=str(media_root)):
+                response = self.client.post(
+                    reverse('api:ai_doc_create'),
+                    data=json.dumps(payload),
+                    content_type='application/json',
+                )
+        finally:
+            shutil.rmtree(media_root, ignore_errors=True)
+
+        self.assertEqual(response.status_code, 201)
+        document = Document.objects.get(pk=response.json()['id'])
+        expected_prefix = f'companies/{company_storage_slug(self.company)}/generated_docs/'
+        self.assertTrue(document.output_file.name.startswith(expected_prefix))
+
+        detail_response = self.client.get(reverse('api:document_detail', args=[document.pk]))
+        self.assertEqual(detail_response.status_code, 200)
+
+
+class ChatAiCompanyContextTests(TestCase):
+    def setUp(self):
+        self.company = Company.objects.create(
+            code='chat-company',
+            slug='chat-company',
+            name='Chat Company',
+            status=CompanyStatus.ACTIVE,
+            company_context='Ngu canh rieng cua Chat Company.',
+        )
+        self.user = User.objects.create_user(username='chat_user', password='secret')
+        CompanyUserMembership.objects.create(
+            company=self.company,
+            user=self.user,
+            local_username='chat_user',
+            role='company_user',
+            is_active=True,
+        )
+        self.client.force_login(self.user)
+
+    def test_chat_endpoint_uses_company_context_without_name_error(self):
+        with patch('ai_engine.rag_engine.get_llm', return_value=_FakeLlm('CHAT_OK')):
+            response = self.client.post(
+                reverse('api:chat_message'),
+                data=json.dumps({'q': 'Hoi nhanh'}),
+                content_type='application/json',
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['answer'], 'CHAT_OK')
+        session = ChatSession.objects.get(pk=response.json()['session_id'])
+        self.assertEqual(session.company_id, self.company.pk)
 
 
 class NotificationMarkAllTests(TestCase):

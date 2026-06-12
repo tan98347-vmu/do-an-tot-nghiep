@@ -1,4 +1,0 @@
-interface:
-  display_name: "Legacy Cleanup Sweep"
-  short_description: "Scan this repo for dead code, wrappers, and junk"
-  default_prompt: "Use $legacy-cleanup-sweep before or after refactors to find old architecture traces, dead code, stale wrappers, and removable junk files."

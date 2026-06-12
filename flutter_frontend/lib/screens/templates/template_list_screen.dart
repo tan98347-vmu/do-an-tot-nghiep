@@ -1,8 +1,9 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH DANH SÁCH MẪU VĂN BẢN ===
+// Hiển thị theo nhóm/tab (của tôi / phòng ban / dùng chung / yêu thích / tất cả — templateCollectionProvider).
+// - Tìm kiếm/lọc (chủ sở hữu, nhóm, theo tag _searchByTag; admin lọc thêm _loadAdminFilterData). Thẻ _TemplateCard có xem trước PDF ('preview-pdf/') + yêu thích.
+// - Mở chi tiết (/templates/<id>), sửa (/edit), tạo mới (/templates/create).
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
 import 'dart:async';
 import 'dart:html' as html;
 import 'dart:typed_data';
@@ -18,14 +19,12 @@ import '../../providers/auth_provider.dart';
 import '../../providers/templates_provider.dart';
 import '../../models/template.dart';
 import '../../models/user.dart';
+import '../../widgets/common/record_code_label.dart';
 import '../../widgets/common/view_mode_toggle.dart';
 import '../../widgets/pdf/web_pdf_frame.dart';
 
 // ─── Simple model cho admin filter lists ────────────────────────────────────
-// Mục đích: Lớp `_SimpleItem` triển khai phần việc `Simple Item` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Mục đơn giản (id + nhãn) cho dropdown lọc.
 
 class _SimpleItem {
   final int id;
@@ -35,10 +34,7 @@ class _SimpleItem {
 
 final Set<String> _registeredTemplateListPreviewViews = <String>{};
 
-// Mục đích: Widget `TemplateListScreen` triển khai phần việc `Template List Screen` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn DANH SÁCH MẪU VĂN BẢN; nhận group (nhóm/tab đang xem).
 
 class TemplateListScreen extends ConsumerStatefulWidget {
   final String group;
@@ -48,10 +44,7 @@ class TemplateListScreen extends ConsumerStatefulWidget {
   ConsumerState<TemplateListScreen> createState() => _TemplateListScreenState();
 }
 
-// Mục đích: Widget `_TemplateListScreenState` triển khai phần việc `Template List Screen State` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn danh sách mẫu: bộ lọc, tìm kiếm, chọn nhiều, dữ liệu lọc admin.
 
 class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
   final _searchCtrl = TextEditingController();
@@ -84,17 +77,18 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
   String _tr(String vi, String en) => _strings.pick(vi, en);
 
   String _searchFieldLabelText() => switch (widget.group) {
-        'system' => _tr('Tên / mã / tag mẫu dùng chung',
-            'Shared template title / code / tag'),
-        'team' => _tr('Tên / mã / tag mẫu phòng ban',
-            'Department template title / code / tag'),
-        'private' =>
-          _tr('Tên / mã / tag mẫu của tôi', 'My template title / code / tag'),
-        'favorite' => _tr('Tên / mã / tag mẫu yêu thích',
-            'Favorite template title / code / tag'),
-        'admin' => _tr('Tên / mã / tag mẫu trong hệ thống',
-            'System template title / code / tag'),
-        _ => _tr('Tên / mã / tag mẫu', 'Template title / code / tag'),
+        'system' => _tr('Tên / mã hệ thống / tag mẫu dùng chung',
+            'Shared template title / system code / tag'),
+        'team' => _tr('Tên / mã hệ thống / tag mẫu phòng ban',
+            'Department template title / system code / tag'),
+        'private' => _tr('Tên / mã hệ thống / tag mẫu của tôi',
+            'My template title / system code / tag'),
+        'favorite' => _tr('Tên / mã hệ thống / tag mẫu yêu thích',
+            'Favorite template title / system code / tag'),
+        'admin' => _tr('Tên / mã hệ thống / tag mẫu trong hệ thống',
+            'System template title / system code / tag'),
+        _ => _tr('Tên / mã hệ thống / tag mẫu',
+            'Template title / system code / tag'),
       };
 
   String _ownerFieldLabelText() =>
@@ -125,9 +119,10 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
         'team' => _tr('Mẫu phòng ban của tôi', 'My department templates'),
         'private' => _tr('Mẫu của tôi', 'My private templates'),
         'favorite' => _tr('Mẫu yêu thích', 'Favorite templates'),
-        'peer' => _tr('Mẫu chia sẻ cho đồng nghiệp', 'Templates shared with me'),
+        'peer' =>
+          _tr('Mẫu chia sẻ cho đồng nghiệp', 'Templates shared with me'),
         'admin' => _tr('Tất cả mẫu văn bản (Admin)', 'All templates (Admin)'),
-        _ => _tr('Mẫu văn bản', 'Templates'),
+        _ => _tr('Quản lý mẫu văn bản', 'Template management'),
       };
 
   String _groupSubtitleText() => switch (widget.group) {
@@ -140,8 +135,7 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
             'All templates you created, including drafts and pending approvals'),
         'favorite' => _tr('Các mẫu bạn đã đánh dấu yêu thích',
             'Templates you marked as favorite'),
-        'peer' => _tr(
-            'Mẫu được đồng nghiệp chia sẻ riêng cho bạn',
+        'peer' => _tr('Mẫu được đồng nghiệp chia sẻ riêng cho bạn',
             'Templates peers shared directly with you'),
         'admin' => _tr('Xem và quản lý toàn bộ mẫu văn bản của người dùng',
             'Browse and manage every template in the system'),
@@ -150,10 +144,7 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
       };
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở màn: nạp danh sách mẫu của nhóm + dữ liệu lọc (admin).
 
   void initState() {
     super.initState();
@@ -163,10 +154,7 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
     if (user?.isSuperuser == true) _loadAdminFilterData();
   }
 
-  // Mục đích: Phương thức `_loadAdminFilterData` triển khai phần việc `load Admin Filter Data` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nạp dữ liệu cho bộ lọc nâng cao của admin (nhóm/người dùng).
 
   Future<void> _loadAdminFilterData() async {
     try {
@@ -199,10 +187,7 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Rời màn: dọn controller tìm kiếm.
 
   void dispose() {
     _searchCtrl.dispose();
@@ -211,10 +196,7 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
     super.dispose();
   }
 
-  // Mục đích: Phương thức `_searchByTag` triển khai phần việc `search By Tag` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Lọc mẫu theo 1 tag khi bấm vào tag.
 
   void _searchByTag(String tag) {
     final query = '#$tag';
@@ -224,10 +206,7 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
     setState(() => _search = query.toLowerCase());
   }
 
-  // Mục đích: Phương thức `_onSearchChanged` triển khai phần việc `on Search Changed` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Lọc danh sách theo từ khóa (debounce).
 
   void _onSearchChanged(String v) {
     _debounce?.cancel();
@@ -250,10 +229,7 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
     return value;
   }
 
-  // Mục đích: Phương thức `_resetFilters` triển khai phần việc `reset Filters` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Xóa toàn bộ bộ lọc.
 
   void _resetFilters() {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -276,10 +252,7 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_hasActiveFilter` triển khai phần việc `has Active Filter` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đang có bộ lọc nào bật không.
 
   bool _hasActiveFilter() =>
       _search.isNotEmpty ||
@@ -309,10 +282,7 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
     return count;
   }
 
-  // Mục đích: Phương thức `_matchDate` triển khai phần việc `match Date` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Kiểm 1 ngày có nằm trong khoảng lọc không.
 
   bool _matchDate(String? dateStr, DateTime? from, DateTime? to) {
     if (from == null && to == null) return true;
@@ -348,7 +318,6 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
       _isAdminView || widget.group == 'private' || widget.group == 'favorite';
   bool get _showOwnerFilter => widget.group != 'private';
 
-
   String get _filterSummaryText => switch (widget.group) {
         'system' =>
           'Tab này đã tách sẵn mẫu dùng chung, bộ lọc ưu tiên tên mã, trạng thái và người tạo.',
@@ -360,14 +329,10 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
           'Tab này đã là danh sách yêu thích, bộ lọc ưu tiên tên mã, trạng thái, người tạo và mức chia sẻ.',
         'admin' =>
           'Tab này dành cho quản trị, bộ lọc ưu tiên tên mã, chủ sở hữu, phòng ban và trạng thái.',
-        _ =>
-          'Dùng bộ lọc theo thuộc tính để khoanh đúng mẫu cần tìm.',
+        _ => 'Dùng bộ lọc theo thuộc tính để khoanh đúng mẫu cần tìm.',
       };
 
-  // Mục đích: Phương thức `_canDeleteTemplate` triển khai phần việc `can Delete Template` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Kiểm user có quyền xóa mẫu này không.
 
   bool _canDeleteTemplate(DocumentTemplate t, AppUser? user) {
     return t.canDelete;
@@ -381,19 +346,13 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
         groupId: _adminGroupIdFilter,
       );
 
-  // Mục đích: Phương thức `_refreshTemplates` triển khai phần việc `refresh Templates` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Làm mới danh sách mẫu từ server.
 
   void _refreshTemplates() {
     ref.invalidate(templateCollectionProvider(_collectionParams));
   }
 
-  // Mục đích: Phương thức `_toggleTemplateSelection` triển khai phần việc `toggle Template Selection` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Chọn/bỏ chọn 1 mẫu (chế độ chọn nhiều).
 
   void _toggleTemplateSelection(int id, bool selected) {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -407,10 +366,7 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_toggleSelectAllTemplates` triển khai phần việc `toggle Select All Templates` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Chọn/bỏ chọn tất cả mẫu đang lọc.
 
   void _toggleSelectAllTemplates(
       List<DocumentTemplate> filtered, AppUser? user) {
@@ -433,10 +389,7 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_bulkDeleteTemplates` triển khai phần việc `bulk Delete Templates` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút Xóa nhiều: xóa hàng loạt mẫu đã chọn (có xác nhận).
 
   Future<void> _bulkDeleteTemplates(BuildContext context) async {
     if (_selectedTemplateIds.isEmpty || _bulkDeleting) return;
@@ -476,9 +429,9 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
         // dung force=true de mau dang duoc su dung cung duoc xoa (soft-delete,
         // van ban da sinh khong bi anh huong).
         await ApiClient().dio.delete(
-              'templates/$id/',
-              queryParameters: {'force': 'true'},
-            );
+          'templates/$id/',
+          queryParameters: {'force': 'true'},
+        );
         successCount++;
       } catch (_) {
         failedCount++;
@@ -507,10 +460,7 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng màn: tab nhóm + tìm/lọc + lưới mẫu (mỗi mẫu là _TemplateCard) + thao tác chọn nhiều.
 
   Widget build(BuildContext context) {
     // Lắng nghe provider để widget tự động dựng lại khi dữ liệu hoặc trạng thái thay đổi.
@@ -1461,7 +1411,8 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
                               size: 18,
                             ),
                             label: Text(allVisibleSelected
-                                ? strings.pick('Bỏ chọn tất cả', 'Clear selection')
+                                ? strings.pick(
+                                    'Bỏ chọn tất cả', 'Clear selection')
                                 : strings.pick('Chọn tất cả', 'Select all')),
                           ),
                           if (_selectedTemplateIds.isNotEmpty) ...[
@@ -1478,17 +1429,19 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
                               ),
                             ),
                             TextButton(
-                              onPressed: () => setState(
-                                  () => _selectedTemplateIds.clear()),
+                              onPressed: () =>
+                                  setState(() => _selectedTemplateIds.clear()),
                               child: Text(strings.pick('Bỏ chọn', 'Clear')),
                             ),
                           ],
                           const SizedBox(width: 8),
                           ViewModeToggle(
                             value: _viewMode,
-                            onChanged: (value) => setState(() => _viewMode = value),
+                            onChanged: (value) =>
+                                setState(() => _viewMode = value),
                             cardLabel: strings.pick('Dạng thẻ', 'Card view'),
-                            listLabel: strings.pick('Dạng danh sách', 'List view'),
+                            listLabel:
+                                strings.pick('Dạng danh sách', 'List view'),
                           ),
                           if (_selectedTemplateIds.isNotEmpty) ...[
                             const SizedBox(width: 8),
@@ -1752,7 +1705,7 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
         'private' => 'Mẫu của tôi',
         'favorite' => 'Mẫu yêu thích',
         'admin' => 'Tất cả mẫu văn bản (Admin)',
-        _ => 'Mẫu văn bản',
+        _ => 'Quản lý mẫu văn bản',
       };
 
   String get _groupSubtitle => switch (widget.group) {
@@ -1761,18 +1714,14 @@ class _TemplateListScreenState extends ConsumerState<TemplateListScreen> {
         'private' =>
           'Tat ca mau do ban tao ra, ke ca mau dang cho duyet hoac cho phe duyet lai',
         'favorite' => 'Các mẫu bạn đã đánh dấu yêu thích',
-        'admin' =>
-          'Xem và quản lý tất cả mẫu văn bản của mọi người dùng',
+        'admin' => 'Xem và quản lý tất cả mẫu văn bản của mọi người dùng',
         _ => 'Tất cả mẫu văn bản bạn có quyền truy cập',
       };
 }
 
 // ─── Card ──────────────────────────────────────────────────────────────────
 
-// Mục đích: Lớp `_TemplateCard` triển khai phần việc `Template Card` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Thẻ 1 mẫu trong lưới (ConsumerStatefulWidget).
 
 class _TemplateCard extends ConsumerStatefulWidget {
   final DocumentTemplate template;
@@ -1799,10 +1748,7 @@ class _TemplateCard extends ConsumerStatefulWidget {
   ConsumerState<_TemplateCard> createState() => _TemplateCardState();
 }
 
-// Mục đích: Lớp `_TemplateCardState` triển khai phần việc `Template Card State` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State thẻ mẫu: xem trước PDF/HTML + thao tác yêu thích/xóa.
 
 class _TemplateCardState extends ConsumerState<_TemplateCard> {
   bool _favLoading = false;
@@ -1810,10 +1756,7 @@ class _TemplateCardState extends ConsumerState<_TemplateCard> {
   bool _initialized = false;
 
   @override
-  // Mục đích: Phương thức `didUpdateWidget` triển khai phần việc `did Update Widget` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khi mẫu của thẻ đổi -> cập nhật trạng thái.
 
   void didUpdateWidget(_TemplateCard old) {
     super.didUpdateWidget(old);
@@ -1825,10 +1768,7 @@ class _TemplateCardState extends ConsumerState<_TemplateCard> {
   }
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khởi tạo thẻ: chuẩn bị xem trước + cờ đã đọc duyệt.
 
   void initState() {
     super.initState();
@@ -1836,28 +1776,19 @@ class _TemplateCardState extends ConsumerState<_TemplateCard> {
     _initialized = true;
   }
 
-  // Mục đích: Phương thức `_canDelete` triển khai phần việc `can Delete` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Kiểm quyền xóa mẫu (trong thẻ).
 
   bool _canDelete(DocumentTemplate t, AppUser? user) {
     return t.canDelete;
   }
 
-  // Mục đích: Phương thức `_canEdit` triển khai phần việc `can Edit` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Kiểm quyền sửa mẫu (trong thẻ).
 
   bool _canEdit(DocumentTemplate t, AppUser? user) {
     return t.canEdit;
   }
 
-  // Mục đích: Phương thức `_reviewStorageKey` triển khai phần việc `review Storage Key` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Key lưu cục bộ đánh dấu đã đọc kết quả duyệt mẫu.
 
   String _reviewStorageKey(int templateId) =>
       'template_review_seen:$templateId';
@@ -1870,10 +1801,7 @@ class _TemplateCardState extends ConsumerState<_TemplateCard> {
     return '$action@$at';
   }
 
-  // Mục đích: Phương thức `_hasUnreadReview` triển khai phần việc `has Unread Review` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mẫu có thông báo duyệt chưa đọc không (chấm đỏ).
 
   bool _hasUnreadReview(DocumentTemplate t, AppUser? user) {
     if (user == null || user.id != t.ownerId) return false;
@@ -1898,10 +1826,7 @@ class _TemplateCardState extends ConsumerState<_TemplateCard> {
     }
   }
 
-  // Mục đích: Phương thức `_toggleFavorite` triển khai phần việc `toggle Favorite` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Bật/tắt yêu thích mẫu (trong thẻ).
 
   Future<void> _toggleFavorite() async {
     if (_favLoading) return;
@@ -1927,10 +1852,7 @@ class _TemplateCardState extends ConsumerState<_TemplateCard> {
     }
   }
 
-  // Mục đích: Phương thức `_delete` triển khai phần việc `delete` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Xóa mẫu (trong thẻ) -> thùng rác.
 
   Future<void> _delete(BuildContext context) async {
     final ok = await showDialog<bool>(
@@ -1969,17 +1891,13 @@ class _TemplateCardState extends ConsumerState<_TemplateCard> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Lỗi xóa: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Lỗi xóa: $e'), backgroundColor: Colors.red),
         );
       }
     }
   }
 
-  // Mục đích: Phương thức `_buildHtmlPreviewFrame` triển khai phần việc `build Html Preview Frame` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng khung xem trước HTML nhỏ trong thẻ mẫu.
 
   Widget _buildHtmlPreviewFrame(String viewKey, String htmlContent) {
     if (_registeredTemplateListPreviewViews.add(viewKey)) {
@@ -1994,10 +1912,7 @@ class _TemplateCardState extends ConsumerState<_TemplateCard> {
     return HtmlElementView(viewType: viewKey);
   }
 
-  // Mục đích: Phương thức `_previewTemplate` triển khai phần việc `preview Template` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở xem trước mẫu (PDF/HTML) từ thẻ.
 
   Future<void> _previewTemplate(BuildContext context) async {
     showDialog<void>(
@@ -2184,10 +2099,7 @@ class _TemplateCardState extends ConsumerState<_TemplateCard> {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng thẻ mẫu: tiêu đề, badge trạng thái/phạm vi, xem trước, nút yêu thích/sửa/xóa; bấm mở chi tiết.
 
   Widget build(BuildContext context) {
     final t = widget.template;
@@ -2198,20 +2110,14 @@ class _TemplateCardState extends ConsumerState<_TemplateCard> {
     final hasUnreadReview = _hasUnreadReview(t, user);
     final isPhone = MediaQuery.sizeOf(context).width < 760;
     final useCompactLayout = widget.compact || isPhone;
-    // Mục đích: Phương thức `selectionBox` triển khai phần việc `selection Box` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-    // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-    // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-    // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+    // Ô checkbox chọn mẫu (chế độ chọn nhiều) trong thẻ.
 
     Widget selectionBox() => Checkbox(
           value: widget.selected,
           onChanged: widget.selectionEnabled ? widget.onSelectedChanged : null,
           visualDensity: VisualDensity.compact,
         );
-    // Mục đích: Phương thức `actionRow` triển khai phần việc `action Row` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-    // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-    // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-    // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+    // Hàng nút thao tác nhanh trong thẻ mẫu.
 
     Widget actionRow() => Row(
           mainAxisSize: MainAxisSize.min,
@@ -2327,10 +2233,7 @@ class _TemplateCardState extends ConsumerState<_TemplateCard> {
             child: const Icon(Icons.more_horiz),
           ),
         );
-    // Mục đích: Phương thức `tagsWrap` triển khai phần việc `tags Wrap` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-    // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-    // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-    // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+    // Hiển thị danh sách tag của mẫu (giới hạn số lượng).
 
     Widget tagsWrap(int limit) => Wrap(
           spacing: 4,
@@ -2431,6 +2334,8 @@ class _TemplateCardState extends ConsumerState<_TemplateCard> {
                               ],
                             ],
                           ),
+                          const SizedBox(height: 5),
+                          RecordCodeLabel(code: t.recordCode),
                           const SizedBox(height: 6),
                           Wrap(
                             spacing: 8,
@@ -2572,6 +2477,8 @@ class _TemplateCardState extends ConsumerState<_TemplateCard> {
                   _StatusChip(status: t.status),
                 ],
               ),
+              const SizedBox(height: 5),
+              RecordCodeLabel(code: t.recordCode, compact: true),
               // Description
               if (t.description.isNotEmpty) ...[
                 const SizedBox(height: 6),
@@ -2695,20 +2602,14 @@ class _TemplateCardState extends ConsumerState<_TemplateCard> {
 
 // ─── Chips ─────────────────────────────────────────────────────────────────
 
-// Mục đích: Lớp `_StatusChip` triển khai phần việc `Status Chip` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget chip trạng thái duyệt của mẫu.
 
 class _StatusChip extends StatelessWidget {
   final String status;
   const _StatusChip({required this.status});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chip trạng thái.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -2736,20 +2637,14 @@ class _StatusChip extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_VisibilityChip` triển khai phần việc `Visibility Chip` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget chip phạm vi hiển thị của mẫu.
 
 class _VisibilityChip extends StatelessWidget {
   final String visibility;
   const _VisibilityChip({required this.visibility});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chip phạm vi.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -2766,10 +2661,7 @@ class _VisibilityChip extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_QuickChip` triển khai phần việc `Quick Chip` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget chip lọc nhanh.
 
 class _QuickChip extends StatelessWidget {
   final String label;
@@ -2785,10 +2677,7 @@ class _QuickChip extends StatelessWidget {
       this.icon});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chip lọc nhanh.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -2825,10 +2714,7 @@ class _QuickChip extends StatelessWidget {
 
 // ─── Date Range Row ─────────────────────────────────────────────────────────
 
-// Mục đích: Lớp `_DateRangeRow` triển khai phần việc `Date Range Row` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget chọn khoảng ngày (từ - đến) trong bộ lọc.
 
 class _DateRangeRow extends StatelessWidget {
   final String label;
@@ -2847,27 +2733,18 @@ class _DateRangeRow extends StatelessWidget {
     required this.onToPick,
   });
 
-  // Mục đích: Phương thức `_fmt` triển khai phần việc `fmt` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Định dạng ngày 'từ'.
 
   String _fmt(DateTime? d) => d == null
       ? 'Từ ngày'
       : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
-  // Mục đích: Phương thức `_fmtTo` triển khai phần việc `fmt To` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Định dạng ngày 'đến'.
 
   String _fmtTo(DateTime? d) => d == null
       ? 'Đến ngày'
       : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
-  // Mục đích: Phương thức `_pick` triển khai phần việc `pick` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở lịch chọn 1 mốc ngày cho bộ lọc.
 
   Future<void> _pick(BuildContext context, DateTime? current,
       void Function(DateTime?) cb) async {
@@ -2881,10 +2758,7 @@ class _DateRangeRow extends StatelessWidget {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng hàng chọn khoảng ngày.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -2953,10 +2827,7 @@ class _DateRangeRow extends StatelessWidget {
 
 // ─── Highlight Text ─────────────────────────────────────────────────────────
 
-// Mục đích: Lớp `_HighlightText` triển khai phần việc `Highlight Text` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget tô sáng phần text khớp từ khóa tìm kiếm.
 
 class _HighlightText extends StatelessWidget {
   final String text;
@@ -2972,10 +2843,7 @@ class _HighlightText extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/templates/template_list_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng text có tô sáng đoạn khớp tìm kiếm.
 
   Widget build(BuildContext context) {
     if (query.isEmpty) {

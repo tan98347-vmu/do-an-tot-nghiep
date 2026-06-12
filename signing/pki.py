@@ -1,9 +1,38 @@
 """
-Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
-Vai tro backend: File `signing/pki.py` giu hoac ho tro luong backend cho de xuat ky, packet ky, nhiem vu ky, xac minh PDF, PKI noi bo va quyen uy quyen.
-Vai tro cua no trong frontend: Cac man `/signing/tasks`, `/signed-pdfs`, `/signing/access` va mot phan thao tac o `/mailbox` phu thuoc truc tiep hoac gian tiep vao file nay.
-Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `api/urls.py`, `api/serializers/signing.py`, `signing.models`, `signing.permissions`, `signing.pki`, `signing.services`.
-Tac dung: Giu cho quy trinh ky nhieu buoc, trang thai chu ky va kiem tra toan ven PDF nhat quan giua nguoi de xuat, nguoi ky va man tra cuu.
+ Phần ký mật mã thực sự nằm tại signing/pki.py:863:
+
+  private_key_pem = get_private_key_pem_for_credential(credential)
+  pdf_signer = _build_local_pyhanko_signer(credential, private_key_pem)
+  pdf_signer_obj.sign_pdf(writer, output=output_handle)
+
+  Private key ký hash bằng RSA tại signing/pki.py:726:
+
+  return private_key.sign(
+      digest_bytes,
+      padding.PKCS1v15(),
+      asym_utils.Prehashed(hash_algorithm),
+  )
+
+  Tức là:
+
+  PDF → SHA-256 → RSA private key → PKCS#7 → nhúng vào PDF
+
+ Bộ máy xác minh
+
+  Nằm tại signing/pki.py:1048.
+
+  Nó thực hiện:
+
+  1. Kiểm tra file còn tồn tại.
+  2. Đọc các chữ ký PKCS#7 nhúng trong PDF.
+  3. Lấy public key từ certificate.
+  4. Tính lại hash vùng PDF được ký.
+  5. Xác minh chữ ký bằng public key.
+  6. Kiểm tra certificate chain với CA tin cậy.
+  7. Kiểm tra PDF có bị sửa sau khi ký không.
+  8. Trả về safe, untrusted, invalid hoặc tampered.
+
+
 """
 
 import base64

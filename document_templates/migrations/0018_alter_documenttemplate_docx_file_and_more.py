@@ -4,6 +4,8 @@ from django.db import migrations, models
 import document_templates.models
 
 
+# class Migration là bước migration thay đổi cấu trúc CSDL (theo tên file: alter documenttemplate docx file and more).
+# vd: chạy "python manage.py migrate" để áp dụng thay đổi schema này.
 class Migration(migrations.Migration):
 
     dependencies = [

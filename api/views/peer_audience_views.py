@@ -31,6 +31,11 @@ from api.views.peer_share import (
 )
 
 
+# Là gì: `_serialize_user` là helper nội bộ của module `peer_audience_views.py`, phục vụ nhóm xây dựng các view chia sẻ tài nguyên theo đối tượng người nhận.
+# Chức năng backend: Hàm chuyển đối tượng nội bộ thành dữ liệu có thể trả cho client; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình tài nguyên được chia sẻ trong công ty.
+# Mối liên hệ: Hàm phối hợp với `strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _serialize_user(user):
     profile = getattr(user, 'profile', None)
     full_name = f'{user.first_name} {user.last_name}'.strip() or user.username
@@ -43,6 +48,11 @@ def _serialize_user(user):
     }
 
 
+# Là gì: `_serialize_audience_member` là helper nội bộ của module `peer_audience_views.py`, phục vụ nhóm xây dựng các view chia sẻ tài nguyên theo đối tượng người nhận.
+# Chức năng backend: Hàm chuyển đối tượng nội bộ thành dữ liệu có thể trả cho client; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình tài nguyên được chia sẻ trong công ty.
+# Mối liên hệ: Hàm phối hợp với `_serialize_user`, `audience_member.created_at.isoformat` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _serialize_audience_member(audience_member):
     return {
         'user_id': audience_member.user_id,
@@ -53,6 +63,11 @@ def _serialize_audience_member(audience_member):
     }
 
 
+# Là gì: `_peer_card_payload` là helper nội bộ của module `peer_audience_views.py`, phục vụ nhóm xây dựng các view chia sẻ tài nguyên theo đối tượng người nhận.
+# Chức năng backend: Hàm xử lý phần việc `peer card payload` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình tài nguyên được chia sẻ trong công ty.
+# Mối liên hệ: Hàm phối hợp với `audience_model.objects.filter.select_related`, `audience_model.objects.filter`, `audience_qs.count` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _peer_card_payload(entity, fk_name: str, audience_model):
     audience_qs = audience_model.objects.filter(**{fk_name: entity}).select_related('user', 'user__profile')
     return {
@@ -74,6 +89,11 @@ def _peer_card_payload(entity, fk_name: str, audience_model):
     }
 
 
+# Là gì: `_parse_audience_payload` là helper nội bộ của module `peer_audience_views.py`, phục vụ nhóm xây dựng các view chia sẻ tài nguyên theo đối tượng người nhận.
+# Chức năng backend: Hàm phân tích dữ liệu thô thành cấu trúc có thể sử dụng; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình tài nguyên được chia sẻ trong công ty.
+# Mối liên hệ: Hàm phối hợp với `data.get`, `item.get`, `normalize_peer_permission_level` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _parse_audience_payload(data):
     raw_audiences = data.get('audiences')
     if raw_audiences is not None:
@@ -111,12 +131,22 @@ def _parse_audience_payload(data):
     return parsed, None
 
 
+# Là gì: `build_peer_views` là hàm điều phối nghiệp vụ của module `peer_audience_views.py`, thuộc nhóm xây dựng các view chia sẻ tài nguyên theo đối tượng người nhận.
+# Chức năng backend: Hàm tổng hợp dữ liệu đầu vào thành cấu trúc phục vụ bước tiếp theo; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình tài nguyên được chia sẻ trong công ty.
+# Mối liên hệ: Hàm phối hợp với `get_user_company`, `model.objects.all`, `get_object_or_404` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 def build_peer_views(*, model, audience_model, fk_name: str, entity_label: str):
     """
     Returns dict cua 6 view functions.
     fk_name: 'template' | 'document' | 'prompt'
     """
 
+    # Là gì: `_get_entity` là hàm cục bộ bên trong `build_peer_views`, chỉ phục vụ bước xử lý nội bộ của nhóm xây dựng các view chia sẻ tài nguyên theo đối tượng người nhận.
+    # Chức năng backend: Hàm đọc và trả về dữ liệu cần thiết; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình tài nguyên được chia sẻ trong công ty.
+    # Mối liên hệ: Hàm phối hợp với `get_user_company`, `model.objects.all`, `any` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def _get_entity(request, pk):
         company = get_user_company(request.user)
         qs = model.objects.all()
@@ -127,16 +157,31 @@ def build_peer_views(*, model, audience_model, fk_name: str, entity_label: str):
                 qs = qs.filter(owner__company_membership__company=company)
         return get_object_or_404(qs, pk=pk)
 
+    # Là gì: `_can_manage_audience` là hàm cục bộ bên trong `build_peer_views`, chỉ phục vụ bước xử lý nội bộ của nhóm xây dựng các view chia sẻ tài nguyên theo đối tượng người nhận.
+    # Chức năng backend: Hàm đánh giá quyền hoặc điều kiện cho phép thao tác; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình tài nguyên được chia sẻ trong công ty.
+    # Mối liên hệ: Hàm phối hợp với `peer_can` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def _can_manage_audience(request, entity):
         if request.user.is_superuser or entity.owner_id == request.user.pk:
             return True
         return peer_can(request.user, entity, PeerPermissionLevel.DELETE)
 
+    # Là gì: `_can_view_audience` là hàm cục bộ bên trong `build_peer_views`, chỉ phục vụ bước xử lý nội bộ của nhóm xây dựng các view chia sẻ tài nguyên theo đối tượng người nhận.
+    # Chức năng backend: Hàm đánh giá quyền hoặc điều kiện cho phép thao tác; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình tài nguyên được chia sẻ trong công ty.
+    # Mối liên hệ: Hàm phối hợp với `peer_can` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def _can_view_audience(request, entity):
         if request.user.is_superuser or entity.owner_id == request.user.pk:
             return True
         return peer_can(request.user, entity, PeerPermissionLevel.VIEW)
 
+    # Là gì: `_render_state` là hàm cục bộ bên trong `build_peer_views`, chỉ phục vụ bước xử lý nội bộ của nhóm xây dựng các view chia sẻ tài nguyên theo đối tượng người nhận.
+    # Chức năng backend: Hàm kết xuất nội dung theo mẫu hoặc định dạng đích; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình tài nguyên được chia sẻ trong công ty.
+    # Mối liên hệ: Hàm phối hợp với `audience_model.objects.filter.select_related.order_by`, `audience_model.objects.filter.select_related`, `audience_model.objects.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
     def _render_state(entity):
         members = list(
             audience_model.objects.filter(**{fk_name: entity})
@@ -162,6 +207,11 @@ def build_peer_views(*, model, audience_model, fk_name: str, entity_label: str):
             ],
         })
 
+    # Là gì: `_handle_list_audience` là hàm cục bộ bên trong `build_peer_views`, chỉ phục vụ bước xử lý nội bộ của nhóm xây dựng các view chia sẻ tài nguyên theo đối tượng người nhận.
+    # Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình tài nguyên được chia sẻ trong công ty.
+    # Mối liên hệ: Hàm phối hợp với `_get_entity`, `_can_view_audience`, `_render_state` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
     def _handle_list_audience(request, pk):
         entity = _get_entity(request, pk)
         if not _can_view_audience(request, entity):
@@ -171,6 +221,11 @@ def build_peer_views(*, model, audience_model, fk_name: str, entity_label: str):
             )
         return _render_state(entity)
 
+    # Là gì: `_handle_update_audience` là hàm cục bộ bên trong `build_peer_views`, chỉ phục vụ bước xử lý nội bộ của nhóm xây dựng các view chia sẻ tài nguyên theo đối tượng người nhận.
+    # Chức năng backend: Hàm cập nhật trạng thái hoặc nội dung hiện có; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình tài nguyên được chia sẻ trong công ty.
+    # Mối liên hệ: Hàm phối hợp với `_get_entity`, `_can_manage_audience`, `_parse_audience_payload` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
     def _handle_update_audience(request, pk):
         entity = _get_entity(request, pk)
         if not _can_manage_audience(request, entity):
@@ -254,16 +309,31 @@ def build_peer_views(*, model, audience_model, fk_name: str, entity_label: str):
             set_peer_status(entity, PEER_NONE)
         return _render_state(entity)
 
+    # Là gì: `list_audience` là endpoint REST của nhóm xây dựng các view chia sẻ tài nguyên theo đối tượng người nhận; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+    # Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Kết quả được các màn hình tài nguyên được chia sẻ trong công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+    # Mối liên hệ: Hàm phối hợp với `_handle_list_audience` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     @api_view(['GET'])
     @permission_classes([IsAuthenticated])
     def list_audience(request, pk):
         return _handle_list_audience(request, pk)
 
+    # Là gì: `update_audience` là endpoint REST của nhóm xây dựng các view chia sẻ tài nguyên theo đối tượng người nhận; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+    # Chức năng backend: Hàm cập nhật trạng thái hoặc nội dung hiện có; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Kết quả được các màn hình tài nguyên được chia sẻ trong công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+    # Mối liên hệ: Hàm phối hợp với `_handle_update_audience` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     @api_view(['PUT'])
     @permission_classes([IsAuthenticated])
     def update_audience(request, pk):
         return _handle_update_audience(request, pk)
 
+    # Là gì: `audience` là endpoint REST của nhóm xây dựng các view chia sẻ tài nguyên theo đối tượng người nhận; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+    # Chức năng backend: Hàm xử lý phần việc `audience` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Kết quả được các màn hình tài nguyên được chia sẻ trong công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+    # Mối liên hệ: Hàm phối hợp với `_handle_list_audience`, `_handle_update_audience` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     @api_view(['GET', 'PUT'])
     @permission_classes([IsAuthenticated])
     def audience(request, pk):
@@ -271,6 +341,11 @@ def build_peer_views(*, model, audience_model, fk_name: str, entity_label: str):
             return _handle_list_audience(request, pk)
         return _handle_update_audience(request, pk)
 
+    # Là gì: `submit` là endpoint REST của nhóm xây dựng các view chia sẻ tài nguyên theo đối tượng người nhận; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+    # Chức năng backend: Hàm gửi dữ liệu vào bước xử lý hoặc phê duyệt tiếp theo; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Kết quả được các màn hình tài nguyên được chia sẻ trong công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+    # Mối liên hệ: Hàm phối hợp với `_get_entity`, `_can_manage_audience`, `audience_model.objects.filter.exists` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
     @api_view(['POST'])
     @permission_classes([IsAuthenticated])
     def submit(request, pk):
@@ -294,6 +369,11 @@ def build_peer_views(*, model, audience_model, fk_name: str, entity_label: str):
         set_peer_status(entity, PEER_PENDING_LEADER)
         return _render_state(entity)
 
+    # Là gì: `approve` là endpoint REST của nhóm xây dựng các view chia sẻ tài nguyên theo đối tượng người nhận; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+    # Chức năng backend: Hàm chấp thuận yêu cầu và chuyển trạng thái nghiệp vụ; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Kết quả được các màn hình tài nguyên được chia sẻ trong công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+    # Mối liên hệ: Hàm phối hợp với `_get_entity`, `can_approve_peer_share`, `str.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
     @api_view(['POST'])
     @permission_classes([IsAuthenticated])
     def approve(request, pk):
@@ -310,6 +390,11 @@ def build_peer_views(*, model, audience_model, fk_name: str, entity_label: str):
         set_peer_status(entity, 'active', approver=request.user, note=note)
         return _render_state(entity)
 
+    # Là gì: `reject` là endpoint REST của nhóm xây dựng các view chia sẻ tài nguyên theo đối tượng người nhận; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+    # Chức năng backend: Hàm từ chối yêu cầu và ghi nhận lý do; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Kết quả được các màn hình tài nguyên được chia sẻ trong công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+    # Mối liên hệ: Hàm phối hợp với `_get_entity`, `can_approve_peer_share`, `str.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
     @api_view(['POST'])
     @permission_classes([IsAuthenticated])
     def reject(request, pk):
@@ -333,11 +418,21 @@ def build_peer_views(*, model, audience_model, fk_name: str, entity_label: str):
 
     has_company_fk = any(field.name == 'company' for field in model._meta.fields)
 
+    # Là gì: `_scope_to_company` là hàm cục bộ bên trong `build_peer_views`, chỉ phục vụ bước xử lý nội bộ của nhóm xây dựng các view chia sẻ tài nguyên theo đối tượng người nhận.
+    # Chức năng backend: Hàm xử lý phần việc `scope to company` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình tài nguyên được chia sẻ trong công ty.
+    # Mối liên hệ: Hàm phối hợp với `qs.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def _scope_to_company(qs, company):
         if has_company_fk:
             return qs.filter(company=company)
         return qs.filter(owner__company_membership__company=company)
 
+    # Là gì: `pending` là endpoint REST của nhóm xây dựng các view chia sẻ tài nguyên theo đối tượng người nhận; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+    # Chức năng backend: Hàm xử lý phần việc `pending` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Kết quả được các màn hình tài nguyên được chia sẻ trong công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+    # Mối liên hệ: Hàm phối hợp với `get_user_company`, `model.objects.filter`, `_scope_to_company` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
     @api_view(['GET'])
     @permission_classes([IsAuthenticated])
     def pending(request):

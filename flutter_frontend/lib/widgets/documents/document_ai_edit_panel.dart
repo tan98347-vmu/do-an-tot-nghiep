@@ -5,9 +5,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/browser_alert.dart';
 import '../../core/browser_voice_input.dart';
 import '../../core/word_ai_user_messages.dart';
 import '../../providers/documents_provider.dart';
+import '../../providers/prompt_preflight_provider.dart';
 import '../../providers/word_ai_provider.dart';
 import '../ai/prompt_picker_dialog.dart';
 import '../ai/save_prompt_dialog.dart';
@@ -107,6 +109,8 @@ class _DocumentAiEditPanelState extends ConsumerState<DocumentAiEditPanel> {
   late final BrowserVoiceInputController _voiceInputController;
   bool _trackChanges = false;
   bool _submitting = false;
+  bool _checkingPrompt = false;
+  String? _promptCheckToken;
   bool _voiceListening = false;
   String _voiceStatus = 'idle';
   String _liveTranscript = '';
@@ -116,7 +120,14 @@ class _DocumentAiEditPanelState extends ConsumerState<DocumentAiEditPanel> {
   void initState() {
     super.initState();
     _voiceInputController = createBrowserVoiceInputController();
+    _instructionController.addListener(_onInstructionChanged);
     _loadRecentPrompts();
+  }
+
+  void _onInstructionChanged() {
+    if (_promptCheckToken != null && mounted) {
+      setState(() => _promptCheckToken = null);
+    }
   }
 
   void _loadRecentPrompts() {
@@ -153,6 +164,7 @@ class _DocumentAiEditPanelState extends ConsumerState<DocumentAiEditPanel> {
   void dispose() {
     _voiceInputController.dispose();
     _instructionFocusNode.dispose();
+    _instructionController.removeListener(_onInstructionChanged);
     _instructionController.dispose();
     super.dispose();
   }
@@ -288,11 +300,52 @@ class _DocumentAiEditPanelState extends ConsumerState<DocumentAiEditPanel> {
     );
   }
 
+  Future<void> _checkInstructionPrompt() async {
+    final instruction = _instructionController.text.trim();
+    if (instruction.isEmpty) {
+      await showBrowserAlert(context, 'Vui lòng nhập yêu cầu cho Word AI trước khi kiểm tra prompt.');
+      return;
+    }
+    setState(() {
+      _checkingPrompt = true;
+      _promptCheckToken = null;
+    });
+    final result = await checkPromptPreflight(
+      scope: 'word_ai_edit',
+      context: 'document_ai_edit',
+      promptRole: 'main_instruction',
+      promptText: instruction,
+      targetId: widget.documentId,
+    );
+    if (!mounted) return;
+    if (_instructionController.text.trim() != instruction) {
+      setState(() {
+        _checkingPrompt = false;
+        _promptCheckToken = null;
+      });
+      return;
+    }
+    setState(() {
+      _checkingPrompt = false;
+      _promptCheckToken = result.promptCheckToken;
+    });
+    if (!result.passed) {
+      await showBrowserAlert(context, promptPreflightFailureMessage(result));
+    }
+  }
+
   Future<void> _submit() async {
     final instruction = _instructionController.text.trim();
     if (instruction.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Hãy nhập yêu cầu cho Word AI trước khi chạy.')),
+      );
+      return;
+    }
+    if ((_promptCheckToken ?? '').isEmpty) {
+      await showBrowserAlert(
+        context,
+        'Hãy bấm "Check prompt" và sửa yêu cầu nếu cần trước khi chạy Word AI.',
       );
       return;
     }
@@ -302,6 +355,7 @@ class _DocumentAiEditPanelState extends ConsumerState<DocumentAiEditPanel> {
       final job = await createWordAiJob(
         documentId: widget.documentId,
         instruction: instruction,
+        promptCheckToken: _promptCheckToken!,
         trackChanges: _trackChanges,
       );
       if (!mounted) return;
@@ -538,6 +592,8 @@ class _DocumentAiEditPanelState extends ConsumerState<DocumentAiEditPanel> {
         final compact = constraints.maxWidth < 760;
         final voiceSupported = _voiceInputController.isSupported;
         final canCompose = widget.canEdit && !_submitting;
+        final canRun =
+            canCompose && (_promptCheckToken ?? '').trim().isNotEmpty;
 
         final actionButtons = compact
             ? Column(
@@ -564,7 +620,7 @@ class _DocumentAiEditPanelState extends ConsumerState<DocumentAiEditPanel> {
                     ),
                   if (voiceSupported) const SizedBox(height: 12),
                   FilledButton.icon(
-                    onPressed: canCompose ? _submit : null,
+                    onPressed: canRun ? _submit : null,
                     icon: _submitting
                         ? const SizedBox(
                             width: 16,
@@ -602,7 +658,7 @@ class _DocumentAiEditPanelState extends ConsumerState<DocumentAiEditPanel> {
                   ),
                   const SizedBox(width: 12),
                   FilledButton.icon(
-                    onPressed: canCompose ? _submit : null,
+                    onPressed: canRun ? _submit : null,
                     icon: _submitting
                         ? const SizedBox(
                             width: 16,
@@ -846,6 +902,37 @@ class _DocumentAiEditPanelState extends ConsumerState<DocumentAiEditPanel> {
                         filled: true,
                         fillColor: const Color(0xFFFAFCFF),
                         alignLabelWithHint: true,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: !canCompose ||
+                                _checkingPrompt ||
+                                _instructionController.text.trim().isEmpty
+                            ? null
+                            : _checkInstructionPrompt,
+                        icon: _checkingPrompt
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Icon(
+                                (_promptCheckToken ?? '').isEmpty
+                                    ? Icons.fact_check_outlined
+                                    : Icons.verified_user_outlined,
+                                size: 16,
+                              ),
+                        label: Text(
+                          _checkingPrompt
+                              ? 'Đang kiểm tra...'
+                              : (_promptCheckToken ?? '').isEmpty
+                                  ? 'Check prompt'
+                                  : 'Prompt đạt yêu cầu',
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),

@@ -27,10 +27,14 @@ _DOCUMENT_INDEX_FIELDS = {
     'category_id',
     'department',
     'department_id',
+    'company',
+    'company_id',
     'doc_number',
     'is_deleted',
 }
 
+# def _delete_field_file xóa file vật lý của một FileField trong storage (tránh file mồ côi khi xóa bản ghi).
+# vd: xóa văn bản -> xóa luôn output_file trên đĩa.
 def _delete_field_file(instance, field_name):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -50,6 +54,8 @@ def _delete_field_file(instance, field_name):
     except Exception:
         pass
 
+# def _delete_document_output_file là receiver post_delete của Document: xóa file DOCX kết quả khi văn bản bị xóa.
+# vd: xóa văn bản #5 -> xóa file output_file của nó.
 @receiver(post_delete, sender=Document)
 def _delete_document_output_file(sender, instance, **kwargs):
     """
@@ -61,6 +67,8 @@ def _delete_document_output_file(sender, instance, **kwargs):
     """
     _delete_field_file(instance, 'output_file')
 
+# def _should_sync_document_index quyết định có cần đánh lại chỉ mục RAG sau khi save không: chỉ khi update_fields đụng các trường ảnh hưởng nội dung/khả năng tìm.
+# vd: chỉ đổi updated_at -> bỏ qua; đổi content -> reindex.
 def _should_sync_document_index(update_fields):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -73,6 +81,8 @@ def _should_sync_document_index(update_fields):
         return True
     return bool(set(update_fields) & _DOCUMENT_INDEX_FIELDS)
 
+# def _safe_sync_document gọi sync_document_index (đánh chỉ mục RAG) cho 1 văn bản, nuốt lỗi + ghi log.
+# vd: sau khi sửa văn bản -> reindex để RAG/hỏi đáp tìm được nội dung mới.
 def _safe_sync_document(document_id):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -86,6 +96,8 @@ def _safe_sync_document(document_id):
     except Exception:
         _logger.exception('document auto reindex failed | document_id=%s', document_id)
 
+# def _safe_purge_document gọi purge_document_index (gỡ chỉ mục RAG) cho 1 văn bản, nuốt lỗi + ghi log.
+# vd: văn bản bị xóa/ẩn -> gỡ khỏi chỉ mục tìm kiếm.
 def _safe_purge_document(document_id):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -99,6 +111,8 @@ def _safe_purge_document(document_id):
     except Exception:
         _logger.exception('document auto purge failed | document_id=%s', document_id)
 
+# def _sync_document_search_index là receiver post_save: sau commit, gỡ chỉ mục nếu văn bản đã xóa mềm, ngược lại đánh lại chỉ mục — chỉ chạy khi field liên quan thay đổi.
+# vd: cập nhật nội dung văn bản -> reindex sau commit.
 @receiver(post_save, sender=Document)
 def _sync_document_search_index(sender, instance, created, update_fields=None, **kwargs):
     """
@@ -113,6 +127,8 @@ def _sync_document_search_index(sender, instance, created, update_fields=None, *
     callback = _safe_purge_document if instance.is_deleted else _safe_sync_document
     transaction.on_commit(lambda document_id=instance.pk: callback(document_id))
 
+# def _purge_document_search_index là receiver post_delete: gỡ chỉ mục RAG của văn bản sau khi xóa (chạy sau commit).
+# vd: xóa văn bản -> purge index sau commit.
 @receiver(post_delete, sender=Document)
 def _purge_document_search_index(sender, instance, **kwargs):
     """
@@ -124,6 +140,8 @@ def _purge_document_search_index(sender, instance, **kwargs):
     """
     transaction.on_commit(lambda document_id=instance.pk: _safe_purge_document(document_id))
 
+# def _delete_document_version_output_file là receiver post_delete của DocumentVersion: xóa file DOCX của version khi version bị xóa.
+# vd: xóa 1 version -> xóa file output của version đó.
 @receiver(post_delete, sender=DocumentVersion)
 def _delete_document_version_output_file(sender, instance, **kwargs):
     """

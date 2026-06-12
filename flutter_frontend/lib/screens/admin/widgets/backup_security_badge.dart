@@ -1,3 +1,6 @@
+// === BADGE BẢO MẬT CỦA BẢN BACKUP ===
+// Hiển thị chip mã hóa (_encryptionChip) và chip trạng thái chữ ký số (_signatureChip: signed/unsigned/invalid) cho một bản backup.
+
 // r5/M10 — Hien thi badge bao mat cho backup record:
 //   - "Da ma hoa" / "Chua ma hoa"
 //   - "Da ky so" / "Chu ky khong hop le" / "Chua ky"

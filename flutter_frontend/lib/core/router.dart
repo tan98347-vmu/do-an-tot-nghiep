@@ -32,6 +32,7 @@ import '../screens/assistant/assistant_audio_library_screen.dart';
 import '../screens/rag/rag_history_screen.dart';
 import '../screens/prompts/prompt_list_screen.dart';
 import '../screens/prompts/prompt_form_screen.dart';
+import '../screens/help/help_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/sharing/pending_approvals_screen.dart' as share_inbox;
 import '../screens/admin/admin_screen.dart';
@@ -424,6 +425,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           // Định nghĩa một route cụ thể để router biết màn nào cần dựng khi URL khớp.
 
+          GoRoute(
+            path: '/help',
+            builder: (_, state) => HelpScreen(
+              initialSection: state.uri.queryParameters['section'],
+            ),
+          ),
           GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
           // Định nghĩa một route cụ thể để router biết màn nào cần dựng khi URL khớp.
 

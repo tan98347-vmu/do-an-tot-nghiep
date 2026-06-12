@@ -83,6 +83,11 @@ from signing.services import (
 
 logger = logging.getLogger('signing')
 
+# Là gì: `_signing_flow_error_response` là helper nội bộ của module `signing.py`, phục vụ nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký.
+# Chức năng backend: Hàm xử lý phần việc `signing flow error response` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình ký số và xử lý yêu cầu ký.
+# Mối liên hệ: Hàm phối hợp với `detail.startswith` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 def _signing_flow_error_response(exc):
     """
     Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -104,6 +109,11 @@ def _signing_flow_error_response(exc):
         )
     return Response({'detail': detail}, status=status.HTTP_400_BAD_REQUEST)
 
+# Là gì: `_resolve_signers` là helper nội bộ của module `signing.py`, phục vụ nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký.
+# Chức năng backend: Hàm xác định đối tượng hoặc cấu hình hiệu lực từ ngữ cảnh hiện tại; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình ký số và xử lý yêu cầu ký.
+# Mối liên hệ: Hàm phối hợp với `SigningProposalCreateSerializer`, `serializer.is_valid`, `User.objects.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _resolve_signers(payload, *, request_user=None):
     """
     Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -135,6 +145,11 @@ def _resolve_signers(payload, *, request_user=None):
         })
     return serializer.validated_data['proposal_note'], signers
 
+# Là gì: `_multi_value_query_param` là helper nội bộ của module `signing.py`, phục vụ nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký.
+# Chức năng backend: Hàm xử lý phần việc `multi value query param` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình ký số và xử lý yêu cầu ký.
+# Mối liên hệ: Hàm phối hợp với `request.GET.getlist`, `str.split`, `item.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _multi_value_query_param(request, key):
     """
     Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -152,6 +167,11 @@ def _multi_value_query_param(request, key):
     return values
 
 
+# Là gì: `_assistant_quick_sign_error_response` là helper nội bộ của module `signing.py`, phục vụ nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký.
+# Chức năng backend: Hàm thực hiện hoặc chuẩn bị thao tác ký số; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình ký số và xử lý yêu cầu ký.
+# Mối liên hệ: Hàm phối hợp với `build_quick_sign_plan_payload` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 def _assistant_quick_sign_error_response(exc, *, plan=None):
     payload = {
         'detail': exc.message,
@@ -163,6 +183,11 @@ def _assistant_quick_sign_error_response(exc, *, plan=None):
     return Response(payload, status=exc.http_status)
 
 
+# Là gì: `_quick_sign_plan_or_404` là helper nội bộ của module `signing.py`, phục vụ nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký.
+# Chức năng backend: Hàm thực hiện hoặc chuẩn bị thao tác ký số; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình ký số và xử lý yêu cầu ký.
+# Mối liên hệ: Hàm phối hợp với `get_user_company`, `AssistantQuickSignPlan.objects.select_related.filter`, `AssistantQuickSignPlan.objects.select_related` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _quick_sign_plan_or_404(token, user):
     company = get_user_company(user)
     queryset = AssistantQuickSignPlan.objects.select_related(
@@ -179,6 +204,11 @@ def _quick_sign_plan_or_404(token, user):
     return get_object_or_404(queryset, token=token)
 
 
+# Là gì: `_assistant_candidate_payloads` là helper nội bộ của module `signing.py`, phục vụ nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký.
+# Chức năng backend: Hàm xử lý phần việc `assistant candidate payloads` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình ký số và xử lý yêu cầu ký.
+# Mối liên hệ: Hàm phối hợp với `search_recipient_candidates`, `request.GET.get`, `get_user_company` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _assistant_candidate_payloads(request):
     candidates = search_recipient_candidates(
         request.GET.get('q') or '',
@@ -211,6 +241,11 @@ def _assistant_candidate_payloads(request):
         for item in candidates
     ]
 
+# Là gì: `signing_summary` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tạo hoặc xử lý nội dung tóm tắt; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_signing_summary` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def signing_summary(request):
@@ -223,6 +258,11 @@ def signing_summary(request):
     """
     return Response(get_signing_summary(request.user))
 
+# Là gì: `signing_candidates` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `signing candidates` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `strip.lower`, `strip`, `request.GET.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def signing_candidates(request):
@@ -259,6 +299,11 @@ def signing_candidates(request):
     return Response(SigningCandidateSerializer(users.order_by('first_name', 'last_name', 'username')[:100], many=True).data)
 
 
+# Là gì: `signing_quick_sign_plan_update_recipient` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm cập nhật trạng thái hoặc nội dung hiện có, đồng thời thực hiện hoặc chuẩn bị thao tác ký số; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_quick_sign_plan_or_404`, `request.data.get`, `get_company_recipient_by_id` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def signing_quick_sign_plan_update_recipient(request, plan_token):
@@ -287,6 +332,11 @@ def signing_quick_sign_plan_update_recipient(request, plan_token):
     )
 
 
+# Là gì: `signing_quick_sign_plan_execute` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm thực hiện hoặc chuẩn bị thao tác ký số; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_quick_sign_plan_or_404`, `execute_quick_sign_and_forward`, `plan.refresh_from_db` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def signing_quick_sign_plan_execute(request, plan_token):
@@ -314,6 +364,11 @@ def signing_quick_sign_plan_execute(request, plan_token):
     )
 
 
+# Là gì: `signing_quick_sign_plan_dismiss` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm thực hiện hoặc chuẩn bị thao tác ký số, đồng thời ẩn hoặc đánh dấu đã xử lý một mục khỏi giao diện; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_quick_sign_plan_or_404`, `cancel_quick_sign_plan`, `_assistant_quick_sign_error_response` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def signing_quick_sign_plan_dismiss(request, plan_token):
@@ -324,6 +379,11 @@ def signing_quick_sign_plan_dismiss(request, plan_token):
         return _assistant_quick_sign_error_response(exc, plan=plan)
     return Response({'status': plan.status})
 
+# Là gì: `_start_signing_flow_response` là helper nội bộ của module `signing.py`, phục vụ nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký.
+# Chức năng backend: Hàm xử lý phần việc `start signing flow response` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình ký số và xử lý yêu cầu ký.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `get_accessible_documents`, `_resolve_signers` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 def _start_signing_flow_response(request, pk):
     """
     Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -358,6 +418,11 @@ def _start_signing_flow_response(request, pk):
     serializer = SigningProposalSerializer(proposal, context={'request': request})
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+# Là gì: `document_signing_start` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `document signing start` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_start_signing_flow_response` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_signing_start(request, pk):
@@ -370,6 +435,11 @@ def document_signing_start(request, pk):
     """
     return _start_signing_flow_response(request, pk)
 
+# Là gì: `document_signing_proposal_create` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm kiểm tra đầu vào và tạo dữ liệu mới; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_start_signing_flow_response` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_signing_proposal_create(request, pk):
@@ -382,6 +452,11 @@ def document_signing_proposal_create(request, pk):
     """
     return _start_signing_flow_response(request, pk)
 
+# Là gì: `signing_pending_hr_proposals` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `signing pending hr proposals` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `can_review_signing_proposals`, `logger.warning`, `get_hr_department` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def signing_pending_hr_proposals(request):
@@ -403,6 +478,11 @@ def signing_pending_hr_proposals(request):
     proposals = get_pending_hr_proposals(request.user)
     return Response(SigningProposalSerializer(proposals, many=True).data)
 
+# Là gì: `signing_proposal_approve` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm chấp thuận yêu cầu và chuyển trạng thái nghiệp vụ; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `can_review_signing_proposals`, `get_object_or_404`, `get_pending_hr_proposals` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def signing_proposal_approve(request, proposal_id):
@@ -424,6 +504,11 @@ def signing_proposal_approve(request, proposal_id):
     proposal.refresh_from_db()
     return Response(SigningProposalSerializer(proposal, context={'request': request}).data)
 
+# Là gì: `signing_proposal_reject` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm từ chối yêu cầu và ghi nhận lý do; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `can_review_signing_proposals`, `get_object_or_404`, `get_pending_hr_proposals` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def signing_proposal_reject(request, proposal_id):
@@ -446,6 +531,11 @@ def signing_proposal_reject(request, proposal_id):
         return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(SigningProposalSerializer(proposal, context={'request': request}).data)
 
+# Là gì: `signing_tasks` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `signing tasks` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_accessible_signing_tasks.order_by`, `get_accessible_signing_tasks`, `SigningTaskSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def signing_tasks(request):
@@ -459,6 +549,11 @@ def signing_tasks(request):
     tasks = get_accessible_signing_tasks(request.user).order_by('status', 'step_no', 'sort_order', 'id')
     return Response(SigningTaskSerializer(tasks, many=True).data)
 
+# Là gì: `_get_accessible_task_or_404` là helper nội bộ của module `signing.py`, phục vụ nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký.
+# Chức năng backend: Hàm đọc và trả về dữ liệu cần thiết; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình ký số và xử lý yêu cầu ký.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `get_accessible_signing_tasks` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _get_accessible_task_or_404(user, task_id):
     """
     Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -469,6 +564,11 @@ def _get_accessible_task_or_404(user, task_id):
     """
     return get_object_or_404(get_accessible_signing_tasks(user), pk=task_id)
 
+# Là gì: `signing_task_detail` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_get_accessible_task_or_404`, `timezone.now`, `task.save` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def signing_task_detail(request, task_id):
@@ -485,6 +585,11 @@ def signing_task_detail(request, task_id):
         task.save(update_fields=['opened_at'])
     return Response(SigningTaskSerializer(task).data)
 
+# Là gì: `signing_task_signature_context` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `signing task signature context` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_get_accessible_task_or_404`, `get_signature_context_for_task` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def signing_task_signature_context(request, task_id):
@@ -498,6 +603,11 @@ def signing_task_signature_context(request, task_id):
     task = _get_accessible_task_or_404(request.user, task_id)
     return Response(get_signature_context_for_task(task, request.user))
 
+# Là gì: `signing_task_preview_pdf` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tạo dữ liệu xem trước mà chưa ghi nhận thay đổi cuối cùng; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_get_accessible_task_or_404`, `can_view_signing_packet`, `CompanyRuntimeGuard.assert_file_field` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect lên tệp hoặc storage; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def signing_task_preview_pdf(request, task_id):
@@ -524,6 +634,11 @@ def signing_task_preview_pdf(request, task_id):
     response['Content-Disposition'] = f'inline; filename="{name}"'
     return response
 
+# Là gì: `signing_task_sign` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm thực hiện hoặc chuẩn bị thao tác ký số; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_get_accessible_task_or_404`, `request.data.get`, `sign_task` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def signing_task_sign(request, task_id):
@@ -548,6 +663,11 @@ def signing_task_sign(request, task_id):
     }
     return Response(payload)
 
+# Là gì: `signing_task_reject` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm từ chối yêu cầu và ghi nhận lý do; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_get_accessible_task_or_404`, `str.strip`, `request.data.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def signing_task_reject(request, task_id):
@@ -569,6 +689,11 @@ def signing_task_reject(request, task_id):
     task.refresh_from_db()
     return Response(SigningTaskSerializer(task).data)
 
+# Là gì: `signing_delegations` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `signing delegations` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `can_manage_hr_delegations`, `can_manage_accounting_delegations`, `DepartmentDelegation.objects.filter.select_related` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def signing_delegations(request):
@@ -635,6 +760,11 @@ def signing_delegations(request):
         delegation.save(update_fields=['is_active', 'created_by'])
     return Response(DepartmentDelegationSerializer(delegation).data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
+# Là gì: `signing_delegation_detail` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `DepartmentDelegation.objects.select_related`, `get_user_company`, `delegation_qs.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def signing_delegation_detail(request, delegation_id):
@@ -659,6 +789,11 @@ def signing_delegation_detail(request, delegation_id):
     delegation.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
 
+# Là gì: `signed_pdf_list` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `strip`, `request.GET.get`, `_multi_value_query_param` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def signed_pdf_list(request):
@@ -710,6 +845,11 @@ def signed_pdf_list(request):
         signed_docs = signed_docs.filter(mailbox_threads__isnull=True)
     return Response(SignedPdfDocumentSerializer(signed_docs, many=True).data)
 
+# Là gì: `_get_signed_pdf_or_404` là helper nội bộ của module `signing.py`, phục vụ nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký.
+# Chức năng backend: Hàm đọc và trả về dữ liệu cần thiết; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình ký số và xử lý yêu cầu ký.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `get_accessible_signed_pdfs` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _get_signed_pdf_or_404(user, pk):
     """
     Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -720,6 +860,11 @@ def _get_signed_pdf_or_404(user, pk):
     """
     return get_object_or_404(get_accessible_signed_pdfs(user), pk=pk)
 
+# Là gì: `signed_pdf_detail` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_get_signed_pdf_or_404`, `SignedPdfDocumentSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def signed_pdf_detail(request, pk):
@@ -733,6 +878,11 @@ def signed_pdf_detail(request, pk):
     signed_pdf = _get_signed_pdf_or_404(request.user, pk)
     return Response(SignedPdfDocumentSerializer(signed_pdf).data)
 
+# Là gì: `signed_pdf_verify` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xác minh tính hợp lệ hoặc tính toàn vẹn của dữ liệu; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_get_signed_pdf_or_404`, `can_view_signed_pdf`, `CompanyRuntimeGuard.assert_file_field` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def signed_pdf_verify(request, pk):
@@ -758,6 +908,11 @@ def signed_pdf_verify(request, pk):
         response_status = status.HTTP_200_OK if report.get('is_safe') else status.HTTP_409_CONFLICT
     return Response(report, status=response_status)
 
+# Là gì: `signed_pdf_preview_pdf` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tạo dữ liệu xem trước mà chưa ghi nhận thay đổi cuối cùng; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_get_signed_pdf_or_404`, `can_view_signed_pdf`, `CompanyRuntimeGuard.assert_file_field` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect lên tệp hoặc storage; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def signed_pdf_preview_pdf(request, pk):
@@ -787,6 +942,11 @@ def signed_pdf_preview_pdf(request, pk):
     response['Content-Disposition'] = f'inline; filename="{name}"'
     return response
 
+# Là gì: `signed_pdf_download` là endpoint REST của nhóm ký số, luồng ký, xác minh chữ ký và hộp thư ký; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm chuẩn bị và trả tệp cho phía client tải xuống; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình ký số và xử lý yêu cầu ký sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_get_signed_pdf_or_404`, `can_view_signed_pdf`, `CompanyRuntimeGuard.assert_file_field` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect lên tệp hoặc storage; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def signed_pdf_download(request, pk):

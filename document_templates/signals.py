@@ -29,11 +29,16 @@ _TEMPLATE_INDEX_FIELDS = {
     'department_id',
     'group',
     'group_id',
+    'company',
+    'company_id',
+    'docx_file',
     'source_type',
     'status',
     'is_deleted',
 }
 
+# def _delete_field_file xóa file vật lý trong storage của một FileField (dùng khi xóa bản ghi để tránh file mồ côi).
+# vd: xóa mẫu -> xóa luôn file docx_file trên đĩa.
 def _delete_field_file(instance, field_name):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -53,6 +58,8 @@ def _delete_field_file(instance, field_name):
     except Exception:
         pass
 
+# def _delete_template_docx_file là receiver post_delete của DocumentTemplate: xóa file DOCX gốc khi mẫu bị xóa.
+# vd: xóa mẫu #5 -> xóa file template_docx của nó.
 @receiver(post_delete, sender=DocumentTemplate)
 def _delete_template_docx_file(sender, instance, **kwargs):
     """
@@ -64,6 +71,8 @@ def _delete_template_docx_file(sender, instance, **kwargs):
     """
     _delete_field_file(instance, 'docx_file')
 
+# def _should_sync_template_index quyết định có cần đánh lại chỉ mục RAG sau khi save không: chỉ khi update_fields đụng các trường ảnh hưởng nội dung/khả năng tìm (title/content/status/...).
+# vd: chỉ đổi updated_at -> bỏ qua; đổi content -> reindex.
 def _should_sync_template_index(update_fields):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -76,6 +85,8 @@ def _should_sync_template_index(update_fields):
         return True
     return bool(set(update_fields) & _TEMPLATE_INDEX_FIELDS)
 
+# def _safe_sync_template gọi sync_template_index (đánh chỉ mục RAG) cho 1 mẫu, nuốt lỗi + ghi log.
+# vd: sau khi sửa mẫu -> reindex để RAG tìm được nội dung mới.
 def _safe_sync_template(template_id):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -89,6 +100,8 @@ def _safe_sync_template(template_id):
     except Exception:
         _logger.exception('template auto reindex failed | template_id=%s', template_id)
 
+# def _safe_purge_template gọi purge_template_index (gỡ chỉ mục RAG) cho 1 mẫu, nuốt lỗi + ghi log.
+# vd: mẫu bị xóa/từ chối -> gỡ khỏi chỉ mục tìm kiếm.
 def _safe_purge_template(template_id):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -102,6 +115,8 @@ def _safe_purge_template(template_id):
     except Exception:
         _logger.exception('template auto purge failed | template_id=%s', template_id)
 
+# def _sync_template_search_index là receiver post_save: sau khi commit, gỡ chỉ mục nếu mẫu đã xóa mềm/bị từ chối, ngược lại đánh lại chỉ mục — chỉ chạy khi field liên quan thay đổi.
+# vd: duyệt mẫu (status->approved) -> reindex; reject -> purge.
 @receiver(post_save, sender=DocumentTemplate)
 def _sync_template_search_index(sender, instance, created, update_fields=None, **kwargs):
     """
@@ -116,6 +131,8 @@ def _sync_template_search_index(sender, instance, created, update_fields=None, *
     callback = _safe_purge_template if instance.is_deleted or instance.status == STATUS_REJECTED else _safe_sync_template
     transaction.on_commit(lambda template_id=instance.pk: callback(template_id))
 
+# def _purge_template_search_index là receiver post_delete: gỡ chỉ mục RAG của mẫu sau khi xóa (chạy sau commit).
+# vd: xóa mẫu -> purge index sau commit.
 @receiver(post_delete, sender=DocumentTemplate)
 def _purge_template_search_index(sender, instance, **kwargs):
     """
@@ -127,6 +144,8 @@ def _purge_template_search_index(sender, instance, **kwargs):
     """
     transaction.on_commit(lambda template_id=instance.pk: _safe_purge_template(template_id))
 
+# def _delete_template_version_docx_file là receiver post_delete của TemplateVersion: xóa file DOCX của version khi version bị xóa.
+# vd: xóa 1 version -> xóa file docx của version đó.
 @receiver(post_delete, sender=TemplateVersion)
 def _delete_template_version_docx_file(sender, instance, **kwargs):
     """

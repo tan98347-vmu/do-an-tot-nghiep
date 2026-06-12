@@ -1,3 +1,9 @@
+// === MÀN HÌNH DANH SÁCH PROMPT (thư viện) ===
+// Liệt kê/tìm/lọc prompt qua promptQueryProvider (_buildQuery), badge trạng thái + phạm vi (_badge/_statusColor/_visColor).
+// - Tạo mới (/prompts/new), sửa (/prompts/<id>/edit).
+// - Duyệt/từ chối/gửi duyệt: _approve/_reject/_submit (POST 'prompts/<id>/approve|reject|submit/'); _askReason hỏi lý do từ chối.
+// - Xóa & xóa hàng loạt: _delete/_bulkDeletePrompts (kiểm quyền _canDeletePrompt).
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -153,13 +159,22 @@ class _PromptListScreenState extends ConsumerState<PromptListScreen> {
         _ => Colors.grey,
       };
 
+  String _dioErrorMessage(DioException error, String fallback) {
+    final data = error.response?.data;
+    if (data is Map && data['detail'] != null) {
+      return data['detail'].toString();
+    }
+    return error.message ?? fallback;
+  }
+
   Future<void> _approve(PromptRecord prompt) async {
     try {
       await ApiClient().dio.post('prompts/${prompt.id}/approve/');
+      if (!mounted) return;
       _invalidateLists();
       _snack('Đã duyệt prompt.');
     } on DioException catch (error) {
-      _snack('Lỗi: ${error.response?.data?['detail'] ?? error.message}');
+      _snack('Lỗi: ${_dioErrorMessage(error, 'Không duyệt được prompt.')}');
     }
   }
 
@@ -175,50 +190,54 @@ class _PromptListScreenState extends ConsumerState<PromptListScreen> {
         'prompts/${prompt.id}/reject/',
         data: {'note': note},
       );
+      if (!mounted) return;
       _invalidateLists();
       _snack('Đã từ chối prompt.');
     } on DioException catch (error) {
-      _snack('Lỗi: ${error.response?.data?['detail'] ?? error.message}');
+      _snack('Lỗi: ${_dioErrorMessage(error, 'Không từ chối được prompt.')}');
     }
   }
 
   Future<void> _submit(PromptRecord prompt) async {
     try {
       await ApiClient().dio.post('prompts/${prompt.id}/submit/');
+      if (!mounted) return;
       _invalidateLists();
       _snack('Đã gửi duyệt.');
     } on DioException catch (error) {
-      _snack('Lỗi: ${error.response?.data?['detail'] ?? error.message}');
+      _snack('Lỗi: ${_dioErrorMessage(error, 'Không gửi duyệt được prompt.')}');
     }
   }
 
   Future<void> _delete(PromptRecord prompt) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Xóa prompt?'),
         content: Text('Xóa "${prompt.title}"? Hành động này không thể hoàn tác.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Hủy'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Xóa'),
           ),
         ],
       ),
     );
-    if (ok != true) return;
+    if (ok != true || !mounted) return;
     try {
       await ApiClient().dio.delete('prompts/${prompt.id}/');
+      if (!mounted) return;
+      _selectedPromptIds.remove(prompt.id);
       _invalidateLists();
       ref.invalidate(recentPromptsProvider);
       _snack('Đã xóa prompt.');
     } on DioException catch (error) {
-      _snack('Lỗi: ${error.response?.data?['detail'] ?? error.message}');
+      _snack('Lỗi: ${_dioErrorMessage(error, 'Không xóa được prompt.')}');
     }
   }
 
@@ -244,24 +263,24 @@ class _PromptListScreenState extends ConsumerState<PromptListScreen> {
     final count = _selectedPromptIds.length;
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Xác nhận xóa hàng loạt'),
         content: Text(
             'Xóa $count prompt đã chọn? Hành động này không thể hoàn tác.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Hủy'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Xóa'),
           ),
         ],
       ),
     );
-    if (ok != true) return;
+    if (ok != true || !mounted) return;
     setState(() => _bulkDeleting = true);
     var success = 0;
     final failures = <String>[];
@@ -270,8 +289,7 @@ class _PromptListScreenState extends ConsumerState<PromptListScreen> {
         await ApiClient().dio.delete('prompts/$id/');
         success++;
       } on DioException catch (e) {
-        failures.add(
-            e.response?.data?['detail']?.toString() ?? e.message ?? 'Loi');
+        failures.add(_dioErrorMessage(e, 'Loi'));
       }
     }
     if (!mounted) return;
@@ -293,7 +311,7 @@ class _PromptListScreenState extends ConsumerState<PromptListScreen> {
     final noteCtrl = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(title),
         content: TextField(
           controller: noteCtrl,
@@ -306,17 +324,17 @@ class _PromptListScreenState extends ConsumerState<PromptListScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Hủy'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Xác nhận'),
           ),
         ],
       ),
     );
-    if (ok != true) return null;
+    if (ok != true || !mounted) return null;
     final note = noteCtrl.text.trim();
     if (note.isEmpty) {
       _snack('Phải nhập lý do.');

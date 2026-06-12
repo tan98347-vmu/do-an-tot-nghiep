@@ -5,6 +5,8 @@ import django.db.models.deletion
 import document_templates.models
 
 
+# class Migration là bước migration thay đổi cấu trúc CSDL (theo tên file: documenttemplate company templatecategory company and more).
+# vd: chạy "python manage.py migrate" để áp dụng thay đổi schema này.
 class Migration(migrations.Migration):
 
     dependencies = [

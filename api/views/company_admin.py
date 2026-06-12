@@ -35,6 +35,11 @@ from ..serializers.company_admin import (
 )
 
 
+# Là gì: `_company_admin_context` là helper nội bộ của module `company_admin.py`, phục vụ nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty.
+# Chức năng backend: Hàm xử lý phần việc `company admin context` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình quản trị công ty.
+# Mối liên hệ: Hàm phối hợp với `get_user_company`, `is_company_admin` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 def _company_admin_context(request):
     company = get_user_company(request.user)
     if company is None or not is_company_admin(request.user):
@@ -42,26 +47,56 @@ def _company_admin_context(request):
     return company, None
 
 
+# Là gì: `_company_users` là helper nội bộ của module `company_admin.py`, phục vụ nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty.
+# Chức năng backend: Hàm xử lý phần việc `company users` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình quản trị công ty.
+# Mối liên hệ: Hàm phối hợp với `User.objects.filter.select_related`, `User.objects.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _company_users(company):
     return User.objects.filter(company_membership__company=company).select_related('profile', 'company_membership')
 
 
+# Là gì: `_serialize_user` là helper nội bộ của module `company_admin.py`, phục vụ nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty.
+# Chức năng backend: Hàm chuyển đối tượng nội bộ thành dữ liệu có thể trả cho client; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình quản trị công ty.
+# Mối liên hệ: Hàm phối hợp với `CompanyAdminUserSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _serialize_user(user, company):
     return CompanyAdminUserSerializer(user, context={'company': company}).data
 
 
+# Là gì: `_group_queryset` là helper nội bộ của module `company_admin.py`, phục vụ nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty.
+# Chức năng backend: Hàm xử lý phần việc `group queryset` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình quản trị công ty.
+# Mối liên hệ: Hàm phối hợp với `UserGroup.objects.filter.order_by`, `UserGroup.objects.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _group_queryset(company):
     return UserGroup.objects.filter(company=company).order_by('name')
 
 
+# Là gì: `_department_queryset` là helper nội bộ của module `company_admin.py`, phục vụ nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty.
+# Chức năng backend: Hàm xử lý phần việc `department queryset` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình quản trị công ty.
+# Mối liên hệ: Hàm phối hợp với `Department.objects.filter.order_by`, `Department.objects.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _department_queryset(company):
     return Department.objects.filter(company=company).order_by('name', 'code')
 
 
+# Là gì: `_position_queryset` là helper nội bộ của module `company_admin.py`, phục vụ nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty.
+# Chức năng backend: Hàm xử lý phần việc `position queryset` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình quản trị công ty.
+# Mối liên hệ: Hàm phối hợp với `CompanyPosition.objects.filter.order_by`, `CompanyPosition.objects.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _position_queryset(company):
     return CompanyPosition.objects.filter(company=company).order_by('name', 'code')
 
 
+# Là gì: `user_list` là endpoint REST của nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_company_admin_context`, `_company_users.order_by`, `_company_users` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def user_list(request):
@@ -99,6 +134,11 @@ def user_list(request):
     return Response(_serialize_user(result.user, company), status=status.HTTP_201_CREATED)
 
 
+# Là gì: `user_detail` là endpoint REST của nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_company_admin_context`, `get_object_or_404`, `_company_users` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def user_detail(request, pk):
@@ -150,6 +190,11 @@ def user_detail(request, pk):
     return Response(_serialize_user(user, company))
 
 
+# Là gì: `group_list` là endpoint REST của nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_company_admin_context`, `_group_queryset`, `CompanyAdminGroupSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def group_list(request):
@@ -175,6 +220,11 @@ def group_list(request):
     return Response(CompanyAdminGroupSerializer(group).data, status=status.HTTP_201_CREATED)
 
 
+# Là gì: `group_detail` là endpoint REST của nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_company_admin_context`, `get_object_or_404`, `_group_queryset` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def group_detail(request, pk):
@@ -202,6 +252,11 @@ def group_detail(request, pk):
     return Response(CompanyAdminGroupSerializer(group).data)
 
 
+# Là gì: `group_members` là endpoint REST của nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `group members` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_company_admin_context`, `get_object_or_404`, `_group_queryset` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def group_members(request, pk):
@@ -227,6 +282,11 @@ def group_members(request, pk):
     return Response({'detail': 'Da cap nhat thanh vien nhom.'}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
+# Là gì: `group_member_detail` là endpoint REST của nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_company_admin_context`, `get_object_or_404`, `_group_queryset` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def group_member_detail(request, pk, user_id):
@@ -247,6 +307,11 @@ def group_member_detail(request, pk, user_id):
     return Response({'detail': 'Da cap nhat vai tro thanh vien.'})
 
 
+# Là gì: `ai_config` là endpoint REST của nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `ai config` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_company_admin_context`, `CompanyAIConfig.seed_defaults`, `CompanyAIConfigSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def ai_config(request):
@@ -268,6 +333,11 @@ def ai_config(request):
     return Response(CompanyAIConfigSerializer(config).data)
 
 
+# Là gì: `company_context_read` là endpoint REST của nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc dữ liệu từ nguồn được chỉ định; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_company_admin_context`, `CompanyAIConfig.seed_defaults` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def company_context_read(request):
@@ -278,6 +348,11 @@ def company_context_read(request):
     return Response({'company_context': config.company_context or ''})
 
 
+# Là gì: `department_list` là endpoint REST của nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_company_admin_context`, `_department_queryset`, `CompanyAdminDepartmentSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def department_list(request):
@@ -309,6 +384,11 @@ def department_list(request):
     return Response(CompanyAdminDepartmentSerializer(department).data, status=status.HTTP_201_CREATED)
 
 
+# Là gì: `department_detail` là endpoint REST của nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_company_admin_context`, `get_object_or_404`, `_department_queryset` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def department_detail(request, pk):
@@ -347,6 +427,11 @@ def department_detail(request, pk):
     return Response(CompanyAdminDepartmentSerializer(department).data)
 
 
+# Là gì: `position_list` là endpoint REST của nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_company_admin_context`, `_position_queryset`, `CompanyAdminPositionSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def position_list(request):
@@ -376,6 +461,11 @@ def position_list(request):
     return Response(CompanyAdminPositionSerializer(position).data, status=status.HTTP_201_CREATED)
 
 
+# Là gì: `position_detail` là endpoint REST của nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_company_admin_context`, `get_object_or_404`, `_position_queryset` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def position_detail(request, pk):
@@ -415,6 +505,11 @@ def position_detail(request, pk):
     return Response(CompanyAdminPositionSerializer(position).data)
 
 
+# Là gì: `import_users_template` là endpoint REST của nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc dữ liệu đầu vào và chuyển thành bản ghi hệ thống; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_company_admin_context`, `HttpResponse`, `build_company_import_template_bytes` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def import_users_template(request):
@@ -429,6 +524,11 @@ def import_users_template(request):
     return response
 
 
+# Là gì: `import_users_excel` là endpoint REST của nhóm quản trị người dùng, nhóm, phòng ban, chức danh và cấu hình theo công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc dữ liệu đầu vào và chuyển thành bản ghi hệ thống; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình quản trị công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_company_admin_context`, `request.FILES.get`, `openpyxl.load_workbook` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def import_users_excel(request):

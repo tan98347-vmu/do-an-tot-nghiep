@@ -1,3 +1,8 @@
+// === MÀN HÌNH SAO LƯU CÔNG TY (R5: mã hóa + chữ ký) ===
+// - _CreateBackupTab: tạo backup theo thành phần (backupComponentsProvider) + đặt mật khẩu mã hóa (_SetPasswordWizard -> 'settings/set-password/').
+// - _BackupListTab (companyBackupsProvider): tải (download có xác nhận mật khẩu), xác minh chữ ký (_verifySignature 'verify/'), khôi phục (_restore '.../restore/'), xóa (_delete).
+// - Cấu hình auto-backup qua companyBackupSettingsProvider.
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +17,7 @@ import 'widgets/backup_security_badge.dart';
 // === END R5 ===
 
 class CompanyBackupScreen extends ConsumerStatefulWidget {
+  // Widget màn SAO LƯU CÔNG TY (mã hóa AES-GCM + chữ ký).
   const CompanyBackupScreen({super.key});
 
   @override
@@ -22,12 +28,14 @@ class _CompanyBackupScreenState extends ConsumerState<CompanyBackupScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs = TabController(length: 3, vsync: this);
 
+  // Rời màn: dọn tài nguyên.
   @override
   void dispose() {
     _tabs.dispose();
     super.dispose();
   }
 
+  // Hiện snackbar thông báo (kèm màu).
   void _snack(String m, {Color? color}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -35,6 +43,7 @@ class _CompanyBackupScreenState extends ConsumerState<CompanyBackupScreen>
     );
   }
 
+  // Dựng màn: cấu hình lịch/mật khẩu backup + danh sách bản backup (mỗi bản là _buildCard).
   @override
   Widget build(BuildContext context) {
     final settingsAsync = ref.watch(companyBackupSettingsProvider);
@@ -96,6 +105,7 @@ class _SetPasswordWizardState extends ConsumerState<_SetPasswordWizard> {
     super.dispose();
   }
 
+  // Lưu cấu hình tự động sao lưu (lịch, bật/tắt).
   Future<void> _save() async {
     final p1 = _pw1.text.trim();
     final p2 = _pw2.text.trim();
@@ -198,6 +208,7 @@ class _BackupListTab extends ConsumerWidget {
   final void Function(String, {Color? color}) onSnack;
   const _BackupListTab({required this.onSnack});
 
+  // Màu badge theo trạng thái bản backup.
   Color _statusColor(String s) => switch (s) {
         'ready' => Colors.green,
         'creating' => Colors.blue,
@@ -207,8 +218,10 @@ class _BackupListTab extends ConsumerWidget {
         _ => Colors.grey,
       };
 
+  // Màu theo loại backup (tự động/thủ công).
   Color _kindColor(String k) => k == 'auto' ? Colors.indigo : Colors.deepPurple;
 
+  // Tải bản backup về máy (có xác nhận _confirmDownload).
   Future<void> _download(BuildContext context, CompanyBackup b) async {
     final pw = await PasswordConfirmDialog.show(
       context,
@@ -291,6 +304,7 @@ class _BackupListTab extends ConsumerWidget {
     await _download(context, b);
   }
 
+  // Xác minh chữ ký số của bản backup (đảm bảo toàn vẹn).
   Future<void> _verifySignature(BuildContext context, WidgetRef ref, CompanyBackup b) async {
     // Yeu cau password admin de decrypt + verify chu ky.
     final pw = await PasswordConfirmDialog.show(
@@ -374,6 +388,7 @@ class _BackupListTab extends ConsumerWidget {
     }
   }
 
+  // Xóa 1 bản backup (có xác nhận).
   Future<void> _delete(BuildContext context, WidgetRef ref, CompanyBackup b) async {
     final pw = await PasswordConfirmDialog.show(
       context,
@@ -393,6 +408,7 @@ class _BackupListTab extends ConsumerWidget {
     }
   }
 
+  // Thẻ 1 bản backup: thời điểm, loại, trạng thái + nút Tải/Xác minh/Khôi phục/Xóa.
   Widget _buildCard(BuildContext context, WidgetRef ref, CompanyBackup b, bool compact) {
     final titleSize = compact ? 13.0 : 14.0;
     return Card(
@@ -490,6 +506,7 @@ class _BackupListTab extends ConsumerWidget {
             style: TextStyle(fontSize: 10.5, color: color, fontWeight: FontWeight.w600)),
       );
 
+  // Định dạng thời điểm bản backup để hiển thị.
   String _fmt(String iso) {
     if (iso.isEmpty) return '';
     try {
@@ -559,6 +576,7 @@ class _CreateBackupTabState extends ConsumerState<_CreateBackupTab> {
   final Set<String> _selected = {};
   bool _creating = false;
 
+  // Nút Tạo backup ngay: tạo bản sao lưu thủ công.
   Future<void> _create() async {
     if (_selected.isEmpty) {
       widget.onSnack('Vui lòng chọn ít nhất 1 thành phần.', color: Colors.orange);
@@ -737,6 +755,7 @@ class _BackupSettingsTabState extends ConsumerState<_BackupSettingsTab> {
     }
   }
 
+  // Đổi mật khẩu mã hóa backup của công ty.
   Future<void> _changePassword() async {
     final ctrlOld = TextEditingController();
     final ctrlNew = TextEditingController();

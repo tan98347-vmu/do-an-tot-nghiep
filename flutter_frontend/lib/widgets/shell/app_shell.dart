@@ -207,9 +207,68 @@ class _AppNav extends ConsumerWidget {
         loc.startsWith('/signed-pdfs') ||
         loc.startsWith('/mailbox');
     final signingSummary = signingSummaryAsync.asData?.value;
-    // Số CHƯA ĐỌC mỗi mục (đã trừ mốc "đã đọc"); badge nav hiển thị theo đây.
-    final notifUnreadMap = ref.watch(notificationUnreadByCategoryProvider);
-    final notifCurrentMap = ref.watch(notificationCurrentCountsProvider);
+    final notificationUnread =
+        ref.watch(notificationUnreadByCategoryProvider);
+    final notificationSnapshot =
+        ref.watch(notificationQueueSnapshotProvider).asData?.value;
+    final activeNotificationCategory = notifCategoryForRoute(loc);
+    if (activeNotificationCategory != null &&
+        notificationSnapshot != null &&
+        (notificationUnread[activeNotificationCategory] ?? 0) > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(notificationQueueAckProvider.notifier).markRead(
+              activeNotificationCategory,
+              notificationSnapshot.signatures[activeNotificationCategory] ??
+                  '',
+            );
+      });
+    }
+
+    String? helpSectionForRoute(String route) {
+      if (route == '/dashboard') return 'dashboard';
+      if (route.startsWith('/ai-doc')) return 'ai-doc';
+      if (route.startsWith('/summaries')) return 'summaries';
+      if (route.startsWith('/rag')) return 'rag';
+      if (route.startsWith('/chat')) return 'chat';
+      if (route.startsWith('/signing') ||
+          route.startsWith('/signed-pdfs') ||
+          route.startsWith('/mailbox')) {
+        return 'signing';
+      }
+      if (route.startsWith('/templates')) return 'templates';
+      if (route.startsWith('/documents')) return 'documents';
+      if (route.startsWith('/prompts')) return 'prompts';
+      if (route == '/trash') return 'trash';
+      if (route == '/profile') return 'profile';
+      if (route.startsWith('/sharing/pending')) return 'approvals';
+      if (route.startsWith('/admin/ai-config')) return 'ai-settings';
+      if (route.startsWith('/admin/backups')) return 'backup';
+      if (route == '/admin') return 'accounts';
+      return null;
+    }
+
+    Widget helpButton(String sectionId) {
+      return Tooltip(
+        message: strings.pick(
+          'Mở hướng dẫn cho chức năng này',
+          'Open the guide for this feature',
+        ),
+        child: SizedBox(
+          width: 28,
+          height: 28,
+          child: IconButton(
+            padding: EdgeInsets.zero,
+            splashRadius: 14,
+            icon: const Icon(
+              Icons.help_outline,
+              size: 16,
+              color: Colors.white54,
+            ),
+            onPressed: () => context.go('/help?section=$sectionId'),
+          ),
+        ),
+      );
+    }
 
     // ── Nav item thông thường ──────────────────────────────────────────────
     // Mục đích: Phương thức `navTile` triển khai phần việc `nav Tile` trong flutter_frontend/lib/widgets/shell/app_shell.dart.
@@ -230,7 +289,7 @@ class _AppNav extends ConsumerWidget {
       }
       final autoTrailing = route == '/signing/tasks'
               ? _PendingCountBadge(
-                  count: notifUnreadMap[kNotifSigningTasks] ?? 0,
+                  count: notificationUnread[kNotifSigningTasks] ?? 0,
                   templates: signingSummary?.tasksAvailable ?? 0,
                   documents: signingSummary?.tasksBlocked ?? 0,
                   loading:
@@ -242,7 +301,7 @@ class _AppNav extends ConsumerWidget {
                 )
               : route == '/signing/proposals/review'
                   ? _PendingCountBadge(
-                      count: notifUnreadMap[kNotifSigningProposals] ?? 0,
+                      count: notificationUnread[kNotifSigningProposals] ?? 0,
                       templates: signingSummary?.hrPendingProposals ?? 0,
                       documents: 0,
                       loading: signingSummaryAsync.isLoading &&
@@ -254,7 +313,7 @@ class _AppNav extends ConsumerWidget {
                     )
                   : route == '/mailbox'
                       ? _PendingCountBadge(
-                          count: notifUnreadMap[kNotifMailbox] ?? 0,
+                          count: notificationUnread[kNotifMailbox] ?? 0,
                           templates: signingSummary?.mailboxPendingThreads ?? 0,
                           documents: signingSummary?.mailboxPendingEntries ?? 0,
                           loading: signingSummaryAsync.isLoading &&
@@ -266,7 +325,8 @@ class _AppNav extends ConsumerWidget {
                         )
                       : route == '/sharing/pending'
                           ? _PendingCountBadge(
-                              count: notifUnreadMap[kNotifShareApprovals] ?? 0,
+                              count:
+                                  notificationUnread[kNotifShareApprovals] ?? 0,
                               templates:
                                   sharingPendingAsync.asData?.value ?? 0,
                               documents: 0,
@@ -281,6 +341,7 @@ class _AppNav extends ConsumerWidget {
       final trailingWidget = trailing ?? autoTrailing;
       final target = query != null ? '$route?group=$query' : route;
       final resolvedLabel = route == '/chat' ? 'Chat AI' : label;
+      final helpSection = helpSectionForRoute(route);
       final bool active;
       if (query != null) {
         active = loc.startsWith(route) && groupParam == query;
@@ -308,12 +369,12 @@ class _AppNav extends ConsumerWidget {
             // Điều hướng người dùng sang màn phù hợp theo kết quả thao tác hiện tại.
 
             onTap: () {
-              // Mở màn của một mục thông báo = đánh dấu mục đó "đã đọc".
-              final cat = notifCategoryForRoute(route);
-              if (cat != null) {
-                ref
-                    .read(notificationAckProvider.notifier)
-                    .markRead(cat, notifCurrentMap[cat] ?? 0);
+              final category = notifCategoryForRoute(route);
+              if (category != null && notificationSnapshot != null) {
+                ref.read(notificationQueueAckProvider.notifier).markRead(
+                      category,
+                      notificationSnapshot.signatures[category] ?? '',
+                    );
               }
               context.go(target);
             },
@@ -328,6 +389,8 @@ class _AppNav extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       resolvedLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight:
@@ -336,6 +399,7 @@ class _AppNav extends ConsumerWidget {
                       ),
                     ),
                   ),
+                  if (helpSection != null) helpButton(helpSection),
                   if (trailingWidget != null) ...[
                     trailingWidget,
                     const SizedBox(width: 8),
@@ -491,6 +555,13 @@ class _AppNav extends ConsumerWidget {
       required List<Widget> children,
       Widget? badge,
     }) {
+      final helpSection = switch (groupKey) {
+        'digital-sign' => 'signing',
+        'templates' => 'templates',
+        'documents' => 'documents',
+        'prompts' => 'prompts',
+        _ => null,
+      };
       return Theme(
         data: Theme.of(context).copyWith(
           expansionTileTheme: ExpansionTileThemeData(
@@ -515,6 +586,8 @@ class _AppNav extends ConsumerWidget {
               Expanded(
                 child: Text(
                   label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 13.5,
                     fontWeight:
@@ -523,6 +596,7 @@ class _AppNav extends ConsumerWidget {
                   ),
                 ),
               ),
+              if (helpSection != null) helpButton(helpSection),
               if (badge != null) ...[
                 badge,
                 const SizedBox(width: 8),
@@ -539,12 +613,10 @@ class _AppNav extends ConsumerWidget {
       );
     }
 
-    // Badge nhóm "Ký số" = tổng số CHƯA ĐỌC của các mục con (đã trừ mốc đã đọc),
-    // để khi đánh dấu đã đọc một mục con thì badge nhóm cũng giảm theo.
     final signingGroupBadge = _PendingCountBadge(
-      count: (notifUnreadMap[kNotifSigningTasks] ?? 0) +
-          (notifUnreadMap[kNotifSigningProposals] ?? 0) +
-          (notifUnreadMap[kNotifMailbox] ?? 0),
+      count: (notificationUnread[kNotifSigningTasks] ?? 0) +
+          (notificationUnread[kNotifSigningProposals] ?? 0) +
+          (notificationUnread[kNotifMailbox] ?? 0),
       templates: signingSummary?.tasksAvailable ?? 0,
       documents: signingSummary?.mailboxPendingThreads ?? 0,
       loading: signingSummaryAsync.isLoading && signingSummary == null,
@@ -649,7 +721,7 @@ class _AppNav extends ConsumerWidget {
 
                 // ── Mẫu văn bản (ExpansionTile) ──────────────────────────
                 navGroup(
-                  label: strings.pick('Mẫu văn bản', 'Templates'),
+                  label: strings.pick('Quản lý mẫu văn bản', 'Template management'),
                   icon: Icons.description_outlined,
                   isExpanded: templateActive,
                   groupKey: 'templates',
@@ -668,7 +740,7 @@ class _AppNav extends ConsumerWidget {
                         query: 'team',
                         indent: 12),
                     navTile(
-                        strings.pick('Riêng của tôi', 'My private templates'),
+                        strings.pick('Mẫu của tôi', 'My private templates'),
                         Icons.lock_outline,
                         '/templates',
                         query: 'private',
@@ -784,6 +856,8 @@ class _AppNav extends ConsumerWidget {
                     Icons.delete_outline, '/trash'),
                 navTile(strings.pick('Hồ sơ cá nhân', 'Profile'),
                     Icons.manage_accounts_outlined, '/profile'),
+                navTile(strings.pick('Hướng dẫn sử dụng', 'User guide'),
+                    Icons.menu_book_outlined, '/help'),
 
                 if (user?.canApprovePending == true) ...[
                   sectionLabel(strings.pick('Phê duyệt', 'Approvals')),

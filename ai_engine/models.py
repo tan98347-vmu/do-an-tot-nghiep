@@ -1,9 +1,31 @@
 """
-Thuoc chuc nang nao: Lop du lieu cho tro ly AI, chat/RAG, audio va logging su dung model.
-Vai tro backend: File nay luu tri thuc do user nap vao, luu session hoi thoai, tung tin nhan, tep audio cua che do giong noi va nhat ky goi model AI de cac service/endpoint co noi doc ghi tap trung.
-Vai tro cua no trong frontend: Man chat AI, man tro ly moi, lich su hoi dap RAG, danh sach audio va mot so thong tin quan tri AI deu bat nguon tu cac model trong file nay.
-Moi lien he voi nhung ham / source khac: Duoc `api/views/chat.py`, `api/views/assistant.py`, `ai_engine.rag_engine`, `ai_engine.rag_index`, `ai_engine.assistant_engine` va signal cleanup trong `ai_engine.signals` su dung.
-Tac dung: Lam tang du lieu cot loi cho toan bo tinh nang AI, tu luu hoi thoai den quan ly tri thuc va thong ke goi model.
+ App ai_engine là gì?
+
+  ai_engine là tầng nghiệp vụ trung tâm cho toàn bộ chức năng AI của hệ thống.
+
+  Nó không chỉ “gọi AI để trả lời”, mà còn chịu trách nhiệm:
+
+  - Quản lý phiên hội thoại.
+  - Lưu lịch sử tin nhắn và audio.
+  - Kết nối mô hình LLM/Ollama.
+  - Trích xuất nội dung PDF, ảnh.
+  - Tạo embedding và quản lý vector database.
+  - Tìm kiếm RAG theo quyền người dùng.
+  - Tạo văn bản từ mẫu.
+  - Điều phối AI Assistant bằng tool calling.
+  - Chuẩn bị quy trình gửi và ký văn bản.
+  - Kiểm tra mức độ tuân thủ của tài liệu.
+  - Ghi nhận lịch sử sử dụng AI.
+
+  trong file models.py này, chúng ta định nghĩa các model dữ liệu cốt lõi cho các chức năng AI, bao gồm:
+    - KnowledgeBase: Lưu trữ các mục tri thức có thể được sử dụng trong các phiên hội thoại AI hoặc RAG.
+    - ChatSession: Quản lý các phiên hội thoại AI, bao gồm thông tin về người dùng, tiêu đề, công ty liên quan, loại phiên hội thoại, chế độ RAG nếu có, trạng thái xóa mềm và thời gian tạo/cập nhật.
+    - ChatMessage: Lưu trữ các tin nhắn trong các phiên hội thoại AI
+    - ChatAudioAttachment: Quản lý các tệp âm thanh liên quan đến các phiên hội thoại chat AI.
+    - AIUsageLog: Ghi lại lịch sử sử dụng AI, bao gồm thông tin về người dùng, tên mô hình được gọi, trạng thái của cuộc gọi và thời gian tạo.
+    - ComplianceCheckResult: Lưu trữ kết quả kiểm tra tuân thủ của các tài liệu hoặc mẫu tài liệu dựa trên các prompt đã được định nghĩa trước đó.
+    
+
 """
 
 from django.db import models
@@ -11,22 +33,17 @@ from django.contrib.auth.models import User
 from accounts.storage_paths import company_media_path
 from my_tennis_club.soft_delete import ActiveOnlyManager
 
-
+# def _chat_audio_upload để tạo đường dẫn lưu trữ cho file audio liên quan đến một phiên hội thoại chat AI. Nó sử dụng hàm company_media_path để xây dựng đường dẫn lưu trữ dựa trên công ty của phiên hội thoại và khu vực lưu trữ 'chat_audio', cùng với tên file gốc đã được làm sạch. Kết quả của hàm này là một chuỗi đường dẫn lưu trữ an toàn và có tổ chức cho các file audio liên quan đến các phiên hội thoại chat AI trong hệ thống lưu trữ.
+# vd: -> 'companies/<slug-cong-ty>/chat_audio/<ten-file>' (đường dẫn lưu file audio).
 def _chat_audio_upload(instance, filename):
     return company_media_path(
         company=getattr(getattr(instance, 'session', None), 'company', None),
         section='chat_audio',
         filename=filename,
     )
-
+# class KnowledgeBase để lưu trữ các mục tri thức (knowledge items) có thể được sử dụng trong các phiên hội thoại AI hoặc RAG. Mỗi mục tri thức bao gồm tiêu đề, nội dung, công ty liên quan, người sở hữu, trạng thái chia sẻ, loại nguồn (văn bản hoặc PDF) và thời gian tạo. Model này cho phép quản lý và tổ chức các nguồn tri thức một cách hiệu quả, đồng thời hỗ trợ việc truy cập và sử dụng chúng trong các tính năng AI của hệ thống.
+# vd: lưu 1 quy chế/biểu mẫu nội bộ để dùng cho hỏi đáp RAG.
 class KnowledgeBase(models.Model):
-    """
-    Thuoc chuc nang nao: Kho tri thuc nguoi dung nap vao cho AI tra cuu.
-    Vai tro backend: Model nay luu cac manh tri thuc dang text hoac PDF kem chu so huu va co chia se hay khong, de backend co the dua noi dung vao RAG/index hoac tra cuu theo user.
-    Vai tro cua no trong frontend: Frontend co the hien danh sach nguon tri thuc, trang thai chia se va noi dung da nap cho AI tu du lieu cua model nay.
-    Moi lien he voi nhung ham / source khac: `ai_engine.rag_engine.add_to_knowledge_base` va cac luong hoi dap AI co the doc model nay; lien ket voi `User` qua field `owner`.
-    Tac dung: Tao kho noi dung goc cho nhung tinh nang hoi dap AI duoc boi canh boi tai lieu nguoi dung dua vao.
-    """
     SOURCE_TEXT = 'text'
     SOURCE_PDF = 'pdf'
     SOURCE_CHOICES = [
@@ -50,43 +67,30 @@ class KnowledgeBase(models.Model):
 
     
 
+    # class Meta để đặt tên hiển thị (Knowledge Base) và sắp xếp các mục tri thức mới nhất lên đầu (created_at giảm dần).
+    # vd: danh sách KnowledgeBase trong admin -> mục tạo gần nhất hiển thị trên cùng.
     class Meta:
-        """
-        Thuoc chuc nang nao: Metadata cho kho tri thuc AI.
-        Vai tro backend: Khoi nay dat ten hien thi va sap xep mac dinh theo thoi gian tao giam dan de ban ghi moi nhat duoc uu tien khi xem admin hay liet ke.
-        Vai tro cua no trong frontend: Danh sach nguon tri thuc thuong hien noi dung moi nhat truoc ma khong can endpoint nao sap xep lai neu khong can.
-        Moi lien he voi nhung ham / source khac: Django admin, ORM va serializer huong thu tu `ordering` nay khi truy van mac dinh.
-        Tac dung: Dat quy tac hien thi co ban ngay tren tang model.
-        """
         verbose_name = 'Knowledge Base'
         verbose_name_plural = 'Knowledge Base'
         ordering = ['-created_at']
 
     
 
+    # def __str__ để hiển thị mục tri thức bằng chính tiêu đề của nó cho dễ nhận biết trong admin/log.
+    # vd: mục có title 'Quy che nghi phep' -> str() = 'Quy che nghi phep'.
     def __str__(self):
-        """
-        Thuoc chuc nang nao: Chuoi dai dien cho mot muc tri thuc.
-        Vai tro backend: Ham nay dung `title` lam nhan dai dien de log, admin va relation field de doc.
-        Vai tro cua no trong frontend: Neu giao dien hoac serializer gián tiep dung string cua model, user se thay tieu de tri thuc thay vi ID.
-        Moi lien he voi nhung ham / source khac: Duoc admin, shell va debug log goi khi ep doi tuong thanh chuoi.
-        Tac dung: Tao cach nhan dien nhanh cho ban ghi tri thuc.
-        """
         return self.title
 
+    # def save để tự gán company theo công ty của owner nếu chưa có, đảm bảo mục tri thức luôn thuộc đúng công ty trước khi lưu.
+    # vd: owner thuộc công ty A, tạo mục chưa set company -> tự gán company = A.
     def save(self, *args, **kwargs):
         if self.company_id is None and self.owner_id and getattr(getattr(self.owner, 'company_membership', None), 'company_id', None):
             self.company = self.owner.company_membership.company
         super().save(*args, **kwargs)
 
+# class ChatSession để quản lý các phiên hội thoại AI, bao gồm thông tin về người dùng, tiêu đề, công ty liên quan, loại phiên hội thoại (chat, RAG, trợ lý AI hoặc giọng nói AI), chế độ RAG nếu có, trạng thái xóa mềm và thời gian tạo/cập nhật. Model này cho phép tổ chức và quản lý các phiên hội thoại một cách hiệu quả, đồng thời hỗ trợ việc truy cập và sử dụng chúng trong các tính năng AI của hệ thống.
+# vd: 1 cuộc trò chuyện = 1 ChatSession (type: chat / rag / assistant / voice).
 class ChatSession(models.Model):
-    """
-    Thuoc chuc nang nao: Phien hoi thoai cho chat AI, RAG, assistant va che do giong noi.
-    Vai tro backend: Model nay luu mot thread hoi thoai cua user, loai session dang chay, mode RAG, thong tin soft-delete va thoi gian cap nhat de backend quan ly lich su tra loi.
-    Vai tro cua no trong frontend: Sidebar/session list, viec tiep tuc cuoc tro chuyen cu, xoa mem session va phan loai text/voice/RAG tren frontend deu dua vao model nay.
-    Moi lien he voi nhung ham / source khac: Co quan he `messages` toi `ChatMessage`, `audio_attachments` toi `ChatAudioAttachment`; `api/views/chat.py` va `api/views/assistant.py` tao/doc/xoa session; `ActiveOnlyManager` loc session da xoa mem.
-    Tac dung: Tro thanh don vi goc de gom nhom cac tin nhan AI theo tung cuoc hoi thoai.
-    """
     SESSION_CHAT = 'chat'
     SESSION_RAG = 'rag'
     SESSION_ASSISTANT = 'assistant'
@@ -127,42 +131,28 @@ class ChatSession(models.Model):
     all_objects = models.Manager()
 
     
-
+# class Meta để định nghĩa metadata cho model ChatSession, bao gồm việc sắp xếp các bản ghi theo thứ tự giảm dần của trường updated_at và created_at. Điều này đảm bảo rằng khi truy vấn các phiên hội thoại, những phiên mới nhất sẽ được hiển thị trước, giúp người dùng dễ dàng tiếp cận với các phiên hội thoại gần đây nhất trong hệ thống.
+    # vd: danh sách phiên -> phiên cập nhật gần nhất lên đầu.
     class Meta:
-        """
-        Thuoc chuc nang nao: Metadata cho session hoi thoai AI.
-        Vai tro backend: Khoi nay sap xep session theo `updated_at` giam dan de thread vua co tin nhan moi luon noi len dau trong truy van mac dinh.
-        Vai tro cua no trong frontend: Danh sach session tren giao dien chat/assistant se uu tien cuoc tro chuyen vua dien ra gan nhat.
-        Moi lien he voi nhung ham / source khac: Cac endpoint liet ke session huong loi tu `ordering` nay neu khong dat sap xep lai.
-        Tac dung: Giu thu tu session phu hop voi trai nghiem hoi thoai.
-        """
         ordering = ['-updated_at', '-created_at']
 
     
-
+# def __str__ để tạo một chuỗi đại diện cho một phiên hội thoại chat, bao gồm tên người dùng và tiêu đề của phiên hội thoại. Điều này giúp dễ dàng nhận diện và phân biệt các phiên hội thoại trong các công cụ quản lý hoặc giao diện người dùng, đặc biệt khi có nhiều phiên hội thoại được tạo bởi cùng một người dùng hoặc có tiêu đề tương tự.
+    # vd: -> 'nguyenvana - Cuoc tro chuyen moi'.
     def __str__(self):
-        """
-        Thuoc chuc nang nao: Chuoi dai dien cho session AI.
-        Vai tro backend: Ham nay ghep username va title session de admin/log nhanh biet thread nao thuoc user nao.
-        Vai tro cua no trong frontend: Frontend huong loi gian tiep neu serializer/admin can render string cua session trong moi truong debug hay quan tri.
-        Moi lien he voi nhung ham / source khac: Doc field `user` va `title`; thuong xuat hien trong admin/shell.
-        Tac dung: Lam cho session de nhan dien hon khi can hien thi bang chuoi.
-        """
         return f'{self.user.username} - {self.title}'
 
+    # def save để tự gán company theo công ty của user nếu chưa có, giúp phiên hội thoại luôn gắn đúng công ty (phục vụ phân quyền đa công ty).
+    # vd: user thuộc công ty A mở phiên chat mới -> session.company tự = A.
     def save(self, *args, **kwargs):
         if self.company_id is None and self.user_id and getattr(getattr(self.user, 'company_membership', None), 'company_id', None):
             self.company = self.user.company_membership.company
         super().save(*args, **kwargs)
 
+# class ChatMessage để lưu từng tin nhắn trong một phiên hội thoại: vai trò (user/assistant), nội dung, trích dẫn (citations) và payload kèm theo, cùng thời điểm tạo.
+# vd: 1 lượt hỏi của user + 1 lượt trả lời của assistant = 2 bản ghi ChatMessage trong cùng session.
 class ChatMessage(models.Model):
-    """
-    Thuoc chuc nang nao: Tung turn tin nhan ben trong mot session AI.
-    Vai tro backend: Model nay luu role user/assistant, noi dung, citations va payload bo sung cua moi luot hoi dap de backend co the phat lai lich su, mirror ket qua RAG va luu metadata hanh dong.
-    Vai tro cua no trong frontend: Bong chat, lich su hoi dap, duong dan nguon trich dan va cac action gan voi ket qua AI deu doc du lieu tu model nay.
-    Moi lien he voi nhung ham / source khac: Thuoc ve `ChatSession`; duoc tao boi `api/views/chat.py`, `api/views/assistant.py` va doc boi serializer chat.
-    Tac dung: Giu trang thai va du lieu hien thi cua tung luot chat AI.
-    """
+
     ROLE_USER = 'user'
     ROLE_ASSISTANT = 'assistant'
     ROLE_CHOICES = [
@@ -178,37 +168,21 @@ class ChatMessage(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     
-
+# class Meta để định nghĩa metadata cho model ChatMessage, bao gồm việc sắp xếp các bản ghi theo thứ tự tăng dần của trường created_at. Điều này đảm bảo rằng khi truy vấn các tin nhắn trong một phiên hội thoại, chúng sẽ được hiển thị theo thứ tự thời gian từ cũ đến mới, giúp người dùng dễ dàng theo dõi diễn biến của cuộc trò chuyện một cách logic và mạch lạc.   
+    # vd: tin nhắn trong phiên -> cũ ở trên, mới ở dưới (đúng dòng thời gian).
     class Meta:
-        """
-        Thuoc chuc nang nao: Metadata cho tin nhan AI.
-        Vai tro backend: Khoi nay sap xep tin nhan tang dan theo `created_at` de backend luon phat lai lich su theo dung thu tu phat sinh.
-        Vai tro cua no trong frontend: Bong chat va lich su session se hien dung thu tu hoi dap tu tren xuong duoi.
-        Moi lien he voi nhung ham / source khac: Cac serializer/view doc queryset mac dinh cua `messages` huong truc tiep thu tu nay.
-        Tac dung: Giu tinh tuyen tinh cua lich su chat.
-        """
         ordering = ['created_at']
 
     
-
+# def __str__ để tạo một chuỗi đại diện cho một tin nhắn trong phiên hội thoại, bao gồm vai trò của người gửi (user hoặc assistant) và một phần nội dung của tin nhắn (giới hạn 50 ký tự). Điều này giúp dễ dàng nhận diện và phân biệt các tin nhắn trong các công cụ quản lý hoặc giao diện người dùng, đặc biệt khi có nhiều tin nhắn được gửi bởi cùng một vai trò hoặc có nội dung tương tự.
+    # vd: -> 'user: Xin chao...'.
     def __str__(self):
-        """
-        Thuoc chuc nang nao: Chuoi dai dien ngan cho mot tin nhan chat.
-        Vai tro backend: Ham nay lay role va 50 ky tu dau noi dung de log/admin nhin nhanh duoc day la message nao ma khong mo toan bo payload.
-        Vai tro cua no trong frontend: Frontend khong goi truc tiep, nhung cong cu debug va admin co chuoi ngan gon de nhan dien tin nhan.
-        Moi lien he voi nhung ham / source khac: Dung field `role` va `content`; duoc co che string cua Django su dung.
-        Tac dung: Tao nhan ngan cho ban ghi tin nhan.
-        """
         return f'{self.role}: {self.content[:50]}'
 
+# class ChatAudioAttachment để quản lý các tệp âm thanh liên quan đến các phiên hội thoại chat AI, bao gồm thông tin về phiên hội thoại, tin nhắn liên quan (nếu có), người tạo, tiêu đề, bản ghi chuyển đổi văn bản (transcript), loại MIME, thời lượng, tệp âm thanh và thời gian tạo. Model này cho phép lưu trữ và quản lý các tệp âm thanh một cách hiệu quả, đồng thời hỗ trợ việc truy cập và sử dụng chúng trong các tính năng AI của hệ thống.
+# vd: lưu file ghi âm + transcript của 1 lượt VoiceAI.
 class ChatAudioAttachment(models.Model):
-    """
-    Thuoc chuc nang nao: Tep audio va metadata cho phien tro ly giong noi.
-    Vai tro backend: Model nay luu tep ghi am, transcript, mime type, do dai va lien ket toi session/message de backend co the tai lai, phat lai hoac xoa audio dung ngu canh.
-    Vai tro cua no trong frontend: Man voice assistant va lich su audio dua vao model nay de hien danh sach file da ghi, cho phep nghe lai hoac tai xuong.
-    Moi lien he voi nhung ham / source khac: Gan voi `ChatSession`, `ChatMessage` va `User`; `api/views/assistant.py` tao/list/download ban ghi, `ai_engine.signals` don dep file sau khi xoa.
-    Tac dung: Tach tai nguyen audio ra khoi message text nhung van lien ket chat che voi phien hoi thoai.
-    """
+
     session = models.ForeignKey(
         ChatSession,
         on_delete=models.CASCADE,
@@ -235,6 +209,8 @@ class ChatAudioAttachment(models.Model):
 
     
 
+    # class Meta để sắp xếp các tệp audio mới nhất lên đầu (created_at giảm dần) cho danh sách lịch sử giọng nói.
+    # vd: danh sách audio của 1 phiên -> file ghi gần nhất nằm trên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Metadata cho file audio tro ly.
@@ -247,6 +223,8 @@ class ChatAudioAttachment(models.Model):
 
     
 
+    # def __str__ để đặt tên hiển thị cho bản ghi audio: ưu tiên title, nếu trống thì dùng 'Audio #<pk>'.
+    # vd: bản ghi chưa đặt title, pk=7 -> str() = 'Audio #7'.
     def __str__(self):
         """
         Thuoc chuc nang nao: Chuoi dai dien cho ban ghi audio.
@@ -256,15 +234,10 @@ class ChatAudioAttachment(models.Model):
         Tac dung: Tao nhan ngan cho tep audio da luu.
         """
         return self.title or f'Audio #{self.pk}'
-
+# class AIUsageLog để ghi lại lịch sử sử dụng AI, bao gồm thông tin về người dùng, tên mô hình được gọi, trạng thái của cuộc gọi (thành công hoặc lỗi) và thời gian tạo. Model này cho phép theo dõi và phân tích việc sử dụng AI trong hệ thống, đồng thời hỗ trợ việc quản lý và tối ưu hóa các cuộc gọi AI dựa trên dữ liệu lịch sử này.
+# vd: mỗi lần gọi AI ghi 1 dòng (user, model, success/error) để thống kê.
 class AIUsageLog(models.Model):
-    """
-    Thuoc chuc nang nao: Nhat ky goi model AI.
-    Vai tro backend: Model nay ghi lai ai da goi model nao va trang thai thanh cong/loi, de backend co the thong ke usage, debug su co va theo doi tac dong cua cac luong AI.
-    Vai tro cua no trong frontend: Hien tai frontend chu yeu huong loi gian tiep qua cac dashboard/bao cao quan tri neu co, thay vi goi truc tiep model nay.
-    Moi lien he voi nhung ham / source khac: `ai_engine.rag_engine._record_ai_usage` ghi du lieu vao day moi khi goi model LLM.
-    Tac dung: Tao audit trail toi thieu cho cac tac vu AI.
-    """
+
     STATUS_SUCCESS = 'success'
     STATUS_ERROR = 'error'
     STATUS_CHOICES = [
@@ -284,31 +257,21 @@ class AIUsageLog(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     
-
+# class Meta để định nghĩa metadata cho model AIUsageLog, bao gồm việc sắp xếp các bản ghi theo thứ tự giảm dần của trường created_at. Điều này đảm bảo rằng khi truy vấn lịch sử sử dụng AI, những bản ghi mới nhất sẽ được hiển thị trước, giúp người quản trị hoặc nhà phát triển dễ dàng tiếp cận với các cuộc gọi AI gần đây nhất trong hệ thống.
+    # vd: danh sách log -> bản ghi mới nhất lên đầu.
     class Meta:
-        """
-        Thuoc chuc nang nao: Metadata cho nhat ky su dung AI.
-        Vai tro backend: Sap xep log moi nhat len dau de viec xem su co va quan sat luong goi model de hon.
-        Vai tro cua no trong frontend: Neu co man quan tri/thong ke, du lieu moi nhat se o tren cung ngay ca khi khong dat sap xep rieng.
-        Moi lien he voi nhung ham / source khac: ORM va admin su dung `ordering` nay khi doc model.
-        Tac dung: Uu tien hien thi ban ghi usage moi tao.
-        """
         ordering = ['-created_at']
 
     
-
+# def __str__ để tạo một chuỗi đại diện cho một bản ghi lịch sử sử dụng AI, bao gồm tên người dùng (hoặc 'guest' nếu không có người dùng liên kết), tên mô hình được gọi (hoặc 'unknown' nếu không có tên mô hình) và trạng thái của cuộc gọi. Điều này giúp dễ dàng nhận diện và phân biệt các bản ghi lịch sử sử dụng AI trong các công cụ quản lý hoặc giao diện người dùng, đặc biệt khi có nhiều bản ghi được tạo bởi cùng một người dùng hoặc có trạng thái tương tự.
+    # vd: -> 'nguyenvana - kimi-k2.6:cloud - success'.
     def __str__(self):
-        """
-        Thuoc chuc nang nao: Chuoi dai dien cho mot ban ghi usage AI.
-        Vai tro backend: Ham nay hien owner, ten model va trang thai de khi xem admin/log co the biet nhanh lan goi nao da thanh cong hay that bai.
-        Vai tro cua no trong frontend: Frontend khong goi truc tiep, nhung cac cong cu quan tri/developer thay duoc thong tin usage ro rang hon.
-        Moi lien he voi nhung ham / source khac: Dung field `user`, `model_name`, `status`; phu hop voi du lieu ma `_record_ai_usage` ghi vao.
-        Tac dung: Tao nhan ngan cho tung dong usage log.
-        """
+ 
         owner = self.user.username if self.user_id else 'guest'
         return f'{owner} - {self.model_name or "unknown"} - {self.status}'
 
-
+# class ComplianceCheckResult để lưu trữ kết quả kiểm tra tuân thủ của các tài liệu hoặc mẫu tài liệu dựa trên các prompt đã được định nghĩa trước đó. Mỗi bản ghi bao gồm thông tin về loại đối tượng được kiểm tra (tài liệu hoặc mẫu tài liệu), ID của đối tượng đó, prompt liên quan, kết quả kiểm tra (đạt hay không đạt), các mục bị thiếu trong kết quả JSON, hash nội dung, thời gian tạo và người tạo. Model này cho phép theo dõi và quản lý các kết quả kiểm tra tuân thủ một cách hiệu quả, đồng thời hỗ trợ việc phân tích và cải thiện chất lượng của các tài liệu và mẫu tài liệu trong hệ thống.
+# vd: một tài liệu có thể được kiểm tra tuân thủ dựa trên một prompt yêu cầu trích xuất thông tin cụ thể, và kết quả kiểm tra sẽ cho biết liệu tài liệu đó có đáp ứng các yêu cầu của prompt hay không, cùng với thông tin chi tiết về những phần nào của tài liệu không đáp ứng được yêu cầu đó.
 class ComplianceCheckResult(models.Model):
     TARGET_DOCUMENT = 'document'
     TARGET_TEMPLATE = 'template'
@@ -342,6 +305,8 @@ class ComplianceCheckResult(models.Model):
         related_name='created_compliance_checks',
     )
 
+    # class Meta để sắp xếp kết quả kiểm tra tuân thủ mới nhất lên đầu và thêm index (target_type, target_id, prompt, content_hash) phục vụ tra cứu/cache nhanh.
+    # vd: cùng (tài liệu, prompt, content_hash) -> tra nhanh kết quả đã chấm nhờ index, khỏi gọi lại LLM.
     class Meta:
         ordering = ['-created_at']
         indexes = [
@@ -350,6 +315,8 @@ class ComplianceCheckResult(models.Model):
             ),
         ]
 
+    # def __str__ để tóm tắt kết quả kiểm tra tuân thủ dạng 'loại:đối_tượng prompt=… passed=…' cho dễ đọc trong admin/log.
+    # vd: 'document:45 prompt=12 passed=False'.
     def __str__(self):
         return (
             f'{self.target_type}:{self.target_id} '

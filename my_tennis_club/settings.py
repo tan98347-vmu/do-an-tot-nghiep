@@ -9,6 +9,8 @@ Tac dung: Dong vai tro nguon cau hinh trung tam de tat ca module backend cung va
 from pathlib import Path
 import json
 import os
+
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -91,7 +93,9 @@ def _env_json_dict(name):
         return {}
     return value if isinstance(value, dict) else {}
 
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-by1dy$5b6f#m4fk9gq5^#!t(hjwy4h3*me!^f66l*dq1j6o0wf')
+SECRET_KEY = (os.getenv('SECRET_KEY') or '').strip()
+if not SECRET_KEY or SECRET_KEY == 'your-secret-key-here':
+    raise ImproperlyConfigured('SECRET_KEY must be set to a non-placeholder environment value.')
 
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 LLM_DETECT_TRACE = os.getenv('LLM_DETECT_TRACE', 'True') == 'True'
@@ -195,10 +199,30 @@ EXTRA_AI_MODELS = [
     'kimi-k2.6:cloud',
 ]
 
-TESSERACT_CMD = os.getenv('TESSERACT_CMD', r'C:\Program Files\Tesseract-OCR\tesseract.exe')
+TESSERACT_CMD = os.getenv('TESSERACT_CMD', 'tesseract')
 
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
 DEFAULT_AI_MODEL = os.getenv('DEFAULT_AI_MODEL', 'kimi-k2.6:cloud')
+PROMPT_PREFLIGHT_MODEL = os.getenv(
+    'PROMPT_PREFLIGHT_MODEL',
+    DEFAULT_AI_MODEL,
+).strip()
+PROMPT_PREFLIGHT_BASE_URL = os.getenv(
+    'PROMPT_PREFLIGHT_BASE_URL',
+    OLLAMA_BASE_URL,
+).strip()
+PROMPT_PREFLIGHT_ALLOWED_HOSTS = tuple(
+    host.strip()
+    for host in os.getenv(
+        'PROMPT_PREFLIGHT_ALLOWED_HOSTS',
+        'localhost,127.0.0.1,::1,host.docker.internal',
+    ).split(',')
+    if host.strip()
+)
+PROMPT_PREFLIGHT_TIMEOUT_SECONDS = max(
+    int(os.getenv('PROMPT_PREFLIGHT_TIMEOUT_SECONDS', '45') or '45'),
+    5,
+)
 DEFAULT_EMBEDDING_MODEL = os.getenv('DEFAULT_EMBEDDING_MODEL', 'mxbai-embed-large')
 AI_REQUEST_TIMEOUT_SECONDS = max(
     int(os.getenv('AI_REQUEST_TIMEOUT_SECONDS', '1200') or '1200'),
@@ -256,6 +280,7 @@ COLLABORA_EDITOR_PATH = os.getenv('COLLABORA_EDITOR_PATH', '/browser/dist/cool.h
 COLLABORA_WOPI_SECRET = os.getenv('COLLABORA_WOPI_SECRET', '')
 COLLABORA_ALLOWED_ORIGINS = _env_csv_list('COLLABORA_ALLOWED_ORIGINS', ())
 MANUAL_EDIT_WOPI_SRC_BASE_URL = os.getenv('MANUAL_EDIT_WOPI_SRC_BASE_URL', '')
+MANUAL_EDIT_POSTMESSAGE_ORIGIN = os.getenv('MANUAL_EDIT_POSTMESSAGE_ORIGIN', '')
 MANUAL_EDIT_SESSION_TTL_SECONDS = max(int(os.getenv('MANUAL_EDIT_SESSION_TTL_SECONDS', '3600') or '3600'), 300)
 
 SIGNING_DEFAULT_SIGNATURE_MODE = os.getenv('SIGNING_DEFAULT_SIGNATURE_MODE', 'pdf_pkcs7')
@@ -305,6 +330,13 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
+    # Chong brute-force / credential-stuffing dang nhap. Rate chinh duoc qua env.
+    # Luu y: throttle dung cache mac dinh (LocMemCache -> dem theo tung process).
+    # Voi nhieu worker nen cau hinh CACHES = Redis de dem chia se giua cac process.
+    'DEFAULT_THROTTLE_RATES': {
+        'login_ip': os.getenv('LOGIN_IP_THROTTLE_RATE', '20/min'),
+        'login_id': os.getenv('LOGIN_ID_THROTTLE_RATE', '8/min'),
+    },
 }
 
 SIMPLE_JWT = {
@@ -374,13 +406,11 @@ BACKUP_ENCRYPTION_REQUIRED = os.getenv('BACKUP_ENCRYPTION_REQUIRED', 'False').lo
 
 if BACKUP_ENCRYPTION_REQUIRED:
     if BACKUP_ENCRYPTION_MASTER_KEY is None:
-        from django.core.exceptions import ImproperlyConfigured
         raise ImproperlyConfigured(
             'BACKUP_ENCRYPTION_REQUIRED=True nhung thieu BACKUP_ENCRYPTION_MASTER_KEY trong ENV. '
             'Sinh key bang: python -c "import os,base64;print(base64.b64encode(os.urandom(32)).decode())"'
         )
     if len(BACKUP_ENCRYPTION_MASTER_KEY) != 32:
-        from django.core.exceptions import ImproperlyConfigured
         raise ImproperlyConfigured(
             'BACKUP_ENCRYPTION_MASTER_KEY phai la base64 cua dung 32 bytes (256-bit AES key).'
         )

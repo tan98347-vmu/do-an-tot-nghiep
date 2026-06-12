@@ -39,6 +39,8 @@ from ..trash_services import mark_deleted
 
 _REMOTE_SOURCE_MAX_BYTES = 12 * 1024 * 1024
 
+# class _HtmlTextExtractor là lớp gom logic/dữ liệu liên quan.
+# vd: gom các thuộc tính/method liên quan vào một nơi.
 class _HtmlTextExtractor(HTMLParser):
     
 
@@ -49,6 +51,11 @@ class _HtmlTextExtractor(HTMLParser):
     Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `api/urls.py`, `api/serializers/templates.py`, `accounts.permissions`, `document_templates.models`, `document_templates.utils`, `document_templates.versioning`. Nam trong pham vi module hien tai.
     Tac dung: To chuc logic lien quan toi `_HtmlTextExtractor` thanh mot don vi ro rang de nhung ham khac goi lai de hon.
     """
+    # Là gì: `__init__` là phương thức của lớp `_HtmlTextExtractor` trong nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+    # Chức năng backend: Hàm xử lý phần việc `init` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+    # Mối liên hệ: Hàm được các endpoint hoặc helper cùng module gọi khi cần cùng quy tắc xử lý.
+    # Bản chất và tác dụng: phương thức đóng gói hành vi gắn với đối tượng hiện tại; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def __init__(self):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -65,6 +72,11 @@ class _HtmlTextExtractor(HTMLParser):
 
     
 
+    # Là gì: `handle_starttag` là phương thức của lớp `_HtmlTextExtractor` trong nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+    # Chức năng backend: Hàm xử lý phần việc `handle starttag` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+    # Mối liên hệ: Hàm phối hợp với `self._parts.append` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: phương thức đóng gói hành vi gắn với đối tượng hiện tại; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def handle_starttag(self, tag, attrs):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -83,6 +95,11 @@ class _HtmlTextExtractor(HTMLParser):
 
     
 
+    # Là gì: `handle_endtag` là phương thức của lớp `_HtmlTextExtractor` trong nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+    # Chức năng backend: Hàm xử lý phần việc `handle endtag` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+    # Mối liên hệ: Hàm phối hợp với `self._parts.append` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: phương thức đóng gói hành vi gắn với đối tượng hiện tại; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def handle_endtag(self, tag):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -101,6 +118,11 @@ class _HtmlTextExtractor(HTMLParser):
 
     
 
+    # Là gì: `handle_data` là phương thức của lớp `_HtmlTextExtractor` trong nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+    # Chức năng backend: Hàm xử lý phần việc `handle data` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+    # Mối liên hệ: Hàm phối hợp với `re.sub.strip`, `re.sub`, `self._parts.append` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: phương thức đóng gói hành vi gắn với đối tượng hiện tại; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def handle_data(self, data):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -121,6 +143,11 @@ class _HtmlTextExtractor(HTMLParser):
 
     
 
+    # Là gì: `text_content` là phương thức của lớp `_HtmlTextExtractor` trong nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+    # Chức năng backend: Hàm xử lý phần việc `text content` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+    # Mối liên hệ: Hàm phối hợp với `join`, `re.sub`, `text.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: phương thức đóng gói hành vi gắn với đối tượng hiện tại; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def text_content(self):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -134,6 +161,11 @@ class _HtmlTextExtractor(HTMLParser):
         text = re.sub(r'\n{3,}', '\n\n', text)
         return text.strip()
 
+# Là gì: `_filename_stem_from_url` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `filename stem from url` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `urlparse.path.rsplit`, `urlparse`, `unquote.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _filename_stem_from_url(source_url):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -150,6 +182,11 @@ def _filename_stem_from_url(source_url):
         filename = filename.rsplit('.', 1)[0]
     return filename.strip()
 
+# Là gì: `_extract_docx_text` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm trích xuất nội dung hoặc giá trị cần thiết từ dữ liệu nguồn; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `DocxDoc`, `_Para`, `para.text.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _extract_docx_text(docx_source):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -179,6 +216,11 @@ def _extract_docx_text(docx_source):
                             parts.append(para.text)
     return '\n\n'.join(parts)
 
+# Là gì: `_extract_existing_vars` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm trích xuất nội dung hoặc giá trị cần thiết từ dữ liệu nguồn; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `extract_template_variables` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _extract_existing_vars(content):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -190,6 +232,11 @@ def _extract_existing_vars(content):
     from document_templates.utils import extract_template_variables
     return extract_template_variables(content)
 
+# Là gì: `_template_debug_preview` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm tạo dữ liệu xem trước mà chưa ghi nhận thay đổi cuối cùng; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `join`, `text.replace.replace.split`, `text.replace.replace` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _template_debug_preview(value, *, limit=220):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -204,6 +251,11 @@ def _template_debug_preview(value, *, limit=220):
         return text
     return f'{text[:limit]}...'
 
+# Là gì: `_template_debug_log` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `template debug log` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `join`, `fields.items` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _template_debug_log(stage, **fields):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -215,6 +267,11 @@ def _template_debug_log(stage, **fields):
     ordered = ' | '.join(f'{key}={value!r}' for key, value in fields.items())
     print(f'[template_detect_debug] {stage} | {ordered}', flush=True)
 
+# Là gì: `_looks_like_cloud_model_name` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `looks like cloud model name` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `str.strip.lower`, `str.strip`, `lowered.endswith` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _looks_like_cloud_model_name(model_name):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -228,6 +285,11 @@ def _looks_like_cloud_model_name(model_name):
         return False
     return lowered.endswith('-cloud') or ':cloud' in lowered
 
+# Là gì: `_apply_replacements_to_docx_bytes` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `apply replacements to docx bytes` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `DocxDoc`, `io.BytesIO`, `replacements.items` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect ghi cơ sở dữ liệu.
 def _apply_replacements_to_docx_bytes(docx_bytes, replacements):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -242,6 +304,11 @@ def _apply_replacements_to_docx_bytes(docx_bytes, replacements):
 
     
 
+    # Là gì: `_apply_to_para` là hàm cục bộ bên trong `_apply_replacements_to_docx_bytes`, chỉ phục vụ bước xử lý nội bộ của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+    # Chức năng backend: Hàm xử lý phần việc `apply to para` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+    # Mối liên hệ: Hàm phối hợp với `replacements.items`, `join`, `full_text.replace` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def _apply_to_para(para):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -282,6 +349,11 @@ def _apply_replacements_to_docx_bytes(docx_bytes, replacements):
     doc.save(buffer)
     return buffer.getvalue()
 
+# Là gì: `_auto_detect_template_content` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `auto detect template content` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `_extract_existing_vars` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _auto_detect_template_content(content, *, source_name='', docx_bytes=None):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -298,6 +370,11 @@ def _auto_detect_template_content(content, *, source_name='', docx_bytes=None):
             'modified_docx': None,
         }
 
+# Là gì: `_canonicalize_template_write_data` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm ghi dữ liệu ra storage hoặc cấu trúc đích; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `data.copy` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _canonicalize_template_write_data(data):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -310,6 +387,11 @@ def _canonicalize_template_write_data(data):
         return data
     return data.copy()
 
+# Là gì: `template_export` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm kết xuất dữ liệu thành tệp hoặc định dạng trao đổi; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_accessible_templates`, `get_object_or_404`, `can_use_template` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect lên tệp hoặc storage; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def template_export(request, pk):
@@ -456,6 +538,11 @@ def template_export(request, pk):
             'modified_docx': None,
         }
 
+# Là gì: `_fetch_remote_template_source` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `fetch remote template source` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `urlparse`, `ValueError`, `Request` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect lên tệp hoặc storage.
 def _fetch_remote_template_source(source_url, fallback_title=''):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -535,6 +622,11 @@ def _fetch_remote_template_source(source_url, fallback_title=''):
         'resolved_url': resolved_url,
     }
 
+# Là gì: `_normalize_search_terms` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm tìm kiếm và lọc các bản ghi phù hợp, đồng thời chuẩn hóa dữ liệu về định dạng thống nhất; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `re.sub`, `str.strip`, `re.split` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _normalize_search_terms(raw_query):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -546,6 +638,11 @@ def _normalize_search_terms(raw_query):
     normalized = re.sub(r'[#,:;]+', ' ', str(raw_query or '').strip())
     return [term for term in re.split(r'\s+', normalized) if term]
 
+# Là gì: `_build_template_search_query` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm tìm kiếm và lọc các bản ghi phù hợp, đồng thời tổng hợp dữ liệu đầu vào thành cấu trúc phục vụ bước tiếp theo; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `str.strip`, `Q`, `field.endswith` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _build_template_search_query(raw_query):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -555,6 +652,7 @@ def _build_template_search_query(raw_query):
     Tac dung: Co lap rieng buoc dung payload hoac cau truc du lieu trung gian de cac endpoint cung file tai su dung dung mot quy tac.
     """
     from django.db.models import Q
+    from accounts.record_codes import TEMPLATE_RECORD_PREFIX, parse_record_code
 
     fields = (
         'title',
@@ -577,6 +675,11 @@ def _build_template_search_query(raw_query):
 
     
 
+    # Là gì: `_field_q` là hàm cục bộ bên trong `_build_template_search_query`, chỉ phục vụ bước xử lý nội bộ của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+    # Chức năng backend: Hàm xử lý phần việc `field q` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+    # Mối liên hệ: Hàm phối hợp với `Q`, `field.endswith` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def _field_q(value):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -594,6 +697,9 @@ def _build_template_search_query(raw_query):
         return query
 
     combined = _field_q(raw)
+    record_id = parse_record_code(raw, TEMPLATE_RECORD_PREFIX)
+    if record_id is not None:
+        combined |= Q(pk=record_id)
     terms = _normalize_search_terms(raw)
     if len(terms) <= 1:
         return combined
@@ -604,6 +710,11 @@ def _build_template_search_query(raw_query):
         token_query = term_query if not token_query.children else token_query & term_query
     return combined | token_query
 
+# Là gì: `_legacy_template_submit_v1` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm gửi dữ liệu vào bước xử lý hoặc phê duyệt tiếp theo; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `get_template_detail_queryset`, `tmpl.submit_for_approval` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def _legacy_template_submit_v1(request, pk):
@@ -620,6 +731,11 @@ def _legacy_template_submit_v1(request, pk):
     tmpl.submit_for_approval()
     return Response({'status': tmpl.status})
 
+# Là gì: `_legacy_template_approve_v1` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm chấp thuận yêu cầu và chuyển trạng thái nghiệp vụ; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `request.data.get`, `is_leader_of` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def _legacy_template_approve_v1(request, pk):
@@ -650,6 +766,11 @@ def _legacy_template_approve_v1(request, pk):
     TemplateApprovalLog.objects.create(template=tmpl, action='approve', actor=request.user, comment=comment)
     return Response({'status': tmpl.status})
 
+# Là gì: `_legacy_template_reject_v1` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm từ chối yêu cầu và ghi nhận lý do; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `request.data.get`, `is_leader_of` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def _legacy_template_reject_v1(request, pk):
@@ -682,6 +803,11 @@ def _legacy_template_reject_v1(request, pk):
     TemplateApprovalLog.objects.create(template=tmpl, action='reject', actor=request.user, comment=comment)
     return Response({'status': tmpl.status})
 
+# Là gì: `template_pending_shares` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `template pending shares` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `DocumentTemplate.objects.none`, `DocumentTemplate.objects.filter`, `UserGroupMembership.objects.filter.values_list` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def template_pending_shares(request):
@@ -711,6 +837,11 @@ def template_pending_shares(request):
     serializer = TemplateListSerializer(qs.distinct().order_by('-created_at'), many=True, context={'request': request})
     return Response(serializer.data)
 
+# Là gì: `template_group_members` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `template group members` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.GET.get`, `UserGroupMembership.objects.filter.exists`, `UserGroupMembership.objects.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def template_group_members(request):
@@ -747,6 +878,11 @@ def template_group_members(request):
         for membership in memberships
     ])
 
+# Là gì: `template_versions` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `template versions` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_template_detail_queryset`, `get_object_or_404`, `can_edit_template` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def template_versions(request, pk):
@@ -766,6 +902,11 @@ def template_versions(request, pk):
     serializer = TemplateVersionSerializer(versions, many=True)
     return Response(serializer.data)
 
+# Là gì: `template_version_toggle_hide` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `template version toggle hide` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `can_edit_template`, `ver.save` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def template_version_toggle_hide(request, pk, ver_id):
@@ -784,6 +925,11 @@ def template_version_toggle_hide(request, pk, ver_id):
     ver.save(update_fields=['is_hidden'])
     return Response({'is_hidden': ver.is_hidden})
 
+# Là gì: `template_version_diff` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `template version diff` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_template_detail_queryset`, `get_object_or_404`, `tmpl.versions.order_by` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def template_version_diff(request, pk, ver_id):
@@ -831,6 +977,11 @@ def template_version_diff(request, pk, ver_id):
         'new_content': new_content,
     })
 
+# Là gì: `template_version_restore` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm khôi phục dữ liệu về trạng thái hoạt động; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `can_edit_template`, `create_template_version_snapshot` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def template_version_restore(request, pk, ver_id):
@@ -887,6 +1038,11 @@ def template_version_restore(request, pk, ver_id):
         pass
     return Response({'detail': f'Đã khôi phục về v{ver.version_number}.'})
 
+# Là gì: `template_favorite` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `template favorite` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_accessible_templates`, `get_object_or_404`, `TemplateFavorite.objects.get_or_create` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def template_favorite(request, pk):
@@ -905,6 +1061,11 @@ def template_favorite(request, pk):
         return Response({'favorited': False})
     return Response({'favorited': True})
 
+# Là gì: `template_import_from_url` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc dữ liệu đầu vào và chuyển thành bản ghi hệ thống; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `strip`, `request.data.get`, `request.data.get.lower` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def template_import_from_url(request):
@@ -975,6 +1136,11 @@ def template_import_from_url(request):
         payload.update(_auto_detect_template_content(content, source_name=payload['title']))
     return Response(payload)
 
+# Là gì: `template_generate_tags` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm sinh nội dung hoặc tệp mới từ dữ liệu đầu vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_accessible_templates`, `get_object_or_404`, `get_llm` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def template_generate_tags(request, pk):
@@ -1017,6 +1183,11 @@ def template_generate_tags(request, pk):
 
     return Response({'tags': tags})
 
+# Là gì: `_resolve_detection_guidance` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xác định đối tượng hoặc cấu hình hiệu lực từ ngữ cảnh hiện tại; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `request.data.get`, `str.strip`, `get_accessible_prompts.filter.first` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 def _resolve_detection_guidance(request, user):
     """Phan giai + lam sach 'goi y nhan dien bien' cua nguoi dung de chen vao prompt detect AI.
 
@@ -1080,6 +1251,11 @@ def _resolve_detection_guidance(request, user):
     return safe_block, None
 
 
+# Là gì: `_extract_docx_template_payload` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm trích xuất nội dung hoặc giá trị cần thiết từ dữ liệu nguồn; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `time.perf_counter`, `_extract_docx_text`, `io.BytesIO` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _extract_docx_template_payload(docx_bytes, *, source_name='', auto_detect=False, debug_id=None, guidance_block=''):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1114,6 +1290,11 @@ def _extract_docx_template_payload(docx_bytes, *, source_name='', auto_detect=Fa
         )
     return {'content': content, 'detected_vars': existing_vars, 'modified_docx': None}
 
+# Là gì: `_legacy_template_submit_v2` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm gửi dữ liệu vào bước xử lý hoặc phê duyệt tiếp theo; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `get_template_detail_queryset`, `str.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def _legacy_template_submit_v2(request, pk):
@@ -1148,6 +1329,11 @@ def _legacy_template_submit_v2(request, pk):
         )
     return Response(TemplateDetailSerializer(tmpl, context={'request': request}).data)
 
+# Là gì: `template_export` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm kết xuất dữ liệu thành tệp hoặc định dạng trao đổi; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_accessible_templates`, `get_object_or_404`, `can_use_template` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def template_export(request, pk):
@@ -1198,6 +1384,11 @@ def template_export(request, pk):
     response['Content-Disposition'] = f'attachment; filename*=UTF-8\'\'{name}'
     return response
 
+# Là gì: `template_import_docx` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc dữ liệu đầu vào và chuyển thành bản ghi hệ thống; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `time.perf_counter`, `hex`, `time.time_ns` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def template_import_docx(request):
@@ -1261,6 +1452,11 @@ def template_import_docx(request):
     )
     return Response(payload)
 
+# Là gì: `_canonicalize_template_write_data` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm ghi dữ liệu ra storage hoặc cấu trúc đích; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `data.copy`, `str.strip`, `normalized.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _canonicalize_template_write_data(data):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1281,6 +1477,11 @@ def _canonicalize_template_write_data(data):
         normalized['source_type'] = 'manual'
     return normalized
 
+# Là gì: `template_list_create` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp, đồng thời kiểm tra đầu vào và tạo dữ liệu mới; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.GET.get`, `request.GET.get.strip`, `qs.select_related` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def template_list_create(request):
@@ -1379,6 +1580,11 @@ def template_list_create(request):
     )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# Là gì: `template_detail` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_template_detail_queryset`, `get_object_or_404`, `can_delete_template` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def template_detail(request, pk):
@@ -1432,6 +1638,11 @@ def template_detail(request, pk):
         return Response(TemplateDetailSerializer(updated, context={'request': request}).data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# Là gì: `_replacement_looks_like_label_span` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `replacement looks like label span` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `str.strip`, `unicodedata.normalize`, `join` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _replacement_looks_like_label_span(raw_text):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1478,6 +1689,11 @@ def _replacement_looks_like_label_span(raw_text):
 
     return False
 
+# Là gì: `_normalize_detected_variable_name` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm chuẩn hóa dữ liệu về định dạng thống nhất; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `str.strip`, `unicodedata.normalize`, `join` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _normalize_detected_variable_name(value):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1503,6 +1719,11 @@ def _normalize_detected_variable_name(value):
         normalized = f'field_{normalized}'
     return normalized
 
+# Là gì: `_build_placeholder_content` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm tổng hợp dữ liệu đầu vào thành cấu trúc phục vụ bước tiếp theo; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `_extract_existing_vars`, `items`, `str.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _build_placeholder_content(content, replacements):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1541,6 +1762,11 @@ def _build_placeholder_content(content, replacements):
 
     return modified_content, sorted(detected_vars)
 
+# Là gì: `_auto_detect_template_content` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `auto detect template content` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `_extract_existing_vars`, `time.perf_counter`, `GlobalAIConfig.get_config` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect lên tệp hoặc storage.
 def _auto_detect_template_content(content, *, source_name='', docx_bytes=None, debug_id=None, guidance_block=''):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1717,6 +1943,11 @@ _previous_canonicalize_template_write_data = globals().get("_canonicalize_templa
 _previous_auto_detect_template_content = globals().get("_auto_detect_template_content")
 _previous_template_export = globals().get("template_export")
 
+# Là gì: `_copy_mutable_payload` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `copy mutable payload` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `data.copy` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _copy_mutable_payload(data):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1734,6 +1965,11 @@ def _copy_mutable_payload(data):
         return dict(data)
     return data
 
+# Là gì: `_coerce_list_payload` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `value.strip`, `json.loads`, `part.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _coerce_list_payload(value):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1759,6 +1995,11 @@ def _coerce_list_payload(value):
         return [part.strip() for part in raw.split(",") if part.strip()]
     return [value]
 
+# Là gì: `_assign_payload_value` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `assign payload value` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `payload.setlist` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _assign_payload_value(payload, key, value):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1774,6 +2015,11 @@ def _assign_payload_value(payload, key, value):
         return
     payload[key] = value
 
+# Là gì: `_canonicalize_template_write_data` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm ghi dữ liệu ra storage hoặc cấu trúc đích; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `_copy_mutable_payload`, `callable`, `_previous_canonicalize_template_write_data` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _canonicalize_template_write_data(data):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1827,6 +2073,11 @@ _TEMPLATE_LABEL_PREFIXES = (
     "ngay sinh",
 )
 
+# Là gì: `_extract_mapping_text` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm trích xuất nội dung hoặc giá trị cần thiết từ dữ liệu nguồn; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `mapping.get`, `value.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _extract_mapping_text(mapping, *keys):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1843,6 +2094,11 @@ def _extract_mapping_text(mapping, *keys):
             return value.strip()
     return None
 
+# Là gì: `_is_placeholder_only` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm đánh giá một điều kiện và trả về kết quả boolean; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `value.strip`, `re.sub`, `stripped.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _is_placeholder_only(value):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1859,6 +2115,11 @@ def _is_placeholder_only(value):
     stripped = re.sub(r"\{\{[^{}]+\}\}", "", stripped)
     return not stripped.strip()
 
+# Là gì: `_should_preserve_source_phrase` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `should preserve source phrase` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `_is_placeholder_only`, `join`, `source_text.lower.split` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _should_preserve_source_phrase(source_text, replacement_text):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1879,6 +2140,11 @@ def _should_preserve_source_phrase(source_text, replacement_text):
             return True
     return any(prefix in lowered for prefix in _TEMPLATE_LABEL_PREFIXES)
 
+# Là gì: `_pick_original_detect_source` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `pick original detect source` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `kwargs.values`, `candidates.append`, `value.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _pick_original_detect_source(args, kwargs):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1895,6 +2161,11 @@ def _pick_original_detect_source(args, kwargs):
         return None
     return max(candidates, key=len)
 
+# Là gì: `_rebuild_detected_content` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `rebuild detected content` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `_extract_mapping_text`, `rebuilt.replace` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _rebuild_detected_content(original_content, mappings):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1933,6 +2204,11 @@ def _rebuild_detected_content(original_content, mappings):
             changed = True
     return rebuilt if changed else None
 
+# Là gì: `_filter_detect_result` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `filter detect result` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `filtered.get`, `_extract_mapping_text`, `_should_preserve_source_phrase` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _filter_detect_result(result, original_source=None):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1985,6 +2261,11 @@ def _filter_detect_result(result, original_source=None):
 
     return filtered
 
+# Là gì: `_auto_detect_template_content` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `auto detect template content` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `callable`, `RuntimeError`, `_previous_auto_detect_template_content` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _auto_detect_template_content(*args, **kwargs):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1998,6 +2279,11 @@ def _auto_detect_template_content(*args, **kwargs):
     result = _previous_auto_detect_template_content(*args, **kwargs)
     return _filter_detect_result(result, original_source=_pick_original_detect_source(args, kwargs))
 
+# Là gì: `_user_can_export_template` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm kết xuất dữ liệu thành tệp hoặc định dạng trao đổi, đồng thời đánh giá quyền hoặc điều kiện cho phép thao tác; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `relation.filter.exists`, `relation.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _user_can_export_template(user, template):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -2040,6 +2326,11 @@ from rest_framework.decorators import api_view as _template_api_view
 from rest_framework.decorators import permission_classes as _template_permission_classes
 from rest_framework.permissions import IsAuthenticated as _TemplateIsAuthenticated
 
+# Là gì: `template_export` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm kết xuất dữ liệu thành tệp hoặc định dạng trao đổi; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `DocumentTemplate.objects.get`, `_user_can_export_template`, `PermissionDenied` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @_template_api_view(["GET"])
 @_template_permission_classes([_TemplateIsAuthenticated])
 def template_export(request, pk):
@@ -2083,6 +2374,11 @@ def template_export(request, pk):
     response["Content-Disposition"] = f'attachment; filename="{filename}.docx"'
     return response
 
+# Là gì: `_canonicalize_template_write_data` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm ghi dữ liệu ra storage hoặc cấu trúc đích; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `_codex_final_copy_payload`, `target.setlist`, `_set_value` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _canonicalize_template_write_data(data):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -2099,6 +2395,11 @@ def _canonicalize_template_write_data(data):
 
     
 
+    # Là gì: `_set_value` là hàm cục bộ bên trong `_canonicalize_template_write_data`, chỉ phục vụ bước xử lý nội bộ của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+    # Chức năng backend: Hàm thiết lập giá trị hoặc trạng thái theo đầu vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+    # Mối liên hệ: Hàm phối hợp với `target.setlist` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def _set_value(target, key, value):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -2140,6 +2441,11 @@ def _canonicalize_template_write_data(data):
 
     return payload
 
+# Là gì: `_auto_detect_template_content` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `auto detect template content` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `_extract_existing_vars`, `time.perf_counter`, `GlobalAIConfig.get_config` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect lên tệp hoặc storage.
 def _auto_detect_template_content(content, *, source_name='', docx_bytes=None, debug_id=None, guidance_block=''):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -2287,6 +2593,11 @@ def _auto_detect_template_content(content, *, source_name='', docx_bytes=None, d
             'modified_docx': None,
         }
 
+# Là gì: `template_export` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm kết xuất dữ liệu thành tệp hoặc định dạng trao đổi; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `_codex_final_user_can_export_template`, `template.render_as_docx` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def template_export(request, pk):
@@ -2337,6 +2648,11 @@ def template_export(request, pk):
     response['Content-Disposition'] = f"attachment; filename*=UTF-8''{name}"
     return response
 
+# Là gì: `_canonicalize_template_write_data` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm ghi dữ liệu ra storage hoặc cấu trúc đích; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `_codex_final_copy_payload`, `target.setlist`, `_set_value` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _canonicalize_template_write_data(data):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -2353,6 +2669,11 @@ def _canonicalize_template_write_data(data):
 
     
 
+    # Là gì: `_set_value` là hàm cục bộ bên trong `_canonicalize_template_write_data`, chỉ phục vụ bước xử lý nội bộ của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+    # Chức năng backend: Hàm thiết lập giá trị hoặc trạng thái theo đầu vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+    # Mối liên hệ: Hàm phối hợp với `target.setlist` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def _set_value(target, key, value):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -2394,6 +2715,11 @@ def _canonicalize_template_write_data(data):
 
     return payload
 
+# Là gì: `_auto_detect_template_content` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `auto detect template content` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `_extract_existing_vars`, `time.perf_counter`, `GlobalAIConfig.get_config` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect lên tệp hoặc storage.
 def _auto_detect_template_content(content, *, source_name='', docx_bytes=None, debug_id=None, guidance_block=''):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -2541,6 +2867,11 @@ def _auto_detect_template_content(content, *, source_name='', docx_bytes=None, d
             'modified_docx': None,
         }
 
+# Là gì: `_legacy_template_submit_v3` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm gửi dữ liệu vào bước xử lý hoặc phê duyệt tiếp theo; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `get_template_detail_queryset`, `str.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def _legacy_template_submit_v3(request, pk):
@@ -2575,6 +2906,11 @@ def _legacy_template_submit_v3(request, pk):
         )
     return Response(TemplateDetailSerializer(tmpl, context={'request': request}).data)
 
+# Là gì: `_legacy_template_approve_v2` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm chấp thuận yêu cầu và chuyển trạng thái nghiệp vụ; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `str.strip`, `request.data.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def _legacy_template_approve_v2(request, pk):
@@ -2620,6 +2956,11 @@ def _legacy_template_approve_v2(request, pk):
     )
     return Response(TemplateDetailSerializer(tmpl, context={'request': request}).data)
 
+# Là gì: `_legacy_template_reject_v2` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm từ chối yêu cầu và ghi nhận lý do; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `str.strip`, `request.data.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def _legacy_template_reject_v2(request, pk):
@@ -2668,6 +3009,11 @@ def _legacy_template_reject_v2(request, pk):
     )
     return Response(TemplateDetailSerializer(tmpl, context={'request': request}).data)
 
+# Là gì: `template_export` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm kết xuất dữ liệu thành tệp hoặc định dạng trao đổi; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `_codex_final_user_can_export_template`, `template.render_as_docx` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def template_export(request, pk):
@@ -2718,6 +3064,11 @@ def template_export(request, pk):
     response['Content-Disposition'] = f"attachment; filename*=UTF-8''{name}"
     return response
 
+# Là gì: `_codex_final_copy_payload` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `codex final copy payload` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `data.copy` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _codex_final_copy_payload(data):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -2735,6 +3086,11 @@ def _codex_final_copy_payload(data):
         return dict(data)
     return data
 
+# Là gì: `_codex_final_normalize_list_value` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp, đồng thời chuẩn hóa dữ liệu về định dạng thống nhất; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `flattened.extend`, `value.items`, `value.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _codex_final_normalize_list_value(value):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -2770,6 +3126,11 @@ def _codex_final_normalize_list_value(value):
         return [part.strip() for part in stripped.split(',') if part.strip()]
     return [value]
 
+# Là gì: `_canonicalize_template_write_data` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm ghi dữ liệu ra storage hoặc cấu trúc đích; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `_codex_final_copy_payload`, `target.setlist`, `_set_value` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _canonicalize_template_write_data(data):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -2786,6 +3147,11 @@ def _canonicalize_template_write_data(data):
 
     
 
+    # Là gì: `_set_value` là hàm cục bộ bên trong `_canonicalize_template_write_data`, chỉ phục vụ bước xử lý nội bộ của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+    # Chức năng backend: Hàm thiết lập giá trị hoặc trạng thái theo đầu vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+    # Mối liên hệ: Hàm phối hợp với `target.setlist` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def _set_value(target, key, value):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -2827,6 +3193,11 @@ def _canonicalize_template_write_data(data):
 
     return payload
 
+# Là gì: `_codex_final_parse_detect_replacements` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm phân tích dữ liệu thô thành cấu trúc có thể sử dụng; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `raw_replacements.items`, `iterable.append`, `item.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _codex_final_parse_detect_replacements(raw_replacements):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -2867,6 +3238,11 @@ def _codex_final_parse_detect_replacements(raw_replacements):
         replacements[original_text] = normalized_name
     return replacements
 
+# Là gì: `_codex_final_auto_detect_guard` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `codex final auto detect guard` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `items`, `str.strip`, `_replacement_looks_like_label_span` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _codex_final_auto_detect_guard(content, replacements):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -2893,6 +3269,11 @@ def _codex_final_auto_detect_guard(content, replacements):
         guarded[source_text] = variable_name
     return guarded
 
+# Là gì: `_auto_detect_template_content` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `auto detect template content` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `_extract_existing_vars`, `time.perf_counter`, `GlobalAIConfig.get_config` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect lên tệp hoặc storage.
 def _auto_detect_template_content(content, *, source_name='', docx_bytes=None, debug_id=None, guidance_block=''):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -3040,6 +3421,11 @@ def _auto_detect_template_content(content, *, source_name='', docx_bytes=None, d
             'modified_docx': None,
         }
 
+# Là gì: `_codex_final_user_can_export_template` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm kết xuất dữ liệu thành tệp hoặc định dạng trao đổi, đồng thời đánh giá quyền hoặc điều kiện cho phép thao tác; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `template.audience_members.filter.exists`, `template.audience_members.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _codex_final_user_can_export_template(user, template):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -3066,6 +3452,11 @@ def _codex_final_user_can_export_template(user, template):
             pass
     return False
 
+# Là gì: `template_submit` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm gửi dữ liệu vào bước xử lý hoặc phê duyệt tiếp theo; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `get_template_detail_queryset`, `str.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def template_submit(request, pk):
@@ -3100,6 +3491,11 @@ def template_submit(request, pk):
         )
     return Response(TemplateDetailSerializer(tmpl, context={'request': request}).data)
 
+# Là gì: `template_approve` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm chấp thuận yêu cầu và chuyển trạng thái nghiệp vụ; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `str.strip`, `request.data.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def template_approve(request, pk):
@@ -3145,6 +3541,11 @@ def template_approve(request, pk):
     )
     return Response(TemplateDetailSerializer(tmpl, context={'request': request}).data)
 
+# Là gì: `template_reject` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm từ chối yêu cầu và ghi nhận lý do; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `str.strip`, `request.data.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def template_reject(request, pk):
@@ -3193,6 +3594,11 @@ def template_reject(request, pk):
     )
     return Response(TemplateDetailSerializer(tmpl, context={'request': request}).data)
 
+# Là gì: `template_export` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm kết xuất dữ liệu thành tệp hoặc định dạng trao đổi; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `_codex_final_user_can_export_template`, `template.render_as_docx` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def template_export(request, pk):
@@ -3246,6 +3652,11 @@ _codex_previous_canonicalize_template_write_data_tail = globals().get("_canonica
 _codex_previous_auto_detect_template_content_tail = globals().get("_auto_detect_template_content")
 _codex_previous_template_export_tail = globals().get("template_export")
 
+# Là gì: `_canonicalize_template_write_data` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm ghi dữ liệu ra storage hoặc cấu trúc đích; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `_codex_final_copy_payload`, `target.setlist`, `_set_value` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _canonicalize_template_write_data(data):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -3262,6 +3673,11 @@ def _canonicalize_template_write_data(data):
 
     
 
+    # Là gì: `_set_value` là hàm cục bộ bên trong `_canonicalize_template_write_data`, chỉ phục vụ bước xử lý nội bộ của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+    # Chức năng backend: Hàm thiết lập giá trị hoặc trạng thái theo đầu vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+    # Mối liên hệ: Hàm phối hợp với `target.setlist` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def _set_value(target, key, value):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -3303,6 +3719,11 @@ def _canonicalize_template_write_data(data):
 
     return payload
 
+# Là gì: `_codex_tail_mapping_text` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `codex tail mapping text` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `mapping.get`, `value.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _codex_tail_mapping_text(mapping, *keys):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -3319,6 +3740,11 @@ def _codex_tail_mapping_text(mapping, *keys):
             return value.strip()
     return None
 
+# Là gì: `_codex_tail_is_placeholder_only` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm đánh giá một điều kiện và trả về kết quả boolean; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `__import__`, `value.strip`, `re_module.sub.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _codex_tail_is_placeholder_only(value):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -3335,6 +3761,11 @@ def _codex_tail_is_placeholder_only(value):
         return False
     return not re_module.sub(r"\{\{[^{}]+\}\}", "", stripped).strip()
 
+# Là gì: `_codex_tail_preserve_phrase` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `codex tail preserve phrase` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `_codex_tail_is_placeholder_only`, `join`, `source_text.lower.split` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _codex_tail_preserve_phrase(source_text, replacement_text):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -3375,6 +3806,11 @@ def _codex_tail_preserve_phrase(source_text, replacement_text):
             return True
     return False
 
+# Là gì: `_codex_tail_pick_source` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `codex tail pick source` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `kwargs.values`, `value.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _codex_tail_pick_source(args, kwargs):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -3392,6 +3828,11 @@ def _codex_tail_pick_source(args, kwargs):
         return None
     return max(candidates, key=len)
 
+# Là gì: `_codex_tail_rebuild_detected_content` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `codex tail rebuild detected content` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `_codex_tail_mapping_text`, `rebuilt.replace` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _codex_tail_rebuild_detected_content(original_content, mappings):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -3430,6 +3871,11 @@ def _codex_tail_rebuild_detected_content(original_content, mappings):
             changed = True
     return rebuilt if changed else None
 
+# Là gì: `_codex_detect_trace_enabled` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `codex detect trace enabled` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm được các endpoint hoặc helper cùng module gọi khi cần cùng quy tắc xử lý.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _codex_detect_trace_enabled():
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -3442,6 +3888,11 @@ def _codex_detect_trace_enabled():
 
     return bool(getattr(settings, 'LLM_DETECT_TRACE', False))
 
+# Là gì: `_codex_detect_trace_log` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `codex detect trace log` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `_codex_detect_trace_enabled`, `_template_debug_log` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _codex_detect_trace_log(stage, *, debug_id=None, force=False, **fields):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -3457,6 +3908,11 @@ def _codex_detect_trace_log(stage, *, debug_id=None, force=False, **fields):
         payload['debug_id'] = debug_id
     _template_debug_log(stage, **payload)
 
+# Là gì: `_codex_detect_trace_block` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `codex detect trace block` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `_codex_detect_trace_enabled` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _codex_detect_trace_block(stage, text, *, debug_id=None):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -3475,6 +3931,11 @@ def _codex_detect_trace_block(stage, text, *, debug_id=None):
         flush=True,
     )
 
+# Là gì: `_codex_detect_trace_json_block` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `codex detect trace json block` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `_codex_detect_trace_enabled`, `_json.dumps`, `repr` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _codex_detect_trace_json_block(stage, value, *, debug_id=None):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -3493,6 +3954,11 @@ def _codex_detect_trace_json_block(stage, value, *, debug_id=None):
         rendered = repr(value)
     _codex_detect_trace_block(stage, rendered, debug_id=debug_id)
 
+# Là gì: `_codex_guard_detect_replacements_with_reasons` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `codex guard detect replacements with reasons` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `items`, `str.strip`, `rejected.append` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _codex_guard_detect_replacements_with_reasons(content, replacements):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -3536,6 +4002,11 @@ def _codex_guard_detect_replacements_with_reasons(content, replacements):
 
     return guarded, rejected
 
+# Là gì: `_auto_detect_template_content` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm xử lý phần việc `auto detect template content` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `_extract_existing_vars`, `time.perf_counter`, `GlobalAIConfig.get_config` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect lên tệp hoặc storage.
 def _auto_detect_template_content(content, *, source_name='', docx_bytes=None, debug_id=None, guidance_block=''):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -3760,6 +4231,11 @@ from rest_framework.decorators import api_view as _codex_tail_api_view
 from rest_framework.decorators import permission_classes as _codex_tail_permission_classes
 from rest_framework.permissions import IsAuthenticated as _CodexTailIsAuthenticated
 
+# Là gì: `_codex_tail_user_can_export_template` là helper nội bộ của module `templates.py`, phục vụ nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản.
+# Chức năng backend: Hàm kết xuất dữ liệu thành tệp hoặc định dạng trao đổi, đồng thời đánh giá quyền hoặc điều kiện cho phép thao tác; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình thư viện và quản trị mẫu.
+# Mối liên hệ: Hàm phối hợp với `relation.filter.exists`, `relation.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _codex_tail_user_can_export_template(user, template):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -3791,6 +4267,11 @@ def _codex_tail_user_can_export_template(user, template):
             continue
     return False
 
+# Là gì: `template_export` là endpoint REST của nhóm danh sách, chi tiết, import, export và vòng đời mẫu văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm kết xuất dữ liệu thành tệp hoặc định dạng trao đổi; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình thư viện và quản trị mẫu sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `_codex_final_user_can_export_template`, `template.render_as_docx` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @_codex_tail_api_view(["GET"])
 @_codex_tail_permission_classes([_CodexTailIsAuthenticated])
 def template_export(request, pk):
@@ -3840,4 +4321,3 @@ def template_export(request, pk):
     )
     response['Content-Disposition'] = f"attachment; filename*=UTF-8''{name}"
     return response
-

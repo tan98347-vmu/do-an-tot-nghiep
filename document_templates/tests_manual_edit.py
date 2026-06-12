@@ -150,6 +150,55 @@ class TemplateManualEditTests(TestCase):
         self.assertEqual(version.change_note, 'Cap nhat bang editor thu cong')
         self.assertFalse(bool(session.working_copy_file))
 
+    def test_wopi_check_file_info_exposes_postmessage_origin(self):
+        """Collabora chi gui App_LoadingStatus/Action_Save_Resp ve host khi
+        CheckFileInfo co PostMessageOrigin. Thieu field nay -> bam "Luu & hoan tat"
+        bao 'Trinh sua web chua san sang de nhan lenh luu'."""
+        create_response = self._create_session()
+        session_id = create_response.data['session']['id']
+        session = TemplateManualEditSession.objects.get(pk=session_id)
+
+        info = self.client.get(
+            reverse('api:template_manual_edit_wopi_file', args=[session.wopi_file_id])
+            + f'?access_token={session.access_token}'
+        )
+        self.assertEqual(info.status_code, 200)
+        self.assertIn('PostMessageOrigin', info.json())
+        # Mac dinh '*' de Collabora postMessage chac chan toi duoc frame cha trong moi
+        # topo deploy (request WOPI la server-to-server nen khong suy ra origin trinh
+        # duyet duoc). Host xac thuc theo event.source nen '*' van an toan.
+        self.assertEqual(info.json()['PostMessageOrigin'], '*')
+
+    def test_wopi_postmessage_origin_uses_browser_origin_from_create(self):
+        """Origin THAT cua trinh duyet (bat tu request tao phien) phai duoc tra ve
+        trong CheckFileInfo -> Collabora postMessage dung dich. Day la fix dut diem
+        cho loi 'chua san sang nhan lenh luu' tren moi topo deploy."""
+        resp = self.client.post(
+            reverse('api:template_manual_edit_session_create', args=[self.template.id]),
+            {}, format='json', HTTP_ORIGIN='https://app.example.vn',
+        )
+        self.assertIn(resp.status_code, {200, 201})
+        session = TemplateManualEditSession.objects.get(pk=resp.data['session']['id'])
+        self.assertEqual(session.post_message_origin, 'https://app.example.vn')
+
+        info = self.client.get(
+            reverse('api:template_manual_edit_wopi_file', args=[session.wopi_file_id])
+            + f'?access_token={session.access_token}'
+        )
+        self.assertEqual(info.json()['PostMessageOrigin'], 'https://app.example.vn')
+
+    @override_settings(MANUAL_EDIT_POSTMESSAGE_ORIGIN='https://aiagentvmu.id.vn')
+    def test_wopi_postmessage_origin_can_be_pinned(self):
+        create_response = self._create_session()
+        session = TemplateManualEditSession.objects.get(
+            pk=create_response.data['session']['id']
+        )
+        info = self.client.get(
+            reverse('api:template_manual_edit_wopi_file', args=[session.wopi_file_id])
+            + f'?access_token={session.access_token}'
+        )
+        self.assertEqual(info.json()['PostMessageOrigin'], 'https://aiagentvmu.id.vn')
+
     def test_cancel_session_marks_session_cancelled(self):
         create_response = self._create_session()
         session_id = create_response.data['session']['id']
@@ -164,3 +213,85 @@ class TemplateManualEditTests(TestCase):
         session = TemplateManualEditSession.objects.get(pk=session_id)
         self.assertEqual(session.status, TemplateManualEditSession.Status.CANCELLED)
         self.assertFalse(session.is_active)
+
+
+@override_settings(
+    MANUAL_EDIT_PROVIDER='collabora',
+    COLLABORA_PUBLIC_URL='http://collabora.test',
+)
+class TemplateManualEditDoesNotResetGroupApprovalTests(TemplateManualEditTests):
+    """Thanh vien sua mau chia se nhom bang trinh sua thu cong -> KHONG duoc reset
+    trang thai duyet ve pending_leader (loi 'mau bien mat khoi tab Mau phong ban')."""
+
+    def setUp(self):
+        super().setUp()
+        from accounts.models import UserGroup, UserGroupMembership
+        from sharing import services
+
+        self.group = UserGroup.objects.create(name='Phong ky thuat', company=self.company)
+        # Chu so huu mau (self.user) la TRUONG NHOM
+        UserGroupMembership.objects.create(
+            group=self.group, user=self.user, role=UserGroupMembership.ROLE_LEADER,
+        )
+        self.member = User.objects.create_user(username='kt-member', password='secret')
+        CompanyUserMembership.objects.create(
+            company=self.company, user=self.member, local_username='kt-member', role='member',
+        )
+        UserGroupMembership.objects.create(
+            group=self.group, user=self.member, role=UserGroupMembership.ROLE_MEMBER,
+        )
+        # Truong nhom chia se mau cho nhom voi toan quyen -> grant active ngay
+        services.create_grant(
+            resource=self.template, scope='group', permission_level='delete',
+            target_group=self.group, actor=self.user,
+        )
+        self.template.refresh_from_db()
+
+    def test_member_manual_edit_finish_keeps_group_approval(self):
+        from document_templates.models import STATUS_APPROVED
+        from sharing import services
+
+        # Tien dieu kien: sau khi chia se, mau da approved + visibility group
+        self.assertEqual(self.template.status, STATUS_APPROVED)
+        self.assertEqual(self.template.visibility, DocumentTemplate.VISIBILITY_GROUP)
+        self.assertTrue(services.can_view(self.member, self.template))
+
+        # Thanh vien mo phien sua thu cong
+        member_client = APIClient()
+        member_client.force_authenticate(self.member)
+        create_resp = member_client.post(
+            reverse('api:template_manual_edit_session_create', args=[self.template.id]),
+            {}, format='json',
+        )
+        self.assertIn(create_resp.status_code, {200, 201}, create_resp.content)
+        session_id = create_resp.data['session']['id']
+        session = TemplateManualEditSession.objects.get(pk=session_id)
+
+        # Editor luu noi dung moi vao working copy (WOPI PUT)
+        edited = _build_docx_bytes('Noi dung thanh vien sua', 'Bien {{x}}')
+        put_resp = member_client.generic(
+            'POST',
+            reverse('api:template_manual_edit_wopi_contents', args=[session.wopi_file_id])
+            + f'?access_token={session.access_token}',
+            edited,
+            content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            HTTP_X_WOPI_OVERRIDE='PUT',
+        )
+        self.assertEqual(put_resp.status_code, 200)
+
+        # Thanh vien bam "Luu & hoan tat"
+        finish_resp = member_client.post(
+            reverse('api:template_manual_edit_session_finish', args=[session_id]),
+            {'change_note': 'thanh vien chinh sua'}, format='json',
+        )
+        self.assertEqual(finish_resp.status_code, 200, finish_resp.content)
+
+        self.template.refresh_from_db()
+        # CHINH: status KHONG duoc quay ve pending_leader
+        self.assertEqual(
+            self.template.status, STATUS_APPROVED,
+            'BUG: sua noi dung khien mau bi reset ve cho-truong-nhom-duyet',
+        )
+        self.assertEqual(self.template.visibility, DocumentTemplate.VISIBILITY_GROUP)
+        # Thanh vien (va ca nhom) van xem duoc
+        self.assertTrue(services.can_view(self.member, self.template))

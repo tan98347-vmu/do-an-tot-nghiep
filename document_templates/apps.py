@@ -7,6 +7,7 @@ from django.apps import AppConfig
 
 # [Web] `DocumentTemplatesConfig` gom một cụm xử lý backend dùng chung cho nhóm màn Mẫu văn bản.
 
+# vd: gom các thuộc tính/method liên quan vào một nơi.
 class DocumentTemplatesConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'document_templates'

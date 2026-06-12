@@ -41,6 +41,11 @@ from api.serializers.company_backups import (
 logger = logging.getLogger(__name__)
 
 
+# Là gì: `_log_request` là helper nội bộ của module `company_backups.py`, phục vụ nhóm tạo, theo dõi, tải xuống, khôi phục và xóa bản sao lưu công ty.
+# Chức năng backend: Hàm xử lý phần việc `log request` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình quản lý backup của công ty.
+# Mối liên hệ: Hàm phối hợp với `log_fn`, `format_log_message` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _log_request(level: str, event: str, request, *, company=None, backup=None, **fields) -> None:
     log_fn = getattr(logger, level)
     company_id = getattr(company, 'pk', company)
@@ -56,6 +61,11 @@ def _log_request(level: str, event: str, request, *, company=None, backup=None, 
     ))
 
 
+# Là gì: `_admin_context` là helper nội bộ của module `company_backups.py`, phục vụ nhóm tạo, theo dõi, tải xuống, khôi phục và xóa bản sao lưu công ty.
+# Chức năng backend: Hàm xử lý phần việc `admin context` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình quản lý backup của công ty.
+# Mối liên hệ: Hàm phối hợp với `get_user_company`, `_log_request`, `is_company_admin` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 def _admin_context(request):
     company = get_user_company(request.user)
     if company is None or not is_company_admin(request.user):
@@ -72,6 +82,11 @@ def _admin_context(request):
     return company, None
 
 
+# Là gì: `_require_password` là helper nội bộ của module `company_backups.py`, phục vụ nhóm tạo, theo dõi, tải xuống, khôi phục và xóa bản sao lưu công ty.
+# Chức năng backend: Hàm xử lý phần việc `require password` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình quản lý backup của công ty.
+# Mối liên hệ: Hàm phối hợp với `ensure_settings`, `_log_request`, `request.data.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 def _require_password(request, company, body_key='password', header_key='HTTP_X_BACKUP_PASSWORD'):
     settings_obj = ensure_settings(company)
     if not settings_obj.has_password:
@@ -105,6 +120,11 @@ def _require_password(request, company, body_key='password', header_key='HTTP_X_
     return None
 
 
+# Là gì: `backup_list_create` là endpoint REST của nhóm tạo, theo dõi, tải xuống, khôi phục và xóa bản sao lưu công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp, đồng thời kiểm tra đầu vào và tạo dữ liệu mới; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình quản lý backup của công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_admin_context`, `CompanyBackup.objects.filter.order_by`, `request.GET.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def backup_list_create(request):
@@ -184,6 +204,11 @@ def backup_list_create(request):
     return Response(CompanyBackupSerializer(record).data, status=status.HTTP_201_CREATED)
 
 
+# Là gì: `backup_detail` là endpoint REST của nhóm tạo, theo dõi, tải xuống, khôi phục và xóa bản sao lưu công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình quản lý backup của công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_admin_context`, `get_object_or_404`, `_log_request` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def backup_detail(request, pk):
@@ -229,6 +254,11 @@ def backup_detail(request, pk):
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+# Là gì: `backup_progress` là endpoint REST của nhóm tạo, theo dõi, tải xuống, khôi phục và xóa bản sao lưu công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `backup progress` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình quản lý backup của công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_admin_context`, `get_object_or_404`, `logger.debug` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def backup_progress(request, pk):
@@ -259,6 +289,11 @@ def backup_progress(request, pk):
     })
 
 
+# Là gì: `_public_key_pem_from_cert` là helper nội bộ của module `company_backups.py`, phục vụ nhóm tạo, theo dõi, tải xuống, khôi phục và xóa bản sao lưu công ty.
+# Chức năng backend: Hàm xử lý phần việc `public key pem from cert` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình quản lý backup của công ty.
+# Mối liên hệ: Hàm phối hợp với `x509.load_pem_x509_certificate`, `cert.public_key`, `pk.public_bytes` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _public_key_pem_from_cert(certificate_pem: str) -> bytes | None:
     """Trich xuat public key PEM tu chuoi X.509 certificate PEM."""
     if not certificate_pem:
@@ -278,6 +313,11 @@ def _public_key_pem_from_cert(certificate_pem: str) -> bytes | None:
         return None
 
 
+# Là gì: `_resolve_verify_public_keys` là helper nội bộ của module `company_backups.py`, phục vụ nhóm tạo, theo dõi, tải xuống, khôi phục và xóa bản sao lưu công ty.
+# Chức năng backend: Hàm xác minh tính hợp lệ hoặc tính toàn vẹn của dữ liệu, đồng thời xác định đối tượng hoặc cấu hình hiệu lực từ ngữ cảnh hiện tại; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình quản lý backup của công ty.
+# Mối liên hệ: Hàm phối hợp với `UserSigningCredential.objects.filter.order_by`, `logger.exception`, `_public_key_pem_from_cert` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _resolve_verify_public_keys(backup) -> list[bytes]:
     """Tra ve danh sach public key PEM co the dung de verify chu ky backup.
 
@@ -310,6 +350,11 @@ def _resolve_verify_public_keys(backup) -> list[bytes]:
     return keys
 
 
+# Là gì: `_verify_backup_signature_if_present` là helper nội bộ của module `company_backups.py`, phục vụ nhóm tạo, theo dõi, tải xuống, khôi phục và xóa bản sao lưu công ty.
+# Chức năng backend: Hàm xác minh tính hợp lệ hoặc tính toàn vẹn của dữ liệu; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình quản lý backup của công ty.
+# Mối liên hệ: Hàm phối hợp với `_resolve_verify_public_keys`, `verify_generic_file`, `Path` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _verify_backup_signature_if_present(backup, *, password: str | None = None) -> tuple[bool, str]:
     """Verify chu ky cua backup neu da co. Tra (ok, message).
 
@@ -331,6 +376,11 @@ def _verify_backup_signature_if_present(backup, *, password: str | None = None) 
     if not sig_path:
         return False, 'Backup khong co file chu ky tren disk.'
 
+    # Là gì: `_try_keys` là hàm cục bộ bên trong `_verify_backup_signature_if_present`, chỉ phục vụ bước xử lý nội bộ của nhóm tạo, theo dõi, tải xuống, khôi phục và xóa bản sao lưu công ty.
+    # Chức năng backend: Hàm xử lý phần việc `try keys` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình quản lý backup của công ty.
+    # Mối liên hệ: Hàm phối hợp với `verify_generic_file` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def _try_keys(file_path: str) -> tuple[bool, str]:
         last_err = ''
         for k in keys:
@@ -375,6 +425,11 @@ def _verify_backup_signature_if_present(backup, *, password: str | None = None) 
         return _try_keys(str(Path(dj_settings.MEDIA_ROOT) / backup.file_path))
 
 
+# Là gì: `backup_download` là endpoint REST của nhóm tạo, theo dõi, tải xuống, khôi phục và xóa bản sao lưu công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm chuẩn bị và trả tệp cho phía client tải xuống; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình quản lý backup của công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_admin_context`, `get_object_or_404`, `_require_password` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def backup_download(request, pk):
@@ -507,6 +562,11 @@ def backup_download(request, pk):
     return response
 
 
+# Là gì: `backup_verify` là endpoint REST của nhóm tạo, theo dõi, tải xuống, khôi phục và xóa bản sao lưu công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xác minh tính hợp lệ hoặc tính toàn vẹn của dữ liệu; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình quản lý backup của công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_admin_context`, `get_object_or_404`, `request.META.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def backup_verify(request, pk):
@@ -556,6 +616,11 @@ def backup_verify(request, pk):
     })
 
 
+# Là gì: `backup_restore` là endpoint REST của nhóm tạo, theo dõi, tải xuống, khôi phục và xóa bản sao lưu công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm khôi phục dữ liệu về trạng thái hoạt động; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình quản lý backup của công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_admin_context`, `get_object_or_404`, `_require_password` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def backup_restore(request, pk):
@@ -635,6 +700,11 @@ def backup_restore(request, pk):
     return Response(CompanyBackupSerializer(backup).data)
 
 
+# Là gì: `backup_settings` là endpoint REST của nhóm tạo, theo dõi, tải xuống, khôi phục và xóa bản sao lưu công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `backup settings` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình quản lý backup của công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_admin_context`, `ensure_settings`, `_log_request` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated])
 def backup_settings(request):
@@ -695,6 +765,11 @@ def backup_settings(request):
     return Response(CompanyBackupSettingsSerializer(settings_obj).data)
 
 
+# Là gì: `backup_set_password` là endpoint REST của nhóm tạo, theo dõi, tải xuống, khôi phục và xóa bản sao lưu công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm thiết lập giá trị hoặc trạng thái theo đầu vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình quản lý backup của công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_admin_context`, `ensure_settings`, `strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def backup_set_password(request):
@@ -739,6 +814,11 @@ def backup_set_password(request):
     return Response({'has_password': True})
 
 
+# Là gì: `backup_verify_password` là endpoint REST của nhóm tạo, theo dõi, tải xuống, khôi phục và xóa bản sao lưu công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xác minh tính hợp lệ hoặc tính toàn vẹn của dữ liệu; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình quản lý backup của công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_admin_context`, `ensure_settings`, `strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def backup_verify_password(request):
@@ -767,6 +847,11 @@ def backup_verify_password(request):
     return Response({'valid': valid, 'has_password': True})
 
 
+# Là gì: `backup_components` là endpoint REST của nhóm tạo, theo dõi, tải xuống, khôi phục và xóa bản sao lưu công ty; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `backup components` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình quản lý backup của công ty sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_admin_context`, `_log_request`, `COMPONENT_LABELS.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def backup_components(request):

@@ -16,7 +16,11 @@ from accounts.storage_paths import company_storage_slug
 PREVIEW_LOGGER = logging.getLogger('documents.preview_pdf')
 
 
+# class DocumentPreviewUnavailable là lớp gom logic/dữ liệu liên quan.
+# vd: gom các thuộc tính/method liên quan vào một nơi.
 class DocumentPreviewUnavailable(Exception):
+    # def __init__ để khởi tạo đối tượng.
+    # vd: khởi tạo với các tham số cần thiết.
     def __init__(self, detail, code='preview_unavailable', status_code=503):
         super().__init__(detail)
         self.detail = detail
@@ -24,16 +28,22 @@ class DocumentPreviewUnavailable(Exception):
         self.status_code = status_code
 
 
+# def _preview_cache_dir để xem trước cache dir.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _preview_cache_dir(namespace='documents'):
     cache_dir = Path(settings.MEDIA_ROOT) / 'preview_cache' / namespace
     cache_dir.mkdir(parents=True, exist_ok=True)
     return cache_dir
 
 
+# def _company_preview_namespace để company preview namespace.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _company_preview_namespace(base_namespace, company):
     return f'{base_namespace}/{company_storage_slug(company)}'
 
 
+# def _preview_signature để xem trước signature.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _preview_signature(document):
     try:
         output_path = Path(document.output_file.path)
@@ -52,6 +62,8 @@ def _preview_signature(document):
     )
 
 
+# def _template_signature_from_file để template signature from file.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _template_signature_from_file(template, docx_file, source_path):
     try:
         stat = source_path.stat()
@@ -69,6 +81,8 @@ def _template_signature_from_file(template, docx_file, source_path):
     )
 
 
+# def _template_signature_from_content để template signature from content.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _template_signature_from_content(template, content, docx_bytes):
     return '|'.join(
         [
@@ -81,11 +95,15 @@ def _template_signature_from_content(template, content, docx_bytes):
     )
 
 
+# def _preview_pdf_path để xem trước pdf path.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _preview_pdf_path(namespace, prefix, object_id, signature):
     digest = hashlib.sha256(signature.encode('utf-8')).hexdigest()[:16]
     return _preview_cache_dir(namespace) / f'{prefix}_{object_id}_{digest}.pdf'
 
 
+# def _cleanup_stale_previews để cleanup stale previews.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _cleanup_stale_previews(namespace, prefix, object_id, keep_path):
     file_prefix = f'{prefix}_{object_id}_'
     for candidate in _preview_cache_dir(namespace).glob(f'{file_prefix}*.pdf'):
@@ -97,6 +115,8 @@ def _cleanup_stale_previews(namespace, prefix, object_id, keep_path):
             PREVIEW_LOGGER.debug('preview cleanup skipped | path=%s', candidate)
 
 
+# def invalidate_template_preview_cache để vô hiệu hóa template preview cache.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def invalidate_template_preview_cache(template):
     """Xoa toan bo PDF preview da cache cua mot mau van ban.
 
@@ -109,6 +129,8 @@ def invalidate_template_preview_cache(template):
     _cleanup_stale_previews(namespace, 'template', template.pk, keep_path=None)
 
 
+# def invalidate_document_preview_cache để vô hiệu hóa document preview cache.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def invalidate_document_preview_cache(document):
     """Xoa toan bo PDF preview da cache cua mot van ban (va cac phien ban).
 
@@ -123,6 +145,8 @@ def invalidate_document_preview_cache(document):
     )
 
 
+# def _cached_preview_is_valid để cached preview is valid.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _cached_preview_is_valid(pdf_path):
     try:
         with fitz.open(str(pdf_path)) as preview_doc:
@@ -132,11 +156,15 @@ def _cached_preview_is_valid(pdf_path):
         return False
 
 
+# def _libreoffice_command để libreoffice command.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _libreoffice_command():
     configured = (getattr(settings, 'LIBREOFFICE_BIN', '') or '').strip()
     return configured or 'soffice'
 
 
+# def _preview_timeout_seconds để xem trước timeout seconds.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _preview_timeout_seconds():
     value = getattr(settings, 'DOC_PREVIEW_TIMEOUT_SECONDS', 45)
     try:
@@ -145,6 +173,8 @@ def _preview_timeout_seconds():
         return 45
 
 
+# def _run_libreoffice_convert để chạy libreoffice convert.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _run_libreoffice_convert(command, timeout_seconds):
     return subprocess.run(
         command,
@@ -155,6 +185,8 @@ def _run_libreoffice_convert(command, timeout_seconds):
     )
 
 
+# def _cleanup_work_dir để cleanup work dir.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _cleanup_work_dir(path):
     work_dir = Path(path)
     for attempt in range(4):
@@ -170,6 +202,8 @@ def _cleanup_work_dir(path):
             time.sleep(0.4 * (attempt + 1))
 
 
+# def _convert_source_to_pdf để convert source to pdf.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _convert_source_to_pdf(source_path, *, namespace, prefix, object_id, signature):
     target_path = _preview_pdf_path(namespace, prefix, object_id, signature)
     if target_path.exists():
@@ -317,6 +351,8 @@ def _convert_source_to_pdf(source_path, *, namespace, prefix, object_id, signatu
     return target_path
 
 
+# def _build_preview_pdf_from_bytes để dựng preview pdf from bytes.
+# vd: nhận tham số đầu vào -> trả cấu trúc dữ liệu/chuỗi đã dựng.
 def _build_preview_pdf_from_bytes(docx_bytes, *, filename, namespace, prefix, object_id, signature):
     work_dir_path = _preview_cache_dir(namespace) / f'preview-source-{uuid.uuid4().hex}'
     work_dir_path.mkdir(parents=True, exist_ok=False)
@@ -334,6 +370,8 @@ def _build_preview_pdf_from_bytes(docx_bytes, *, filename, namespace, prefix, ob
         _cleanup_work_dir(work_dir_path)
 
 
+# def build_document_preview_pdf để dựng document preview pdf.
+# vd: nhận tham số đầu vào -> trả cấu trúc dữ liệu/chuỗi đã dựng.
 def build_document_preview_pdf(document):
     if not getattr(document, 'output_file', None):
         raise DocumentPreviewUnavailable(
@@ -378,6 +416,8 @@ def build_document_preview_pdf(document):
     return pdf_path
 
 
+# def _document_version_signature để document version signature.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _document_version_signature(version):
     try:
         output_path = Path(version.output_file.path)
@@ -396,6 +436,8 @@ def _document_version_signature(version):
     )
 
 
+# def build_document_version_preview_pdf để dựng document version preview pdf.
+# vd: nhận tham số đầu vào -> trả cấu trúc dữ liệu/chuỗi đã dựng.
 def build_document_version_preview_pdf(version):
     """Convert DOCX cua mot DocumentVersion sang PDF (co cache).
 
@@ -448,6 +490,8 @@ def build_document_version_preview_pdf(version):
     return pdf_path
 
 
+# def build_template_preview_pdf để dựng template preview pdf.
+# vd: nhận tham số đầu vào -> trả cấu trúc dữ liệu/chuỗi đã dựng.
 def build_template_preview_pdf(template):
     docx_file = getattr(template, 'docx_file', None)
     source_type = getattr(template, 'source_type', None)

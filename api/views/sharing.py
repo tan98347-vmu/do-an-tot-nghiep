@@ -41,6 +41,11 @@ from sharing.constants import (
 from sharing.models import ShareGrant
 
 
+# Là gì: `_resolve_model` là helper nội bộ của module `sharing.py`, phục vụ nhóm chia sẻ tài nguyên và quản lý phạm vi truy cập.
+# Chức năng backend: Hàm xác định đối tượng hoặc cấu hình hiệu lực từ ngữ cảnh hiện tại; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các hộp thoại và màn hình chia sẻ.
+# Mối liên hệ: Hàm phối hợp với `ENTITY_TYPE_TO_MODEL.get`, `apps.get_model` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _resolve_model(entity_type: str):
     mapping = ENTITY_TYPE_TO_MODEL.get(entity_type)
     if not mapping:
@@ -52,6 +57,11 @@ def _resolve_model(entity_type: str):
         return None
 
 
+# Là gì: `_get_resource_or_404` là helper nội bộ của module `sharing.py`, phục vụ nhóm chia sẻ tài nguyên và quản lý phạm vi truy cập.
+# Chức năng backend: Hàm đọc và trả về dữ liệu cần thiết; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các hộp thoại và màn hình chia sẻ.
+# Mối liên hệ: Hàm phối hợp với `_resolve_model`, `get_object_or_404` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _get_resource_or_404(entity_type: str, pk: int):
     model_cls = _resolve_model(entity_type)
     if model_cls is None:
@@ -59,6 +69,11 @@ def _get_resource_or_404(entity_type: str, pk: int):
     return get_object_or_404(model_cls, pk=pk)
 
 
+# Là gì: `_entity_type_for_grant` là helper nội bộ của module `sharing.py`, phục vụ nhóm chia sẻ tài nguyên và quản lý phạm vi truy cập.
+# Chức năng backend: Hàm xử lý phần việc `entity type for grant` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các hộp thoại và màn hình chia sẻ.
+# Mối liên hệ: Hàm phối hợp với `MODEL_TO_ENTITY_TYPE.get`, `ct.model.lower`, `join` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _entity_type_for_grant(grant: ShareGrant) -> str | None:
     ct = grant.content_type
     return MODEL_TO_ENTITY_TYPE.get((ct.app_label, ct.model.lower())) or MODEL_TO_ENTITY_TYPE.get(
@@ -66,6 +81,11 @@ def _entity_type_for_grant(grant: ShareGrant) -> str | None:
     )
 
 
+# Là gì: `_is_owner_or_admin` là helper nội bộ của module `sharing.py`, phục vụ nhóm chia sẻ tài nguyên và quản lý phạm vi truy cập.
+# Chức năng backend: Hàm đánh giá một điều kiện và trả về kết quả boolean; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các hộp thoại và màn hình chia sẻ.
+# Mối liên hệ: Hàm phối hợp với `is_platform_admin`, `services.can` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _is_owner_or_admin(user, resource) -> bool:
     owner_id = getattr(resource, 'owner_id', None) or getattr(resource, 'created_by_id', None)
     if owner_id is not None and owner_id == user.pk:
@@ -83,6 +103,11 @@ def _is_owner_or_admin(user, resource) -> bool:
     return False
 
 
+# Là gì: `shareable_group_list` là endpoint REST của nhóm chia sẻ tài nguyên và quản lý phạm vi truy cập; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các hộp thoại và màn hình chia sẻ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_user_company`, `UserGroup.objects.filter`, `groups.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def shareable_group_list(request):
@@ -120,6 +145,12 @@ def shareable_group_list(request):
 # Per-resource endpoints
 # ============================================================================
 
+# vd: POST body hợp lệ -> tạo bản ghi, trả 201.
+# Là gì: `shares_list_create` là endpoint REST của nhóm chia sẻ tài nguyên và quản lý phạm vi truy cập; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp, đồng thời kiểm tra đầu vào và tạo dữ liệu mới; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các hộp thoại và màn hình chia sẻ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_get_resource_or_404`, `_is_owner_or_admin`, `services.grants_listed_for_owner` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def shares_list_create(request, entity_type: str, pk: int):
@@ -191,6 +222,11 @@ def shares_list_create(request, entity_type: str, pk: int):
     return Response(ShareGrantSerializer(grant).data, status=status.HTTP_201_CREATED)
 
 
+# Là gì: `shares_detail` là endpoint REST của nhóm chia sẻ tài nguyên và quản lý phạm vi truy cập; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các hộp thoại và màn hình chia sẻ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_get_resource_or_404`, `get_object_or_404`, `_is_owner_or_admin` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def shares_detail(request, entity_type: str, pk: int, grant_id: int):
@@ -219,6 +255,11 @@ def shares_detail(request, entity_type: str, pk: int, grant_id: int):
     return Response(ShareGrantSerializer(grant).data)
 
 
+# Là gì: `shares_submit` là endpoint REST của nhóm chia sẻ tài nguyên và quản lý phạm vi truy cập; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm gửi dữ liệu vào bước xử lý hoặc phê duyệt tiếp theo; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các hộp thoại và màn hình chia sẻ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_get_resource_or_404`, `get_object_or_404`, `_is_owner_or_admin` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def shares_submit(request, entity_type: str, pk: int, grant_id: int):
@@ -233,6 +274,11 @@ def shares_submit(request, entity_type: str, pk: int, grant_id: int):
     return Response(ShareGrantSerializer(grant).data)
 
 
+# Là gì: `shares_approve` là endpoint REST của nhóm chia sẻ tài nguyên và quản lý phạm vi truy cập; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm chấp thuận yêu cầu và chuyển trạng thái nghiệp vụ; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các hộp thoại và màn hình chia sẻ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_get_resource_or_404`, `get_object_or_404`, `get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def shares_approve(request, entity_type: str, pk: int, grant_id: int):
@@ -249,6 +295,11 @@ def shares_approve(request, entity_type: str, pk: int, grant_id: int):
     return Response(ShareGrantSerializer(grant).data)
 
 
+# Là gì: `shares_reject` là endpoint REST của nhóm chia sẻ tài nguyên và quản lý phạm vi truy cập; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm từ chối yêu cầu và ghi nhận lý do; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các hộp thoại và màn hình chia sẻ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_get_resource_or_404`, `get_object_or_404`, `get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def shares_reject(request, entity_type: str, pk: int, grant_id: int):
@@ -269,6 +320,12 @@ def shares_reject(request, entity_type: str, pk: int, grant_id: int):
 # Inbox / shared-with-me cross-entity
 # ============================================================================
 
+# vd: client gọi endpoint này -> nhận JSON kết quả tương ứng.
+# Là gì: `shares_pending_inbox` là endpoint REST của nhóm chia sẻ tài nguyên và quản lý phạm vi truy cập; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `shares pending inbox` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các hộp thoại và màn hình chia sẻ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `strip.lower`, `strip`, `request.GET.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def shares_pending_inbox(request):
@@ -286,39 +343,30 @@ def shares_pending_inbox(request):
     sort = (request.GET.get('sort') or 'newest').strip().lower()
 
     rows = []  # (timestamp, payload)
-    for entity_type, (app_label, model_name) in ENTITY_TYPE_TO_MODEL.items():
+    for entity_type, resource, grant in services.get_reviewable_grant_rows(request.user):
         if entity_filter and entity_filter != entity_type:
             continue
-        try:
-            model_cls = apps.get_model(app_label, model_name)
-        except LookupError:
+        if scope_filter and grant.scope != scope_filter:
             continue
-        qs = services.get_reviewable_qs(request.user, model_cls)
-        for resource in qs[:100]:
-            title = getattr(resource, 'title', '') or ''
-            owner = getattr(resource, 'owner', None) or getattr(resource, 'created_by', None)
-            owner_name = ''
-            if owner is not None:
-                owner_name = (owner.get_full_name() or owner.get_username() or '')
-            for g in ShareGrant.objects.for_resource(resource).pending():
-                if scope_filter and g.scope != scope_filter:
-                    continue
-                if not services.can_approve_grant(request.user, g):
-                    continue
-                if q and q not in title.lower() and q not in owner_name.lower():
-                    continue
-                ts = g.submitted_at or g.created_at
-                rows.append((
-                    ts,
-                    {
-                        'entity_type': entity_type,
-                        'entity_id': resource.pk,
-                        'entity_title': title,
-                        'owner_name': owner_name,
-                        'submitted_at': ts.isoformat() if ts else None,
-                        'grant': ShareGrantSerializer(g).data,
-                    },
-                ))
+        title = getattr(resource, 'title', '') or ''
+        owner = getattr(resource, 'owner', None) or getattr(resource, 'created_by', None)
+        owner_name = ''
+        if owner is not None:
+            owner_name = owner.get_full_name() or owner.get_username() or ''
+        if q and q not in title.lower() and q not in owner_name.lower():
+            continue
+        submitted_at = grant.submitted_at or grant.created_at
+        rows.append((
+            submitted_at,
+            {
+                'entity_type': entity_type,
+                'entity_id': resource.pk,
+                'entity_title': title,
+                'owner_name': owner_name,
+                'submitted_at': submitted_at.isoformat() if submitted_at else None,
+                'grant': ShareGrantSerializer(grant).data,
+            },
+        ))
 
     import datetime as _dt
 
@@ -327,6 +375,11 @@ def shares_pending_inbox(request):
     return Response({'pending': [payload for _, payload in rows], 'count': len(rows)})
 
 
+# Là gì: `shares_shared_with_me` là endpoint REST của nhóm chia sẻ tài nguyên và quản lý phạm vi truy cập; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `shares shared with me` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các hộp thoại và màn hình chia sẻ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `ENTITY_TYPE_TO_MODEL.items`, `services.get_accessible_qs`, `accessible_qs.exclude` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def shares_shared_with_me(request):

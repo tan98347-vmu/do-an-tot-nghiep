@@ -47,6 +47,56 @@ _VISIBILITY_CACHE_APPROVALS = (
 )
 
 
+# Cac model co truong `status` kieu DUYET (approval workflow: pending_leader/
+# pending/approved). KHAC voi Document.status (draft/final/archived) — KHONG dong bo
+# status cho Document de tranh ghi de sai y nghia.
+_APPROVAL_STATUS_MODELS = {
+    'document_templates.DocumentTemplate',
+    'prompts.Prompt',
+}
+_APPROVAL_STATUS_APPROVED = 'approved'
+
+# Scope "chia se" (khong tinh private): khi mot trong cac scope nay co grant ACTIVE
+# nghia la viec chia se DA DUOC DUYET -> legacy `status` phai la 'approved' de cac
+# tab danh sach (vd "Mau phong ban") khong an nham resource khoi thanh vien.
+_SHARED_SCOPES = (SCOPE_GROUP, SCOPE_COLLEAGUES, SCOPE_EVERYONE)
+
+
+def _approval_status_model_key(resource) -> str:
+    meta = type(resource)._meta
+    return f'{meta.app_label}.{type(resource).__name__}'
+
+
+def _sync_approval_status_cache(resource) -> None:
+    """Dong bo legacy `status` -> 'approved' khi co grant chia se ACTIVE.
+
+    Chi PROMOTE (khong demote) de khong dap len trang thai pending do workflow
+    duyet quan ly. Chi ap dung cho model co status kieu duyet (template/prompt).
+    """
+    if resource is None or not hasattr(resource, 'status'):
+        return
+    if _approval_status_model_key(resource) not in _APPROVAL_STATUS_MODELS:
+        return
+    from django.contrib.contenttypes.models import ContentType
+
+    ct = ContentType.objects.get_for_model(type(resource))
+    has_active_shared = ShareGrant.objects.filter(
+        content_type=ct,
+        object_id=resource.pk,
+        approval_status=APPROVAL_ACTIVE,
+        scope__in=_SHARED_SCOPES,
+    ).exists()
+    if not has_active_shared:
+        return
+    if getattr(resource, 'status', None) == _APPROVAL_STATUS_APPROVED:
+        return
+    try:
+        type(resource).objects.filter(pk=resource.pk).update(status=_APPROVAL_STATUS_APPROVED)
+        resource.status = _APPROVAL_STATUS_APPROVED
+    except Exception:
+        pass
+
+
 def _sync_visibility_cache(resource, *, excluded_grant_ids=()) -> None:
     if resource is None or not hasattr(resource, 'visibility'):
         return
@@ -79,6 +129,8 @@ def _sync_visibility_cache(resource, *, excluded_grant_ids=()) -> None:
         resource.visibility = legacy_value
     except Exception:
         pass
+
+    _sync_approval_status_cache(resource)
 
 
 @receiver(post_save, sender=ShareGrant)

@@ -9,10 +9,14 @@ ALL_SEARCH_TYPES = (
 )
 
 
+# class GlobalSearchQuerySerializer là serializer định nghĩa dữ liệu vào/ra (GlobalSearchQuery).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class GlobalSearchQuerySerializer(serializers.Serializer):
     q = serializers.CharField(max_length=200, trim_whitespace=True)
     types = serializers.CharField(required=False, allow_blank=True)
 
+    # def validate_q để kiểm tra hợp lệ q (trong serializer).
+    # vd: dữ liệu sai -> báo lỗi/False; hợp lệ -> True hoặc giá trị đã chuẩn hóa.
     def validate_q(self, value):
         query = str(value or '').strip()
         if not query:
@@ -21,6 +25,8 @@ class GlobalSearchQuerySerializer(serializers.Serializer):
             raise serializers.ValidationError('q phai co it nhat 2 ky tu.')
         return query[:200]
 
+    # def validate_types để kiểm tra hợp lệ types (trong serializer).
+    # vd: dữ liệu sai -> báo lỗi/False; hợp lệ -> True hoặc giá trị đã chuẩn hóa.
     def validate_types(self, value):
         raw = str(value or '').strip().lower()
         if not raw:
@@ -43,11 +49,15 @@ class GlobalSearchQuerySerializer(serializers.Serializer):
             )
         return parsed
 
+    # def validate để kiểm tra hợp lệ (trong serializer).
+    # vd: dữ liệu sai -> báo lỗi/False; hợp lệ -> True hoặc giá trị đã chuẩn hóa.
     def validate(self, attrs):
         attrs['types'] = attrs.get('types') or list(ALL_SEARCH_TYPES)
         return attrs
 
 
+# class GlobalSearchItemSerializer là serializer định nghĩa dữ liệu vào/ra (GlobalSearchItem).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class GlobalSearchItemSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     type = serializers.ChoiceField(choices=ALL_SEARCH_TYPES)
@@ -57,6 +67,8 @@ class GlobalSearchItemSerializer(serializers.Serializer):
     updated_at = serializers.DateTimeField()
 
 
+# class GlobalSearchResultsSerializer là serializer định nghĩa dữ liệu vào/ra (GlobalSearchResults).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class GlobalSearchResultsSerializer(serializers.Serializer):
     template = GlobalSearchItemSerializer(many=True, required=False)
     document = GlobalSearchItemSerializer(many=True, required=False)
@@ -65,6 +77,8 @@ class GlobalSearchResultsSerializer(serializers.Serializer):
     conversation = GlobalSearchItemSerializer(many=True, required=False)
 
 
+# class GlobalSearchResponseSerializer là serializer định nghĩa dữ liệu vào/ra (GlobalSearchResponse).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class GlobalSearchResponseSerializer(serializers.Serializer):
     results = GlobalSearchResultsSerializer()
     took_ms = serializers.IntegerField(min_value=0)

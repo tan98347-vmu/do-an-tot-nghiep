@@ -1,8 +1,7 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/assistant/assistant_rag_result_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH KẾT QUẢ RAG TỪ TRỢ LÝ ===
+// Hiển thị câu trả lời RAG (kèm trích dẫn nguồn) của một phiên trợ lý (_loadResult 'assistant/sessions/<id>/messages/'); _goBack quay lại chat.
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/assistant/assistant_rag_result_screen.dart.
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
@@ -13,10 +12,7 @@ import '../../models/chat.dart';
 import '../../widgets/ai/citation_sections.dart';
 import '../../widgets/tasks/task_done_popup.dart';
 
-// Mục đích: Widget `AssistantRagResultScreen` triển khai phần việc `Assistant Rag Result Screen` trong flutter_frontend/lib/screens/assistant/assistant_rag_result_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn KẾT QUẢ RAG; nhận assistantSessionId.
 
 class AssistantRagResultScreen extends StatefulWidget {
   final int assistantSessionId;
@@ -25,6 +21,7 @@ class AssistantRagResultScreen extends StatefulWidget {
   final String? returnTo;
   final String? returnLabel;
 
+  // Widget màn KẾT QUẢ RAG từ trợ lý; nhận assistantSessionId.
   const AssistantRagResultScreen({
     super.key,
     required this.assistantSessionId,
@@ -38,10 +35,7 @@ class AssistantRagResultScreen extends StatefulWidget {
   State<AssistantRagResultScreen> createState() => _AssistantRagResultScreenState();
 }
 
-// Mục đích: Widget `_AssistantRagResultScreenState` triển khai phần việc `Assistant Rag Result Screen State` trong flutter_frontend/lib/screens/assistant/assistant_rag_result_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn kết quả RAG: tải câu trả lời + nguồn trích dẫn.
 
 class _AssistantRagResultScreenState extends State<AssistantRagResultScreen> {
   bool _loading = true;
@@ -50,20 +44,14 @@ class _AssistantRagResultScreenState extends State<AssistantRagResultScreen> {
   ChatMessage? _assistantMessage;
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/assistant/assistant_rag_result_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Mở màn: nạp kết quả RAG của phiên (_loadResult).
   void initState() {
     super.initState();
+    // Gọi 'assistant/sessions/<id>/messages/' lấy câu trả lời RAG + trích dẫn để hiển thị.
     _loadResult();
   }
 
-  // Mục đích: Phương thức `_loadResult` triển khai phần việc `load Result` trong flutter_frontend/lib/screens/assistant/assistant_rag_result_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tải kết quả RAG của phiên ('assistant/sessions/<id>/messages/').
 
   Future<void> _loadResult() async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -115,11 +103,7 @@ class _AssistantRagResultScreenState extends State<AssistantRagResultScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_title` triển khai phần việc `title` trong flutter_frontend/lib/screens/assistant/assistant_rag_result_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Tiêu đề hiển thị cho kết quả RAG.
   String _title(BuildContext context) {
     final strings = AppStrings.of(context);
     return widget.mode == 'document'
@@ -127,11 +111,7 @@ class _AssistantRagResultScreenState extends State<AssistantRagResultScreen> {
         : strings.pick('Hỏi đáp mẫu văn bản', 'Template Q&A');
   }
 
-  // Mục đích: Phương thức `_subtitle` triển khai phần việc `subtitle` trong flutter_frontend/lib/screens/assistant/assistant_rag_result_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Phụ đề (mô tả nguồn/ngữ cảnh) của kết quả.
   String _subtitle(BuildContext context) {
     final strings = AppStrings.of(context);
     return widget.mode == 'document'
@@ -156,11 +136,7 @@ class _AssistantRagResultScreenState extends State<AssistantRagResultScreen> {
         },
       ).toString();
 
-  // Mục đích: Phương thức `_goBack` triển khai phần việc `go Back` trong flutter_frontend/lib/screens/assistant/assistant_rag_result_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Quay lại màn chat trợ lý.
   void _goBack() {
     // Điều hướng người dùng sang màn phù hợp theo kết quả thao tác hiện tại.
 
@@ -168,11 +144,7 @@ class _AssistantRagResultScreenState extends State<AssistantRagResultScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/assistant/assistant_rag_result_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Dựng màn hiển thị câu trả lời + danh sách nguồn trích dẫn.
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
 

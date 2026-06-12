@@ -1,3 +1,6 @@
+// === DIALOG XÁC NHẬN MẬT KHẨU BACKUP ===
+// _submit() gọi 'settings/verify-password/' để xác minh mật khẩu trước khi tải/khôi phục backup đã mã hóa.
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../../../core/api_client.dart';

@@ -12,6 +12,10 @@ from ai_engine.compliance_checker import (
     ComplianceLLMError,
 )
 from ai_engine.models import ComplianceCheckResult
+from api.security.prompt_guard import (
+    prompt_check_expected_payload,
+    sign_prompt_check_token,
+)
 from document_templates.models import DocumentTemplate
 from documents.models import Document
 from prompts.models import PROMPT_STATUS_APPROVED, Prompt
@@ -143,16 +147,36 @@ class ComplianceEndpointTests(TestCase):
         )
         self.client.force_authenticate(self.user)
 
+    def _run_payload(self, target_type, target_id):
+        prompt_text = '\n\n'.join(
+            part.strip()
+            for part in (
+                self.prompt.system_content,
+                self.prompt.rules_content,
+            )
+            if part.strip()
+        )
+        expected = prompt_check_expected_payload(
+            user_id=self.user.pk,
+            scope='compliance_check',
+            context=f'compliance_{target_type}',
+            prompt_role='criteria',
+            prompt_text=prompt_text,
+            target_id=target_id,
+        )
+        return {
+            'target_type': target_type,
+            'target_id': target_id,
+            'prompt_id': self.prompt.pk,
+            'prompt_check_token': sign_prompt_check_token(expected),
+        }
+
     def test_run_endpoint_returns_exact_pass_message(self):
         fake_llm = _FakeLlm(['{"passed": true, "items_missing": []}'])
         with patch('ai_engine.compliance_checker.get_llm', return_value=fake_llm):
             response = self.client.post(
                 reverse('api:compliance_check_run'),
-                data={
-                    'target_type': 'document',
-                    'target_id': self.document.pk,
-                    'prompt_id': self.prompt.pk,
-                },
+                data=self._run_payload('document', self.document.pk),
                 format='json',
             )
 
@@ -164,6 +188,20 @@ class ComplianceEndpointTests(TestCase):
             'Văn bản/mẫu văn bản đã đáp ứng được những yêu cầu mà bạn đưa ra',
         )
 
+    def test_run_endpoint_requires_prompt_check_token(self):
+        response = self.client.post(
+            reverse('api:compliance_check_run'),
+            data={
+                'target_type': 'document',
+                'target_id': self.document.pk,
+                'prompt_id': self.prompt.pk,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('prompt_check_token', response.json())
+
     def test_run_endpoint_uses_cache_for_same_hash(self):
         fake_llm = _FakeLlm([
             '{"passed": false, "items_missing": [{"requirement": "Muc A", "explanation": "Con thieu"}]}',
@@ -171,20 +209,12 @@ class ComplianceEndpointTests(TestCase):
         with patch('ai_engine.compliance_checker.get_llm', return_value=fake_llm):
             first = self.client.post(
                 reverse('api:compliance_check_run'),
-                data={
-                    'target_type': 'template',
-                    'target_id': self.template.pk,
-                    'prompt_id': self.prompt.pk,
-                },
+                data=self._run_payload('template', self.template.pk),
                 format='json',
             )
             second = self.client.post(
                 reverse('api:compliance_check_run'),
-                data={
-                    'target_type': 'template',
-                    'target_id': self.template.pk,
-                    'prompt_id': self.prompt.pk,
-                },
+                data=self._run_payload('template', self.template.pk),
                 format='json',
             )
 
@@ -196,11 +226,7 @@ class ComplianceEndpointTests(TestCase):
     def test_run_endpoint_returns_404_for_cross_company_target(self):
         response = self.client.post(
             reverse('api:compliance_check_run'),
-            data={
-                'target_type': 'document',
-                'target_id': self.other_document.pk,
-                'prompt_id': self.prompt.pk,
-            },
+            data=self._run_payload('document', self.other_document.pk),
             format='json',
         )
 
@@ -214,22 +240,14 @@ class ComplianceEndpointTests(TestCase):
         with patch('ai_engine.compliance_checker.get_llm', return_value=fake_llm):
             self.client.post(
                 reverse('api:compliance_check_run'),
-                data={
-                    'target_type': 'document',
-                    'target_id': self.document.pk,
-                    'prompt_id': self.prompt.pk,
-                },
+                data=self._run_payload('document', self.document.pk),
                 format='json',
             )
             self.document.content = 'Noi dung moi de thay doi hash.'
             self.document.save(update_fields=['content'])
             self.client.post(
                 reverse('api:compliance_check_run'),
-                data={
-                    'target_type': 'document',
-                    'target_id': self.document.pk,
-                    'prompt_id': self.prompt.pk,
-                },
+                data=self._run_payload('document', self.document.pk),
                 format='json',
             )
 

@@ -13,6 +13,7 @@ class ComplianceApi {
     required String targetType,
     required int targetId,
     required int promptId,
+    required String promptCheckToken,
     bool force = false,
   }) async {
     final resp = await _client.dio.post(
@@ -21,6 +22,7 @@ class ComplianceApi {
         'target_type': targetType,
         'target_id': targetId,
         'prompt_id': promptId,
+        'prompt_check_token': promptCheckToken,
         if (force) 'force': true,
       },
     );

@@ -1,9 +1,21 @@
 """
-Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
-Vai tro backend: File `api/trash_services.py` giu hoac ho tro luong backend cho danh sach van ban, chi tiet van ban, version, chia se, luu tru, preview PDF, hom thu va xoa mem.
-Vai tro cua no trong frontend: Cac man `/documents`, `/mailbox`, `/trash` va badge phe duyet doc ket qua do file nay cung cap hoac gian tiep lam thay doi.
-Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `api/urls.py`, `api/serializers/documents.py`, `documents.models`, `documents.mailbox_services`, `documents.pdf_preview`, `accounts.permissions`.
-Tac dung: Bao dam vong doi van ban tu luc tao, chia se, xu ly hom thu toi luc phuc hoi hoac xoa vinh vien khong bi lech trang thai.
+trash_services.py:1 là service quản lý nghiệp vụ Thùng rác của hệ thống.
+
+  Nó phục vụ trực tiếp màn Flutter:
+
+  /thrash?
+
+  Correction route /trash. Need avoid typo. Let's write.
+
+  Nó quản lý các dữ liệu đã xóa mềm:
+
+  - Mẫu văn bản.
+  - Văn bản.
+  - Lịch sử ChatAI/Trợ lý AI.
+  - Lịch sử VoiceAI.
+  - Lịch sử RAG mẫu.
+  - Lịch sử RAG văn bản.
+
 """
 
 import re
@@ -38,6 +50,8 @@ TRASH_CATEGORY_CHOICES = {
     CATEGORY_RAG_DOCUMENT,
 }
 
+# def normalize_id_list để chuẩn hóa id list.
+# vd: nhận điều kiện -> trả về dữ liệu phù hợp.
 def normalize_id_list(raw_ids):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -67,6 +81,8 @@ def normalize_id_list(raw_ids):
         deduped.append(value)
     return deduped
 
+# def _strip_html để strip html.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _strip_html(value):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -77,6 +93,8 @@ def _strip_html(value):
     """
     return re.sub(r'<[^>]+>', ' ', str(value or ''))
 
+# def _preview_text để xem trước text.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _preview_text(value, limit=180):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -90,6 +108,8 @@ def _preview_text(value, limit=180):
         return text
     return text[: max(limit - 3, 0)].rstrip() + '...'
 
+# def _session_trash_category để session trash category.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _session_trash_category(session):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -104,6 +124,8 @@ def _session_trash_category(session):
         return CATEGORY_RAG_DOCUMENT if session.rag_mode == 'document' else CATEGORY_RAG_TEMPLATE
     return CATEGORY_CHAT_AI_TEXT
 
+# def _expires_at để expires at.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _expires_at(deleted_at):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -116,6 +138,8 @@ def _expires_at(deleted_at):
         return None
     return deleted_at + TRASH_RETENTION
 
+# def mark_deleted để đánh dấu deleted.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def mark_deleted(instance, actor):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -135,6 +159,8 @@ def mark_deleted(instance, actor):
     instance.save(update_fields=update_fields)
     return True
 
+# def restore_deleted để khôi phục deleted.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def restore_deleted(instance):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -154,6 +180,8 @@ def restore_deleted(instance):
     instance.save(update_fields=update_fields)
     return True
 
+# def purge_expired_trash để dọn sạch expired trash.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def purge_expired_trash(now=None):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -195,6 +223,8 @@ def purge_expired_trash(now=None):
         item.delete()
     return payload
 
+# def _trash_template_queryset để trash template queryset.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _trash_template_queryset(user):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -206,6 +236,8 @@ def _trash_template_queryset(user):
     queryset = DocumentTemplate.all_objects.filter(owner=user, is_deleted=True)
     return filter_queryset_by_current_company(queryset, user)
 
+# def _trash_document_queryset để trash document queryset.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _trash_document_queryset(user):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -217,6 +249,8 @@ def _trash_document_queryset(user):
     queryset = Document.all_objects.filter(owner=user, is_deleted=True)
     return filter_queryset_by_current_company(queryset, user)
 
+# def _trash_chat_queryset để trash chat queryset.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _trash_chat_queryset(user):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -229,17 +263,25 @@ def _trash_chat_queryset(user):
     return filter_queryset_by_current_company(queryset, user)
 
 
+# def _trash_template_item_queryset để trash template item queryset.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _trash_template_item_queryset(user):
     return _trash_template_queryset(user)
 
 
+# def _trash_document_item_queryset để trash document item queryset.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _trash_document_item_queryset(user):
     return _trash_document_queryset(user)
 
 
+# def _trash_chat_item_queryset để trash chat item queryset.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _trash_chat_item_queryset(user):
     return _trash_chat_queryset(user)
 
+# def trash_counts để trash counts.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def trash_counts(user):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -269,6 +311,8 @@ def trash_counts(user):
     counts[CATEGORY_ALL] = sum(counts.values())
     return counts
 
+# def list_trash_entries để trả danh sách trash entries.
+# vd: nhận điều kiện -> trả về dữ liệu phù hợp.
 def list_trash_entries(user, *, category=CATEGORY_ALL, query=''):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -385,6 +429,8 @@ def list_trash_entries(user, *, category=CATEGORY_ALL, query=''):
         'results': results,
     }
 
+# def restore_trash_items để khôi phục trash items.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def restore_trash_items(user, items):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -441,6 +487,8 @@ def restore_trash_items(user, items):
         'skipped_count': skipped_count,
     }
 
+# def permanently_delete_trash_items để permanently delete trash items.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def permanently_delete_trash_items(user, items):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -499,6 +547,8 @@ def permanently_delete_trash_items(user, items):
         'skipped_count': skipped_count,
     }
 
+# def soft_delete_chat_sessions để soft delete chat sessions.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def soft_delete_chat_sessions(user, session_ids, *, actor, session_types=None, rag_mode=None):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.

@@ -1,8 +1,8 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/signing/signing_delegation_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH ỦY QUYỀN KÝ SỐ ===
+// Quản lý ủy quyền theo phòng ban: thêm/xóa quyền duyệt đề xuất ký (approve_signing_proposal) và xem PDF đã ký (view_signed_pdf).
+// - _addDelegation/_deleteDelegation 'signing/delegations/', chọn người qua 'signing/candidates/'.
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/signing/signing_delegation_screen.dart.
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,22 +11,17 @@ import '../../core/api_client.dart';
 import '../../models/signing.dart';
 import '../../providers/signing_summary_provider.dart';
 
-// Mục đích: Widget `SigningDelegationScreen` triển khai phần việc `Signing Delegation Screen` trong flutter_frontend/lib/screens/signing/signing_delegation_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn ỦY QUYỀN KÝ SỐ — ConsumerStatefulWidget.
 
 class SigningDelegationScreen extends ConsumerStatefulWidget {
+  // Widget màn ỦY QUYỀN KÝ SỐ (theo phòng ban).
   const SigningDelegationScreen({super.key});
 
   @override
   ConsumerState<SigningDelegationScreen> createState() => _SigningDelegationScreenState();
 }
 
-// Mục đích: Widget `_SigningDelegationScreenState` triển khai phần việc `Signing Delegation Screen State` trong flutter_frontend/lib/screens/signing/signing_delegation_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn ủy quyền: tải danh sách ủy quyền + thao tác thêm/xóa.
 
 class _SigningDelegationScreenState extends ConsumerState<SigningDelegationScreen> {
   bool _loading = true;
@@ -39,20 +34,13 @@ class _SigningDelegationScreenState extends ConsumerState<SigningDelegationScree
   int? _selectedAccountingUserId;
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/signing/signing_delegation_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Mở màn: nạp danh sách ủy quyền hiện có + tóm tắt quyền (_load).
   void initState() {
     super.initState();
     _load();
   }
 
-  // Mục đích: Phương thức `_load` triển khai phần việc `load` trong flutter_frontend/lib/screens/signing/signing_delegation_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tải danh sách ủy quyền + tóm tắt quyền ('signing/delegations/').
 
   Future<void> _load() async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -119,11 +107,7 @@ class _SigningDelegationScreenState extends ConsumerState<SigningDelegationScree
     }
   }
 
-  // Mục đích: Phương thức `_addDelegation` triển khai phần việc `add Delegation` trong flutter_frontend/lib/screens/signing/signing_delegation_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Thêm 1 ủy quyền (chọn loại quyền + người được ủy) -> POST 'delegations/'.
   Future<void> _addDelegation(String permissionType, int? userId) async {
     if (userId == null) return;
     // Gọi API hoặc tác vụ bất đồng bộ rồi chờ kết quả trước khi cập nhật giao diện.
@@ -143,11 +127,7 @@ class _SigningDelegationScreenState extends ConsumerState<SigningDelegationScree
     await _load();
   }
 
-  // Mục đích: Phương thức `_deleteDelegation` triển khai phần việc `delete Delegation` trong flutter_frontend/lib/screens/signing/signing_delegation_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Xóa 1 ủy quyền -> DELETE 'delegations/<id>/'.
   Future<void> _deleteDelegation(int id) async {
     // Gọi API hoặc tác vụ bất đồng bộ rồi chờ kết quả trước khi cập nhật giao diện.
 
@@ -161,10 +141,7 @@ class _SigningDelegationScreenState extends ConsumerState<SigningDelegationScree
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/signing/signing_delegation_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng màn: tóm tắt quyền + danh sách ủy quyền theo nhóm (mỗi nhóm là _DelegationSection).
 
   Widget build(BuildContext context) {
     final summary = _summary;
@@ -231,10 +208,7 @@ class _SigningDelegationScreenState extends ConsumerState<SigningDelegationScree
   }
 }
 
-// Mục đích: Lớp `_DelegationSection` triển khai phần việc `Delegation Section` trong flutter_frontend/lib/screens/signing/signing_delegation_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget 1 nhóm ủy quyền (theo loại quyền) + nút thêm/xóa.
 
 class _DelegationSection extends StatelessWidget {
   final String title;
@@ -258,10 +232,7 @@ class _DelegationSection extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/signing/signing_delegation_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng 1 nhóm ủy quyền.
 
   Widget build(BuildContext context) {
     return Card(

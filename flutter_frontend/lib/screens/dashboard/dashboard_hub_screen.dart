@@ -1,8 +1,8 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH DASHBOARD (trang chủ) ===
+// Tổng quan + thống kê hệ thống (dashboardStatsProvider), lời chào (_DashboardHero), điều hướng nhanh tới các chức năng.
+// - Chuyển ngôn ngữ VI/EN (_LocaleSwitcher, appLocaleProvider). currentUserProvider để cá nhân hóa.
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
 import 'dart:async';
 
 import 'package:fl_chart/fl_chart.dart';
@@ -21,10 +21,7 @@ import '../../providers/dashboard_provider.dart';
 import 'organization_structure_graph_responsive.dart';
 import 'system_architecture_graph_responsive.dart';
 
-// Mục đích: Widget `DashboardScreen` triển khai phần việc `Dashboard Screen` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn DASHBOARD (trang chủ sau đăng nhập) — ConsumerStatefulWidget.
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -33,19 +30,13 @@ class DashboardScreen extends ConsumerStatefulWidget {
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-// Mục đích: Widget `_DashboardScreenState` triển khai phần việc `Dashboard Screen State` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn dashboard: nạp số liệu tổng quan + làm mới.
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Timer? _refreshTimer;
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở màn: nạp dữ liệu dashboard.
 
   void initState() {
     super.initState();
@@ -55,10 +46,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Rời màn: dọn tài nguyên.
 
   void dispose() {
     _refreshTimer?.cancel();
@@ -66,10 +54,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng màn: thanh công cụ + nội dung (loading/lỗi/đã tải).
 
   Widget build(BuildContext context) {
     // Lắng nghe provider để widget tự động dựng lại khi dữ liệu hoặc trạng thái thay đổi.
@@ -115,10 +100,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 }
 
-// Mục đích: Lớp `_DashboardToolbar` triển khai phần việc `Dashboard Toolbar` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Thanh công cụ dashboard (làm mới, đổi ngôn ngữ...).
 
 class _DashboardToolbar extends StatelessWidget {
   final bool isCompact;
@@ -126,10 +108,7 @@ class _DashboardToolbar extends StatelessWidget {
   const _DashboardToolbar({required this.isCompact});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng thanh công cụ.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -181,19 +160,13 @@ class _DashboardToolbar extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_LocaleSwitcher` triển khai phần việc `Locale Switcher` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Nút đổi ngôn ngữ VI/EN (ConsumerWidget).
 
 class _LocaleSwitcher extends ConsumerWidget {
   const _LocaleSwitcher();
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng nút đổi ngôn ngữ.
 
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = AppStrings.of(context);
@@ -240,10 +213,7 @@ class _LocaleSwitcher extends ConsumerWidget {
   }
 }
 
-// Mục đích: Lớp `_DashboardLoadedView` triển khai phần việc `Dashboard Loaded View` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Bố cục dashboard khi đã tải xong số liệu.
 
 class _DashboardLoadedView extends StatelessWidget {
   final AppUser? user;
@@ -257,10 +227,7 @@ class _DashboardLoadedView extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng nội dung dashboard: hero + thẻ số liệu + biểu đồ + gần đây + thao tác nhanh.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -409,10 +376,7 @@ class _DashboardLoadedView extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_DashboardHero` triển khai phần việc `Dashboard Hero` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Khối hero đầu dashboard (chào mừng + số liệu nổi bật).
 
 class _DashboardHero extends StatelessWidget {
   final AppUser? user;
@@ -424,10 +388,7 @@ class _DashboardHero extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng hero.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -557,10 +518,7 @@ class _DashboardHero extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_HeroChip` triển khai phần việc `Hero Chip` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Chip số liệu nổi bật trong hero.
 
 class _HeroChip extends StatelessWidget {
   final IconData icon;
@@ -572,10 +530,7 @@ class _HeroChip extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng hero chip.
 
   Widget build(BuildContext context) {
     return Container(
@@ -602,10 +557,7 @@ class _HeroChip extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_ScopeMetricCard` triển khai phần việc `Scope Metric Card` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Thẻ số liệu theo phạm vi (văn bản/mẫu...).
 
 class _ScopeMetricCard extends StatelessWidget {
   final String title;
@@ -625,10 +577,7 @@ class _ScopeMetricCard extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng thẻ số liệu phạm vi.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -713,10 +662,7 @@ class _ScopeMetricCard extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_AiMetricCard` triển khai phần việc `Ai Metric Card` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Thẻ số liệu sử dụng AI.
 
 class _AiMetricCard extends StatelessWidget {
   final String title;
@@ -730,10 +676,7 @@ class _AiMetricCard extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng thẻ số liệu AI.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -893,10 +836,7 @@ class _AiMetricCard extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_BreakdownRow` triển khai phần việc `Breakdown Row` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Dòng phân tích chi tiết 1 chỉ số.
 
 class _BreakdownRow extends StatelessWidget {
   final Color accent;
@@ -912,10 +852,7 @@ class _BreakdownRow extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng dòng phân tích.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -973,10 +910,7 @@ class _BreakdownRow extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_ActivityBarCard` triển khai phần việc `Activity Bar Card` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Thẻ biểu đồ cột hoạt động theo thời gian.
 
 class _ActivityBarCard extends StatelessWidget {
   final DashboardStats stats;
@@ -984,10 +918,7 @@ class _ActivityBarCard extends StatelessWidget {
   const _ActivityBarCard({required this.stats});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng biểu đồ cột hoạt động.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -1108,10 +1039,7 @@ class _ActivityBarCard extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_ScopePieChartCard` triển khai phần việc `Scope Pie Chart Card` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Thẻ biểu đồ tròn phân bổ theo phạm vi.
 
 class _ScopePieChartCard extends StatelessWidget {
   final String title;
@@ -1125,10 +1053,7 @@ class _ScopePieChartCard extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng biểu đồ tròn.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -1235,10 +1160,7 @@ class _ScopePieChartCard extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_RecentCard` triển khai phần việc `Recent Card` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Thẻ danh sách hoạt động/đối tượng gần đây.
 
 class _RecentCard extends StatelessWidget {
   final String title;
@@ -1252,10 +1174,7 @@ class _RecentCard extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng thẻ gần đây.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -1300,10 +1219,7 @@ class _RecentCard extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_RecentRow` triển khai phần việc `Recent Row` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Dòng 1 mục gần đây.
 
 class _RecentRow extends StatelessWidget {
   final RecentItem item;
@@ -1311,10 +1227,7 @@ class _RecentRow extends StatelessWidget {
   const _RecentRow({required this.item});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng dòng gần đây.
 
   Widget build(BuildContext context) {
     final statusColor = switch (item.status) {
@@ -1366,10 +1279,7 @@ class _RecentRow extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_DashboardError` triển khai phần việc `Dashboard Error` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Trạng thái lỗi tải dashboard (kèm nút thử lại).
 
 class _DashboardError extends StatelessWidget {
   final Object error;
@@ -1381,10 +1291,7 @@ class _DashboardError extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng trạng thái lỗi.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -1422,19 +1329,13 @@ class _DashboardError extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_QuickActions` triển khai phần việc `Quick Actions` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Khối nút thao tác nhanh (tạo văn bản/mẫu...).
 
 class _QuickActions extends StatelessWidget {
   const _QuickActions();
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng các nút thao tác nhanh.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -1600,9 +1501,6 @@ Color _scopeColor(String key, Color fallback) {
   }
 }
 
-// Mục đích: Hàm `mathMax` triển khai phần việc `math Max` trong flutter_frontend/lib/screens/dashboard/dashboard_hub_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là hàm thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Trả về số lớn hơn trong hai số (helper).
 
 int mathMax(int left, int right) => left > right ? left : right;

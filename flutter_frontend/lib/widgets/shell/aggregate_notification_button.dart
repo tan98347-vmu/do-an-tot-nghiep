@@ -26,7 +26,6 @@ class AggregateNotificationButton extends ConsumerWidget {
     }
 
     final unreadCountAsync = ref.watch(unreadNotificationCountProvider);
-    // Tổng = thông báo sự kiện (backend) + việc cần xử lý đang chờ (4 hàng đợi).
     final queueUnread = ref.watch(notificationTotalUnreadProvider);
     final count = (unreadCountAsync.asData?.value ?? 0) + queueUnread;
     return Stack(
@@ -69,17 +68,17 @@ class AggregateNotificationButton extends ConsumerWidget {
         _ => Icons.notifications_none,
       };
 
-  /// Mục "Việc cần xử lý" (4 hàng đợi) hiển thị phía trên danh sách thông báo sự kiện.
-  /// Chỉ hiện các mục đang có việc mới; có nút "đã đọc" và bấm để mở màn tương ứng.
+  /// Mục "Việc cần xử lý" hiển thị các hàng đợi còn tồn tại ở backend.
   Widget _buildQueueSection(
     BuildContext context,
     WidgetRef ref,
     BuildContext dialogCtx,
   ) {
-    final current = ref.watch(notificationCurrentCountsProvider);
     final unread = ref.watch(notificationUnreadByCategoryProvider);
+    final snapshot =
+        ref.watch(notificationQueueSnapshotProvider).asData?.value;
     final visible =
-        kNotifCategories.where((k) => (unread[k] ?? 0) > 0).toList();
+        kNotifCategories.where((key) => (unread[key] ?? 0) > 0).toList();
     if (visible.isEmpty) return const SizedBox.shrink();
     return Container(
       color: const Color(0xFFFFFBEB),
@@ -101,37 +100,29 @@ class AggregateNotificationButton extends ConsumerWidget {
               leading: Icon(_queueIcon(key), size: 20, color: Colors.deepOrange),
               title: Text(notifCategoryLabel(key)),
               subtitle: Text('${unread[key]} mục mới cần xử lý'),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '${unread[key]}',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold),
-                    ),
+              trailing: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '${unread[key]}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
                   ),
-                  IconButton(
-                    tooltip: 'Đánh dấu đã đọc',
-                    icon: const Icon(Icons.done_all, size: 18),
-                    onPressed: () => ref
-                        .read(notificationAckProvider.notifier)
-                        .markRead(key, current[key] ?? 0),
-                  ),
-                ],
+                ),
               ),
               onTap: () {
-                ref
-                    .read(notificationAckProvider.notifier)
-                    .markRead(key, current[key] ?? 0);
+                if (snapshot != null) {
+                  ref.read(notificationQueueAckProvider.notifier).markRead(
+                        key,
+                        snapshot.signatures[key] ?? '',
+                      );
+                }
                 Navigator.pop(dialogCtx);
                 context.go(notifCategoryRoute(key));
               },
@@ -177,12 +168,14 @@ class AggregateNotificationButton extends ConsumerWidget {
                         ),
                         TextButton.icon(
                           onPressed: () async {
-                            // Đánh dấu đã đọc cả thông báo sự kiện (backend) lẫn
-                            // các hàng đợi việc cần xử lý (mốc last-seen client).
-                            ref
-                                .read(notificationAckProvider.notifier)
-                                .markAllRead(
-                                    ref.read(notificationCurrentCountsProvider));
+                            final snapshot = ref.read(
+                              notificationQueueSnapshotProvider,
+                            ).asData?.value;
+                            if (snapshot != null) {
+                              ref
+                                  .read(notificationQueueAckProvider.notifier)
+                                  .markAllRead(snapshot);
+                            }
                             await markAllAggregateNotificationsRead();
                             ref.invalidate(notificationsProvider);
                             ref.invalidate(unreadNotificationCountProvider);
@@ -257,6 +250,21 @@ class AggregateNotificationButton extends ConsumerWidget {
                                 ref.invalidate(notificationsProvider);
                                 ref.invalidate(unreadNotificationCountProvider);
                                 ref.invalidate(signingSummaryProvider);
+                                final category =
+                                    notifCategoryForSourceType(item.sourceType);
+                                final snapshot = ref.read(
+                                  notificationQueueSnapshotProvider,
+                                ).asData?.value;
+                                if (category != null && snapshot != null) {
+                                  ref
+                                      .read(
+                                        notificationQueueAckProvider.notifier,
+                                      )
+                                      .markRead(
+                                        category,
+                                        snapshot.signatures[category] ?? '',
+                                      );
+                                }
                                 if (context.mounted) {
                                   Navigator.pop(ctx);
                                   context.go(item.deeplink);

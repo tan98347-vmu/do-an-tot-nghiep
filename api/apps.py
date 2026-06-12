@@ -8,6 +8,8 @@ Tac dung: Giu cho cac man dieu phoi cap he thong co cung nguon cau hinh, cung ro
 
 from django.apps import AppConfig
 
+# class ApiConfig là cấu hình khởi động của app.
+# vd: gom các thuộc tính/method liên quan vào một nơi.
 class ApiConfig(AppConfig):
     """
     Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.

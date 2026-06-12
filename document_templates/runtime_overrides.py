@@ -10,6 +10,8 @@ import re
 import os
 from functools import wraps
 
+# def _patch_render_as_docx vá lại method render_as_docx của DocumentTemplate lúc runtime (bản cải tiến: ưu tiên file DOCX gốc, nhận diện HTML chính xác hơn); idempotent qua cờ _codex_runtime_patch.
+# vd: sau patch -> mẫu content HTML xuất DOCX đúng hơn.
 def _patch_render_as_docx(DocumentTemplate):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -30,6 +32,8 @@ def _patch_render_as_docx(DocumentTemplate):
 
     
 
+    # def _render_as_docx là bản render_as_docx đã vá: DOCX còn file gốc -> render giữ layout; content có HTML -> create_docx_from_html (fallback text); không có gì -> DOCX từ text.
+    # vd: content có thẻ HTML -> tạo DOCX từ HTML.
     def _render_as_docx(self, variables_dict=None, *, allow_content_fallback=True):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -66,6 +70,8 @@ def _patch_render_as_docx(DocumentTemplate):
     _render_as_docx._codex_runtime_patch = True
     DocumentTemplate.render_as_docx = _render_as_docx
 
+# def _patch_template_save vá method save của DocumentTemplate để CHỐNG MẤT nội dung: nếu nội dung mới ngắn bất thường so với bản cũ (vd lỗi editor) thì giữ lại nội dung cũ.
+# vd: content cũ 5000 ký tự, lưu bản mới chỉ 1000 -> giữ bản cũ.
 def _patch_template_save(DocumentTemplate):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -80,6 +86,8 @@ def _patch_template_save(DocumentTemplate):
 
     
 
+    # def save (bản vá) so sánh độ dài content cũ/mới; nếu tụt quá ngưỡng (giảm >40% và mất >=1200 ký tự, cũ >=4000) -> khôi phục content cũ rồi mới lưu.
+    # vd: giảm đột ngột -> không ghi đè bằng bản ngắn nghi lỗi.
     @wraps(current_save)
     def save(self, *args, **kwargs):
         """
@@ -119,6 +127,8 @@ def _patch_template_save(DocumentTemplate):
     save._codex_runtime_patch = True
     DocumentTemplate.save = save
 
+# def _patch_document_save_default_private vá save của Document: khi TẠO mới mà visibility='public' -> ép về 'private' (mặc định an toàn, tránh lộ văn bản).
+# vd: tạo Document visibility='public' -> tự đổi thành 'private'.
 def _patch_document_save_default_private():
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -138,6 +148,8 @@ def _patch_document_save_default_private():
 
     
 
+    # def save (bản vá Document) ép visibility public -> private khi đang ở trạng thái tạo mới.
+    # vd: bản ghi Document mới public -> private.
     @wraps(current_save)
     def save(self, *args, **kwargs):
         """
@@ -156,6 +168,8 @@ def _patch_document_save_default_private():
     save._codex_runtime_patch = True
     Document.save = save
 
+# def apply_runtime_overrides áp tất cả bản vá runtime (render_as_docx, template.save, document.save); gọi ở app ready().
+# vd: khởi động app -> kích hoạt các override hành vi model.
 def apply_runtime_overrides():
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).

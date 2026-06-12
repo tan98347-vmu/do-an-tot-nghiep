@@ -1,3 +1,6 @@
+// === MÀN HÌNH CHỌN CHẾ ĐỘ CHATAI ===
+// 3 thẻ (_ModeCard) dẫn tới: chat văn bản (/chat/text), chat giọng nói (/chat/voice), thư viện audio (/chat/audio).
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -6,8 +9,10 @@ import '../../widgets/tasks/task_done_popup.dart';
 import '../../widgets/tasks/task_inbox_button.dart';
 
 class ChatAiHubScreen extends StatelessWidget {
+  // Widget màn CHỌN CHẾ ĐỘ CHATAI.
   const ChatAiHubScreen({super.key});
 
+  // Dựng 3 thẻ chế độ: chat văn bản / chat giọng nói / thư viện audio.
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -181,6 +186,7 @@ class ChatAiHubScreen extends StatelessWidget {
 }
 
 class _ModeCard extends StatelessWidget {
+  // Thẻ một chế độ ChatAI: icon + nhãn + điều hướng tới route tương ứng khi bấm.
   const _ModeCard({
     required this.icon,
     required this.accent,

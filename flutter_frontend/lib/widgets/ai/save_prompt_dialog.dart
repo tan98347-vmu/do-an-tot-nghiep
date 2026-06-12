@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
+import '../../core/browser_alert.dart';
+import '../../providers/prompt_preflight_provider.dart';
 import '../../providers/prompts_provider.dart';
 
 class SavePromptDialog extends StatefulWidget {
@@ -44,6 +46,8 @@ class _SavePromptDialogState extends State<SavePromptDialog> {
   late final TextEditingController _titleCtrl;
   late final Set<String> _scopes;
   bool _saving = false;
+  bool _checkingPrompt = false;
+  String? _promptCheckToken;
   String? _error;
 
   @override
@@ -60,10 +64,45 @@ class _SavePromptDialogState extends State<SavePromptDialog> {
     super.dispose();
   }
 
+  String get _promptText => [
+        widget.systemContent.trim(),
+        widget.rulesContent.trim(),
+      ].where((part) => part.isNotEmpty).join('\n\n');
+
+  Future<void> _checkPrompt() async {
+    final promptText = _promptText;
+    if (promptText.isEmpty) {
+      await showBrowserAlert(context, 'Vui lòng nhập nội dung prompt trước khi kiểm tra.');
+      return;
+    }
+    setState(() {
+      _checkingPrompt = true;
+      _error = null;
+    });
+    final result = await checkPromptPreflight(
+      scope: 'saved_prompt',
+      context: 'prompt_library',
+      promptRole: 'saved_prompt',
+      promptText: promptText,
+    );
+    if (!mounted) return;
+    setState(() {
+      _checkingPrompt = false;
+      _promptCheckToken = result.promptCheckToken;
+    });
+    if (!result.passed) {
+      await showBrowserAlert(context, promptPreflightFailureMessage(result));
+    }
+  }
+
   Future<void> _save() async {
     final title = _titleCtrl.text.trim();
     if (title.isEmpty) {
-      setState(() => _error = 'Vui long nhap ten prompt.');
+      setState(() => _error = 'Vui lòng nhập tên prompt.');
+      return;
+    }
+    if ((_promptCheckToken ?? '').isEmpty) {
+      await showBrowserAlert(context, 'Hãy bấm "Check prompt" và sửa prompt nếu cần trước khi lưu.');
       return;
     }
 
@@ -81,6 +120,7 @@ class _SavePromptDialogState extends State<SavePromptDialog> {
           'rules_content': widget.rulesContent,
           'usage_scope': _scopes.toList(),
           'visibility': 'private',
+          'prompt_check_token': _promptCheckToken,
         },
       );
       if (!mounted) return;
@@ -151,6 +191,29 @@ class _SavePromptDialogState extends State<SavePromptDialog> {
                 );
               }).toList(),
             ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _checkingPrompt || _saving ? null : _checkPrompt,
+              icon: _checkingPrompt
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      (_promptCheckToken ?? '').isEmpty
+                          ? Icons.fact_check_outlined
+                          : Icons.verified_user_outlined,
+                      size: 16,
+                    ),
+              label: Text(
+                _checkingPrompt
+                    ? 'Đang kiểm tra...'
+                    : (_promptCheckToken ?? '').isEmpty
+                        ? 'Check prompt'
+                        : 'Prompt đạt yêu cầu',
+              ),
+            ),
           ],
         ),
       ),
@@ -160,7 +223,9 @@ class _SavePromptDialogState extends State<SavePromptDialog> {
           child: const Text('Hủy'),
         ),
         FilledButton.icon(
-          onPressed: _saving ? null : _save,
+          onPressed: _saving || (_promptCheckToken ?? '').isEmpty
+              ? null
+              : _save,
           icon: _saving
               ? const SizedBox(
                   width: 14,

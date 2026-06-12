@@ -1,3 +1,7 @@
+// === MÀN HÌNH TÓM TẮT VĂN BẢN (workspace) ===
+// Cấu hình tùy chọn tóm tắt (_updateOptions: độ dài/ngôn ngữ/trọng tâm) + prompt tùy chỉnh (_setSelectedPrompt; _checkExtraRulesPrompt kiểm an toàn + sinh preview_token/prompt_check_token).
+// - _generateSummary: gọi documentSummaryApiProvider tạo tóm tắt; _downloadSummary tải kết quả. documentDetailProvider lấy văn bản nguồn.
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,18 +9,17 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../l10n/app_strings.dart';
+import '../../core/browser_alert.dart';
 import '../../models/document.dart';
 import '../../models/document_summary.dart';
 import '../../models/prompt.dart';
 import '../../providers/document_summaries_provider.dart';
 import '../../providers/documents_provider.dart';
+import '../../providers/prompt_preflight_provider.dart';
 import '../../providers/prompts_provider.dart';
 import '../../widgets/ai/document_summary_prompt_preview_dialog.dart';
 import '../../widgets/ai/prompt_picker_dialog.dart';
 import '../../widgets/ai/save_prompt_dialog.dart';
-// === BEGIN R4: PromptToggleSection import ===
-import '../../widgets/ai/prompt_toggle_section.dart';
-// === END R4 ===
 
 class DocumentSummaryWorkspaceScreen extends ConsumerStatefulWidget {
   final int documentId;
@@ -39,8 +42,10 @@ class _DocumentSummaryWorkspaceScreenState
   DocumentSummaryOutput? _summaryOutput;
   Prompt? _selectedPrompt;
   String? _previewToken;
+  String? _promptCheckToken;
   String? _summaryError;
   bool _previewLoading = false;
+  bool _checkingPrompt = false;
   bool _summaryLoading = false;
   String? _summarySourceUpdatedAt;
   DateTime? _summaryGeneratedAt;
@@ -69,6 +74,16 @@ class _DocumentSummaryWorkspaceScreenState
     }
     setState(() {
       _previewToken = null;
+    });
+  }
+
+  void _invalidateExtraPromptChecks() {
+    if (_previewToken == null && _promptCheckToken == null) {
+      return;
+    }
+    setState(() {
+      _previewToken = null;
+      _promptCheckToken = null;
     });
   }
 
@@ -124,6 +139,54 @@ class _DocumentSummaryWorkspaceScreenState
     return preview != null && (_previewToken ?? '').trim().isNotEmpty;
   }
 
+  Future<bool> _ensurePromptCheckToken() async {
+    if (_extraRulesController.text.trim().isEmpty) {
+      return true;
+    }
+    if ((_promptCheckToken ?? '').trim().isNotEmpty) {
+      return true;
+    }
+    await showBrowserAlert(
+      context,
+      'Hãy bấm "Check prompt" và sửa yêu cầu bổ sung nếu cần trước khi tạo tóm tắt.',
+    );
+    return false;
+  }
+
+  Future<void> _checkExtraRulesPrompt() async {
+    final text = _extraRulesController.text.trim();
+    if (text.isEmpty) {
+      await showBrowserAlert(context, 'Vui lòng nhập yêu cầu bổ sung trước khi kiểm tra prompt.');
+      return;
+    }
+    setState(() {
+      _checkingPrompt = true;
+      _promptCheckToken = null;
+    });
+    final result = await checkPromptPreflight(
+      scope: 'summary',
+      context: 'document_summary',
+      promptRole: 'extra_instruction',
+      promptText: text,
+      targetId: widget.documentId,
+    );
+    if (!mounted) return;
+    if (_extraRulesController.text.trim() != text) {
+      setState(() {
+        _checkingPrompt = false;
+        _promptCheckToken = null;
+      });
+      return;
+    }
+    setState(() {
+      _checkingPrompt = false;
+      _promptCheckToken = result.promptCheckToken;
+    });
+    if (!result.passed) {
+      await showBrowserAlert(context, promptPreflightFailureMessage(result));
+    }
+  }
+
   // === BEGIN R2: M2 download summary ===
   Future<void> _downloadSummary(Document document, String format) async {
     try {
@@ -167,6 +230,10 @@ class _DocumentSummaryWorkspaceScreenState
     if (_summaryLoading) {
       return;
     }
+    final hasPromptCheckToken = await _ensurePromptCheckToken();
+    if (!hasPromptCheckToken) {
+      return;
+    }
     final hasPreviewToken = await _ensurePreviewToken();
     if (!hasPreviewToken) {
       return;
@@ -183,6 +250,7 @@ class _DocumentSummaryWorkspaceScreenState
           options: _options,
           userExtraRules: _extraRulesController.text,
           previewToken: _previewToken,
+          promptCheckToken: _promptCheckToken,
           promptId: _selectedPrompt?.id,
         );
       if (!mounted) {
@@ -425,45 +493,68 @@ class _DocumentSummaryWorkspaceScreenState
             ],
           ),
           const SizedBox(height: 18),
-          // === BEGIN R4: wrap extra rules editor in toggle ===
-          PromptToggleSection(
-            storageKey: 'prompt_toggle_summary_workspace',
-            labelHidden: _tr('Tùy chỉnh prompt', 'Customize prompt'),
-            labelShown: _tr('Ẩn tùy chỉnh', 'Hide customization'),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _tr('Yêu cầu bổ sung an toàn', 'Safe extra instructions'),
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _tr(
+                  'Tùy chỉnh prompt và kiểm tra trước khi tóm tắt',
+                  'Customize and check the prompt before summarizing',
                 ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _extraRulesController,
-                  onChanged: (_) {
-                    _invalidatePreviewToken();
-                    setState(() {});
-                  },
-                  minLines: 5,
-                  maxLines: 8,
-                  decoration: InputDecoration(
-                    hintText: _tr(
-                      'Ví dụ: nhấn mạnh thời hạn, tách riêng rủi ro, hoặc viết ngắn gọn hơn cho lãnh đạo.',
-                      'Example: emphasize deadlines, separate risks, or keep the wording shorter for executives.',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _extraRulesController,
+                onChanged: (_) {
+                  _invalidateExtraPromptChecks();
+                  setState(() {});
+                },
+                minLines: 5,
+                maxLines: 8,
+                decoration: InputDecoration(
+                  hintText: _tr(
+                    'Ví dụ: nhấn mạnh thời hạn, tách riêng rủi ro, hoặc viết ngắn gọn hơn cho lãnh đạo.',
+                    'Example: emphasize deadlines, separate risks, or keep the wording shorter for executives.',
                   ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _summaryLoading ||
+                        _checkingPrompt ||
+                        _extraRulesController.text.trim().isEmpty
+                    ? null
+                    : _checkExtraRulesPrompt,
+                icon: _checkingPrompt
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        (_promptCheckToken ?? '').isEmpty
+                            ? Icons.fact_check_outlined
+                            : Icons.verified_user_outlined,
+                        size: 16,
+                      ),
+                label: Text(
+                  _checkingPrompt
+                      ? _tr('Đang kiểm tra...', 'Checking...')
+                      : (_promptCheckToken ?? '').isEmpty
+                          ? 'Check prompt'
+                          : _tr('Prompt đạt yêu cầu', 'Prompt passed'),
+                ),
+              ),
+            ],
           ),
-          // === END R4 ===
           const SizedBox(height: 10),
           if (previewRequired)
             Container(
@@ -514,8 +605,11 @@ class _DocumentSummaryWorkspaceScreenState
                 label: Text(_tr('Preview prompt', 'Preview prompt')),
               ),
               FilledButton.icon(
-                onPressed:
-                    _summaryLoading ? null : () => _generateSummary(document),
+                onPressed: _summaryLoading ||
+                        (_extraRulesController.text.trim().isNotEmpty &&
+                            (_promptCheckToken ?? '').isEmpty)
+                    ? null
+                    : () => _generateSummary(document),
                 icon: _summaryLoading
                     ? const SizedBox(
                         width: 16,
@@ -733,7 +827,9 @@ class _DocumentSummaryWorkspaceScreenState
                   ),
                   // === END R2 ===
                   FilledButton.tonalIcon(
-                    onPressed: _summaryLoading
+                    onPressed: _summaryLoading ||
+                            (_extraRulesController.text.trim().isNotEmpty &&
+                                (_promptCheckToken ?? '').isEmpty)
                         ? null
                         : () => _generateSummary(document),
                     icon: const Icon(Icons.refresh),

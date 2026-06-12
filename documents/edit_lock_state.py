@@ -7,6 +7,8 @@ from signing.models import PACKET_ACTIVE, PACKET_COMPLETED
 from .manual_edit_models import DocumentManualEditSession
 
 
+# class DocumentEditLockState (dataclass) mô tả trạng thái khóa chỉnh sửa của 1 văn bản: có bị khóa không, lý do (đang ký / đang sửa thủ công), thông tin phiên sửa và ai đang giữ, có cho phép tiếp tục (resume) không.
+# vd: đang có phiên Collabora mở -> is_locked=True, code='manual_edit_active'.
 @dataclass(frozen=True)
 class DocumentEditLockState:
     is_locked: bool
@@ -19,6 +21,8 @@ class DocumentEditLockState:
     can_resume_manual_edit: bool = False
 
 
+# def _manual_edit_lock_state kiểm tra văn bản có phiên sửa thủ công đang mở (còn hạn) không; nếu có -> khóa, kèm tên người giữ và cờ can_resume cho chủ phiên/superuser.
+# vd: A đang mở phiên sửa -> B thấy 'đang được chỉnh sửa', A thấy 'bạn đang có phiên mở'.
 def _manual_edit_lock_state(document, *, user=None):
     now = timezone.now()
     session = (
@@ -55,6 +59,8 @@ def _manual_edit_lock_state(document, *, user=None):
     )
 
 
+# def get_document_edit_lock_state trả trạng thái khóa của văn bản: khóa nếu đang có quy trình ký (packet active/completed) hoặc đang có phiên sửa thủ công; không thì mở.
+# vd: văn bản đang trong quy trình ký -> is_locked=True, code='signing_locked'.
 def get_document_edit_lock_state(document, *, user=None):
     if not document or not getattr(document, 'pk', None):
         return DocumentEditLockState(is_locked=False)

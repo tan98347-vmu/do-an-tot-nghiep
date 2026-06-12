@@ -1,8 +1,8 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/signing/signing_task_detail_screen_pki.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH CHI TIẾT NHIỆM VỤ KÝ ===
+// Xem PDF cần ký (preview auto-reload), ngữ cảnh chữ ký ('signature-context/' — chứng thư của tôi).
+// - _signNow: KÝ ('sign/'); _rejectTask: từ chối ('reject/'). Ký xong -> xem PDF đã ký (/signed-pdfs/<id>).
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/signing/signing_task_detail_screen_pki.dart.
 import 'dart:async';
 import 'dart:html' as html;
 
@@ -17,14 +17,12 @@ import '../../models/signing.dart';
 import '../../providers/signing_summary_provider.dart';
 import '../../widgets/pdf/web_pdf_frame.dart';
 
-// Mục đích: Widget `SigningTaskDetailScreen` triển khai phần việc `Signing Task Detail Screen` trong flutter_frontend/lib/screens/signing/signing_task_detail_screen_pki.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn CHI TIẾT NHIỆM VỤ KÝ; nhận taskId.
 
 class SigningTaskDetailScreen extends ConsumerStatefulWidget {
   final int taskId;
 
+  // Widget màn CHI TIẾT NHIỆM VỤ KÝ; nhận taskId.
   const SigningTaskDetailScreen({super.key, required this.taskId});
 
   @override
@@ -32,10 +30,7 @@ class SigningTaskDetailScreen extends ConsumerStatefulWidget {
       _SigningTaskDetailScreenState();
 }
 
-// Mục đích: Widget `_SigningTaskDetailScreenState` triển khai phần việc `Signing Task Detail Screen State` trong flutter_frontend/lib/screens/signing/signing_task_detail_screen_pki.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn chi tiết nhiệm vụ ký: xem trước PDF, ngữ cảnh chữ ký, ký/từ chối.
 
 class _SigningTaskDetailScreenState
     extends ConsumerState<SigningTaskDetailScreen> {
@@ -51,22 +46,14 @@ class _SigningTaskDetailScreenState
   AppStrings get _strings => AppStrings.of(context);
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/signing/signing_task_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Mở màn: nạp nhiệm vụ ký (_load) và bật auto-reload khung xem trước PDF.
   void initState() {
     super.initState();
     _load();
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/signing/signing_task_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Rời màn: dừng auto-reload PDF và dọn tài nguyên.
   void dispose() {
     _stopPdfAutoReload();
     final current = _pdfUrl;
@@ -81,6 +68,7 @@ class _SigningTaskDetailScreenState
     _pdfAutoReloadTimer = null;
   }
 
+  // Khởi động lại vòng tự tải lại PDF xem trước (cập nhật khi file đổi).
   void _restartPdfAutoReload() {
     _stopPdfAutoReload();
     _pdfAutoReloadTimer = Timer.periodic(const Duration(seconds: 10), (_) {
@@ -90,21 +78,14 @@ class _SigningTaskDetailScreenState
     });
   }
 
-  // Mục đích: Phương thức `_setPdfInteractivity` triển khai phần việc `set Pdf Interactivity` trong flutter_frontend/lib/screens/signing/signing_task_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Bật/tắt tương tác với khung PDF (chặn thao tác khi đang xử lý).
   void _setPdfInteractivity(bool enabled) {
     final frame = _pdfFrame;
     if (frame == null) return;
     frame.style.pointerEvents = enabled ? 'auto' : 'none';
   }
 
-  // Mục đích: Phương thức `_load` triển khai phần việc `load` trong flutter_frontend/lib/screens/signing/signing_task_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tải chi tiết nhiệm vụ ký từ server (preview + ngữ cảnh chữ ký).
 
   Future<void> _load({bool silent = false}) async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -186,11 +167,7 @@ class _SigningTaskDetailScreenState
     }
   }
 
-  // Mục đích: Phương thức `_signNow` triển khai phần việc `sign Now` trong flutter_frontend/lib/screens/signing/signing_task_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nút KÝ NGAY: gọi 'sign/' ký tài liệu bằng chứng thư của mình; xong chuyển sang xem PDF đã ký.
   Future<void> _signNow() async {
     final task = _task;
     final contextData = _signatureContext;
@@ -301,11 +278,7 @@ class _SigningTaskDetailScreenState
     }
   }
 
-  // Mục đích: Phương thức `_rejectTask` triển khai phần việc `reject Task` trong flutter_frontend/lib/screens/signing/signing_task_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nút TỪ CHỐI: hỏi lý do rồi gọi 'reject/' để từ chối nhiệm vụ ký.
   Future<void> _rejectTask() async {
     final reasonCtrl = TextEditingController();
     _setPdfInteractivity(false);
@@ -384,11 +357,7 @@ class _SigningTaskDetailScreenState
     }
   }
 
-  // Mục đích: Phương thức `_buildSignatureContextPanel` triển khai phần việc `build Signature Context Panel` trong flutter_frontend/lib/screens/signing/signing_task_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Dựng panel ngữ cảnh chữ ký: thông tin chứng thư/người ký lấy từ 'signature-context/'.
   Widget _buildSignatureContextPanel() {
     final task = _task;
     final contextData = _signatureContext;
@@ -491,11 +460,7 @@ class _SigningTaskDetailScreenState
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/signing/signing_task_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Dựng màn: AppBar + khung xem trước PDF + panel ngữ cảnh chữ ký + nút Ký/Từ chối; xử lý loading/lỗi.
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     final task = _task;

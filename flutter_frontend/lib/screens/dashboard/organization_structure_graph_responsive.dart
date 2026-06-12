@@ -1,8 +1,8 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === BIỂU ĐỒ CƠ CẤU TỔ CHỨC (dashboard) ===
+// Vẽ sơ đồ phòng ban / nhóm / người (orgNodeStatsProvider) bằng CustomPainter (_EdgePainter vẽ cạnh, _NodeCard vẽ node).
+// - _handleTap mở chi tiết người nếu có quyền (_canInspectPerson); _roleColor/_roleLabel tô màu theo vai trò.
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -13,10 +13,7 @@ import '../../models/dashboard_stats.dart';
 import '../../models/user.dart';
 import '../../providers/dashboard_provider.dart';
 
-// Mục đích: Lớp `OrganizationStructureGraphResponsive` triển khai phần việc `Organization Structure Graph Responsive` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget SƠ ĐỒ CƠ CẤU TỔ CHỨC (cây nhân sự) — ConsumerStatefulWidget.
 
 class OrganizationStructureGraphResponsive extends ConsumerStatefulWidget {
   final OrgStructure structure;
@@ -33,10 +30,7 @@ class OrganizationStructureGraphResponsive extends ConsumerStatefulWidget {
       _OrganizationStructureGraphResponsiveState();
 }
 
-// Mục đích: Lớp `_OrganizationStructureGraphResponsiveState` triển khai phần việc `Organization Structure Graph Responsive State` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State sơ đồ tổ chức: bố trí node, vẽ cạnh, tương tác chọn người.
 
 class _OrganizationStructureGraphResponsiveState
     extends ConsumerState<OrganizationStructureGraphResponsive> {
@@ -44,10 +38,7 @@ class _OrganizationStructureGraphResponsiveState
   String? _selectedNodeId;
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở màn: chuẩn bị dữ liệu/animation sơ đồ.
 
   void initState() {
     super.initState();
@@ -60,10 +51,7 @@ class _OrganizationStructureGraphResponsiveState
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Rời màn: dọn animation.
 
   void dispose() {
     _controller.dispose();
@@ -71,10 +59,7 @@ class _OrganizationStructureGraphResponsiveState
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng sơ đồ tổ chức: node nhân sự + cạnh quan hệ + chú thích; bấm node để xem chi tiết.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -203,10 +188,7 @@ class _OrganizationStructureGraphResponsiveState
         (viewer.isSuperuser || viewer.isStaff || viewer.isLeaderOfAny);
   }
 
-  // Mục đích: Phương thức `_canInspectPerson` triển khai phần việc `can Inspect Person` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Có được xem chi tiết người này không (quyền).
 
   bool _canInspectPerson(OrgPerson person) {
     final viewer = widget.viewer;
@@ -216,10 +198,7 @@ class _OrganizationStructureGraphResponsiveState
     return person.role == 'employee';
   }
 
-  // Mục đích: Phương thức `_handleTap` triển khai phần việc `handle Tap` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khi bấm 1 node nhân sự -> mở panel chi tiết (nếu có quyền).
 
   void _handleTap(BuildContext context, OrgPerson person, bool isCompact) {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -303,10 +282,7 @@ class _OrganizationStructureGraphResponsiveState
   }
 }
 
-// Mục đích: Lớp `_Layout` triển khai phần việc `Layout` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Mô hình bố trí sơ đồ (vị trí node + kích thước).
 
 class _Layout {
   final double canvasWidth;
@@ -322,10 +298,7 @@ class _Layout {
   });
 }
 
-// Mục đích: Lớp `_EdgePainter` triển khai phần việc `Edge Painter` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Bộ vẽ các cạnh nối giữa các node (CustomPainter).
 
 class _EdgePainter extends CustomPainter {
   final Map<String, Offset> positions;
@@ -341,10 +314,7 @@ class _EdgePainter extends CustomPainter {
   });
 
   @override
-  // Mục đích: Phương thức `paint` triển khai phần việc `paint` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Vẽ toàn bộ cạnh của sơ đồ.
 
   void paint(Canvas canvas, Size size) {
     for (final edge in reportingEdges) {
@@ -355,10 +325,7 @@ class _EdgePainter extends CustomPainter {
     }
   }
 
-  // Mục đích: Phương thức `_draw` triển khai phần việc `draw` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Vẽ 1 cạnh (đường nối, nét liền/đứt).
 
   void _draw(Canvas canvas, OrgEdge edge, Color color, bool dashed) {
     final from = positions[edge.from];
@@ -396,10 +363,7 @@ class _EdgePainter extends CustomPainter {
   }
 
   @override
-  // Mục đích: Phương thức `shouldRepaint` triển khai phần việc `should Repaint` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Có cần vẽ lại sơ đồ không khi dữ liệu đổi.
 
   bool shouldRepaint(covariant _EdgePainter oldDelegate) {
     return oldDelegate.selectedNodeId != selectedNodeId ||
@@ -409,10 +373,7 @@ class _EdgePainter extends CustomPainter {
   }
 }
 
-// Mục đích: Lớp `_NodeCard` triển khai phần việc `Node Card` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Thẻ 1 node nhân sự trong sơ đồ.
 
 class _NodeCard extends StatelessWidget {
   final OrgPerson person;
@@ -426,10 +387,7 @@ class _NodeCard extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng thẻ node nhân sự (ảnh, tên, chức danh).
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -483,10 +441,7 @@ class _NodeCard extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_Legend` triển khai phần việc `Legend` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Chú thích màu/loại quan hệ của sơ đồ.
 
 class _Legend extends StatelessWidget {
   final String label;
@@ -495,10 +450,7 @@ class _Legend extends StatelessWidget {
   const _Legend({required this.label, required this.color});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chú thích.
 
   Widget build(BuildContext context) {
     return Container(
@@ -522,10 +474,7 @@ class _Legend extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_Marker` triển khai phần việc `Marker` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Dấu chú thích 1 mục (màu + nhãn).
 
 class _Marker extends StatelessWidget {
   final String label;
@@ -533,10 +482,7 @@ class _Marker extends StatelessWidget {
   const _Marker({required this.label});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng dấu chú thích.
 
   Widget build(BuildContext context) {
     return Container(
@@ -552,10 +498,7 @@ class _Marker extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_Inspector` triển khai phần việc `Inspector` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Panel chi tiết 1 nhân sự khi được chọn (ConsumerWidget).
 
 class _Inspector extends ConsumerWidget {
   final OrgPerson person;
@@ -563,10 +506,7 @@ class _Inspector extends ConsumerWidget {
   const _Inspector({required this.person});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng panel chi tiết nhân sự.
 
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = AppStrings.of(context);
@@ -665,10 +605,7 @@ class _Inspector extends ConsumerWidget {
   }
 }
 
-// Mục đích: Lớp `_Metric` triển khai phần việc `Metric` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Ô số liệu trong panel chi tiết.
 
 class _Metric extends StatelessWidget {
   final String label;
@@ -677,10 +614,7 @@ class _Metric extends StatelessWidget {
   const _Metric({required this.label, required this.value});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng ô số liệu.
 
   Widget build(BuildContext context) {
     return Container(
@@ -718,10 +652,7 @@ Color _roleColor(String role) {
   }
 }
 
-// Mục đích: Hàm `_roleLabel` triển khai phần việc `role Label` trong flutter_frontend/lib/screens/dashboard/organization_structure_graph_responsive.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là hàm thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Nhãn vai trò/chức danh để hiển thị.
 
 String _roleLabel(String role, AppStrings strings) {
   switch (role) {

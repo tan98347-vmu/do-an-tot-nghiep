@@ -51,3 +51,16 @@ class TemplateSearchHelpersTests(TestCase):
 
     def test_search_templates_returns_empty_for_short_queries(self):
         self.assertEqual(search_templates(self.user, 'q'), [])
+
+    def test_search_templates_matches_record_code(self):
+        template = DocumentTemplate.objects.create(
+            company=self.company,
+            owner=self.user,
+            title='Mau trung ten',
+            content='Noi dung',
+        )
+
+        results = search_templates(self.user, template.record_code)
+
+        self.assertEqual([item['id'] for item in results], [template.id])
+        self.assertEqual(results[0]['record_code'], template.record_code)

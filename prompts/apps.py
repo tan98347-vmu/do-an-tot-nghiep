@@ -18,7 +18,11 @@ _DEFAULT_ASSISTANT_DOCUMENT_RULES = (
 )
 
 
+# class _CuratedAssistantDocumentRules là một 'chuỗi động': khi ép sang str sẽ lấy prompt chat mặc định trong DB (curated + public + approved + tag 'seed:default-chat-primary') làm bộ quy tắc cho trợ lý sinh văn bản; nếu lỗi DB hoặc chưa seed thì trả bộ quy tắc cứng mặc định.
+# vd: str(obj) -> ghép system_content + rules_content của prompt seed, hoặc _DEFAULT_ASSISTANT_DOCUMENT_RULES nếu chưa có.
 class _CuratedAssistantDocumentRules:
+    # def __str__ truy vấn prompt chat mặc định trong DB và trả nội dung quy tắc; bắt OperationalError/ProgrammingError (vd khi chưa migrate) để fallback an toàn về quy tắc mặc định.
+    # vd: DB chưa sẵn sàng -> trả _DEFAULT_ASSISTANT_DOCUMENT_RULES.
     def __str__(self) -> str:
         from django.db.utils import OperationalError, ProgrammingError
 
@@ -53,6 +57,8 @@ class _CuratedAssistantDocumentRules:
         return rules_text or _DEFAULT_ASSISTANT_DOCUMENT_RULES
 
 
+# class PromptsConfig là cấu hình app prompts; ở ready() thay bộ quy tắc trợ lý hard-code trong assistant_engine bằng bộ quy tắc lấy động từ prompt seed.
+# vd: khi Django khởi động -> assistant_engine.ASSISTANT_DOCUMENT_RULES dùng prompt seed (nếu có).
 class PromptsConfig(AppConfig):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -65,6 +71,8 @@ class PromptsConfig(AppConfig):
     name = 'prompts'
     verbose_name = 'Prompts'
 
+    # def ready gán assistant_engine.ASSISTANT_DOCUMENT_RULES = _CuratedAssistantDocumentRules() để trợ lý dùng quy tắc cấu hình được qua prompt thay vì hằng số cứng; nuốt lỗi nếu import thất bại.
+    # vd: chạy 1 lần lúc app khởi động.
     def ready(self):
         try:
             from ai_engine import assistant_engine

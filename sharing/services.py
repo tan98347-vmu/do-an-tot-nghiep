@@ -25,6 +25,7 @@ from __future__ import annotations
 
 from typing import Iterable, Optional
 
+from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
@@ -43,6 +44,7 @@ from .constants import (
     APPROVAL_PENDING_ADMIN,
     APPROVAL_PENDING_LEADER,
     APPROVAL_REJECTED,
+    ENTITY_TYPE_TO_MODEL,
     PERMISSION_DELETE,
     PERMISSION_EDIT,
     PERMISSION_ORDER,
@@ -370,6 +372,43 @@ def get_reviewable_qs(user, model_cls) -> QuerySet:
         model_cls=model_cls,
         company=company,
     )
+
+
+def get_reviewable_grant_rows(user) -> list[tuple[str, object, ShareGrant]]:
+    """Return every pending grant the user can currently approve."""
+    rows: list[tuple[str, object, ShareGrant]] = []
+    for entity_type, (app_label, model_name) in ENTITY_TYPE_TO_MODEL.items():
+        try:
+            model_cls = apps.get_model(app_label, model_name)
+        except LookupError:
+            continue
+
+        resources = list(get_reviewable_qs(user, model_cls))
+        resources_by_id = {resource.pk: resource for resource in resources}
+        if not resources_by_id:
+            continue
+
+        content_type = ContentType.objects.get_for_model(model_cls)
+        grants = (
+            ShareGrant.objects.filter(
+                content_type=content_type,
+                object_id__in=resources_by_id.keys(),
+            )
+            .pending()
+            .select_related(
+                'content_type',
+                'created_by',
+                'submitted_by',
+                'target_user',
+                'target_group',
+            )
+        )
+        for grant in grants:
+            if can_approve_grant(user, grant):
+                rows.append(
+                    (entity_type, resources_by_id[grant.object_id], grant)
+                )
+    return rows
 
 
 # ============================================================================

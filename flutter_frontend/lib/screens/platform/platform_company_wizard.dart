@@ -1,3 +1,7 @@
+// === WIZARD TẠO CÔNG TY (nhiều bước) ===
+// Dialog nhiều bước: thông tin công ty (_buildCompanyInfoStep) -> nhóm (_buildGroupStep) -> nhân viên (_buildEmployeeStep, _EmployeeDialog) -> xem lại (_buildReviewStep).
+// - _validateCurrentStep kiểm tra trước khi sang bước (_continue/_back).
+
 import 'package:flutter/material.dart';
 
 Future<Map<String, dynamic>?> showPlatformCompanyWizard(BuildContext context) {

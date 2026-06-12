@@ -4,6 +4,8 @@ from rest_framework import serializers
 from accounts.models import CompanyAIConfig, CompanyPosition, Department, UserGroup, UserGroupMembership
 
 
+# class CompanyAdminUserSerializer là serializer định nghĩa dữ liệu vào/ra (CompanyAdminUser).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class CompanyAdminUserSerializer(serializers.ModelSerializer):
     username = serializers.SerializerMethodField()
     technical_username = serializers.CharField(source='username', read_only=True)
@@ -11,6 +13,8 @@ class CompanyAdminUserSerializer(serializers.ModelSerializer):
     groups = serializers.SerializerMethodField()
     company_role = serializers.SerializerMethodField()
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         model = User
         fields = (
@@ -29,16 +33,22 @@ class CompanyAdminUserSerializer(serializers.ModelSerializer):
             'date_joined',
         )
 
+    # def get_username để lấy username (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_username(self, obj):
         membership = getattr(obj, 'company_membership', None)
         return membership.local_username if membership else obj.username
 
+    # def get_chuc_danh để lấy chuc danh (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_chuc_danh(self, obj):
         try:
             return obj.profile.chuc_danh
         except Exception:
             return ''
 
+    # def get_groups để lấy groups (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_groups(self, obj):
         memberships = obj.group_memberships.select_related('group').all()
         company = self.context.get('company')
@@ -49,16 +59,22 @@ class CompanyAdminUserSerializer(serializers.ModelSerializer):
             for membership in memberships
         ]
 
+    # def get_company_role để lấy company role (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_company_role(self, obj):
         membership = getattr(obj, 'company_membership', None)
         return getattr(membership, 'role', None)
 
 
+# class CompanyAdminGroupSerializer là serializer định nghĩa dữ liệu vào/ra (CompanyAdminGroup).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class CompanyAdminGroupSerializer(serializers.ModelSerializer):
     member_count = serializers.SerializerMethodField()
     document_count = serializers.SerializerMethodField()
     template_count = serializers.SerializerMethodField()
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         model = UserGroup
         fields = (
@@ -71,22 +87,34 @@ class CompanyAdminGroupSerializer(serializers.ModelSerializer):
             'created_at',
         )
 
+    # def get_member_count để lấy member count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_member_count(self, obj):
         return obj.memberships.count()
 
+    # def get_document_count để lấy document count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_document_count(self, obj):
         return obj.documents.count()
 
+    # def get_template_count để lấy template count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_template_count(self, obj):
         return obj.templates.count()
 
 
+# class CompanyAdminGroupDetailSerializer là serializer định nghĩa dữ liệu vào/ra (CompanyAdminGroupDetail).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class CompanyAdminGroupDetailSerializer(CompanyAdminGroupSerializer):
     members = serializers.SerializerMethodField()
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta(CompanyAdminGroupSerializer.Meta):
         fields = CompanyAdminGroupSerializer.Meta.fields + ('members',)
 
+    # def get_members để lấy members (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_members(self, obj):
         memberships = obj.memberships.select_related('user').all()
         return [
@@ -100,7 +128,11 @@ class CompanyAdminGroupDetailSerializer(CompanyAdminGroupSerializer):
         ]
 
 
+# class CompanyAIConfigSerializer là serializer định nghĩa dữ liệu vào/ra (CompanyAIConfig).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class CompanyAIConfigSerializer(serializers.ModelSerializer):
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         model = CompanyAIConfig
         fields = (
@@ -117,13 +149,19 @@ class CompanyAIConfigSerializer(serializers.ModelSerializer):
             'updated_at',
         )
 
+    # def validate_chat_ai_model để kiểm tra hợp lệ chat ai model (trong serializer).
+    # vd: dữ liệu sai -> báo lỗi/False; hợp lệ -> True hoặc giá trị đã chuẩn hóa.
     def validate_chat_ai_model(self, value):
         return str(value or '').strip()
 
 
+# class CompanyAdminDepartmentSerializer là serializer định nghĩa dữ liệu vào/ra (CompanyAdminDepartment).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class CompanyAdminDepartmentSerializer(serializers.ModelSerializer):
     member_count = serializers.SerializerMethodField()
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         model = Department
         fields = (
@@ -136,13 +174,19 @@ class CompanyAdminDepartmentSerializer(serializers.ModelSerializer):
             'created_at',
         )
 
+    # def get_member_count để lấy member count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_member_count(self, obj):
         return obj.memberships.filter(is_active=True).count()
 
 
+# class CompanyAdminPositionSerializer là serializer định nghĩa dữ liệu vào/ra (CompanyAdminPosition).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class CompanyAdminPositionSerializer(serializers.ModelSerializer):
     user_count = serializers.SerializerMethodField()
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         model = CompanyPosition
         fields = (
@@ -155,5 +199,7 @@ class CompanyAdminPositionSerializer(serializers.ModelSerializer):
             'created_at',
         )
 
+    # def get_user_count để lấy user count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_user_count(self, obj):
         return obj.company.profiles.filter(chuc_danh__iexact=obj.name).count()

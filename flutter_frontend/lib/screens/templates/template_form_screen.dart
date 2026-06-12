@@ -1,8 +1,8 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH TẠO / SỬA MẪU VĂN BẢN ===
+// Form: tiêu đề/mô tả/nội dung HOẶC upload DOCX (_buildDocxFormData / thay DOCX 'replace-docx/'), danh mục, phạm vi private/group/public (thành viên nhóm 'group-members/'), tags (sinh tự động 'generate-tags/').
+// - Xem trước PDF ('preview-pdf/' auto-reload), xuất file ('export/'); _save POST/PUT 'templates/' rồi mở /templates/<id>; có lối mở sửa thủ công Collabora (/manual-edit).
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:html' as html;
@@ -25,17 +25,11 @@ import '../../widgets/ai/save_prompt_dialog.dart';
 import '../../widgets/pdf/web_pdf_frame.dart';
 import '../../widgets/sharing/unified_share_sheet.dart';
 
-// Mục đích: Lớp `_CreateMode` triển khai phần việc `Create Mode` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Chế độ tạo mẫu: nhập tay / upload DOCX / upload DOCX kèm nhận diện biến.
 
 enum _CreateMode { manual, uploadDocx, uploadDocxDetect }
 
-// Mục đích: Lớp `_GroupMemberOption` triển khai phần việc `Group Member Option` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Mục 1 thành viên nhóm (cho chọn đối tượng chia sẻ).
 
 class _GroupMemberOption {
   final int id;
@@ -63,10 +57,7 @@ class _GroupMemberOption {
       );
 }
 
-// Mục đích: Widget `TemplateFormScreen` triển khai phần việc `Template Form Screen` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn TẠO / SỬA MẪU VĂN BẢN.
 
 class TemplateFormScreen extends ConsumerStatefulWidget {
   final int? id;
@@ -84,10 +75,7 @@ class TemplateFormScreen extends ConsumerStatefulWidget {
   ConsumerState<TemplateFormScreen> createState() => _TemplateFormScreenState();
 }
 
-// Mục đích: Widget `_TemplateFormScreenState` triển khai phần việc `Template Form Screen State` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State form mẫu: controller các trường, chọn DOCX, biến, phạm vi chia sẻ, editor nội dung.
 
 class _TemplateFormScreenState extends ConsumerState<TemplateFormScreen> {
   final _formKey = GlobalKey<FormState>();
@@ -164,10 +152,7 @@ class _TemplateFormScreenState extends ConsumerState<TemplateFormScreen> {
   bool get _hasLocalDocxBytes =>
       _docxFileBytes != null && _docxFileBytes!.isNotEmpty;
 
-  // Mục đích: Phương thức `_clearDocxSelection` triển khai phần việc `clear Docx Selection` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Xóa file DOCX đang chọn (hủy upload).
 
   void _clearDocxSelection({bool clearStatus = false}) {
     _docxFileName = null;
@@ -180,10 +165,7 @@ class _TemplateFormScreenState extends ConsumerState<TemplateFormScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_effectiveDocxFilename` triển khai phần việc `effective Docx Filename` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Lấy tên file DOCX hiệu lực để hiển thị/gửi.
 
   String _effectiveDocxFilename([String? preferred]) {
     var filename =
@@ -231,10 +213,7 @@ class _TemplateFormScreenState extends ConsumerState<TemplateFormScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_resolveStoredDocxBytes` triển khai phần việc `resolve Stored Docx Bytes` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Lấy lại bytes DOCX đã lưu (khi sửa mẫu có sẵn file).
 
   Future<Uint8List?> _resolveStoredDocxBytes() async {
     if (_hasLocalDocxBytes) return _docxFileBytes;
@@ -254,10 +233,7 @@ class _TemplateFormScreenState extends ConsumerState<TemplateFormScreen> {
     return bytes;
   }
 
-  // Mục đích: Phương thức `_refreshTemplateCollections` triển khai phần việc `refresh Template Collections` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Làm mới danh sách mẫu sau khi lưu.
 
   void _refreshTemplateCollections([int? detailId]) {
     if (detailId != null) {
@@ -443,10 +419,7 @@ class _TemplateFormScreenState extends ConsumerState<TemplateFormScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_validateDateRange` triển khai phần việc `validate Date Range` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Kiểm khoảng ngày hiệu lực/hết hạn hợp lệ.
 
   bool _validateDateRange() {
     if (_effectiveDate != null &&
@@ -467,10 +440,7 @@ class _TemplateFormScreenState extends ConsumerState<TemplateFormScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở màn: khởi tạo form (chế độ tạo/sửa), nạp dữ liệu mẫu nếu sửa.
 
   void initState() {
     super.initState();
@@ -497,10 +467,7 @@ class _TemplateFormScreenState extends ConsumerState<TemplateFormScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Rời màn: giải phóng controller + editor.
 
   void dispose() {
     _editorMsgSub?.cancel();
@@ -515,10 +482,7 @@ class _TemplateFormScreenState extends ConsumerState<TemplateFormScreen> {
     super.dispose();
   }
 
-  // Mục đích: Phương thức `_maybeImportSourceFromUrl` triển khai phần việc `maybe Import Source From Url` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nếu có URL nguồn truyền vào -> tự nhập nội dung từ URL.
 
   void _maybeImportSourceFromUrl() {
     final sourceUrl = widget.sourceUrl?.trim();
@@ -536,10 +500,7 @@ class _TemplateFormScreenState extends ConsumerState<TemplateFormScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_importSourceFromUrl` triển khai phần việc `import Source From Url` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tải & nhập nội dung mẫu từ 1 URL nguồn.
 
   Future<void> _importSourceFromUrl(String sourceUrl) async {
     final sourceTitle = widget.sourceTitle?.trim();
@@ -647,10 +608,7 @@ class _TemplateFormScreenState extends ConsumerState<TemplateFormScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_onEditorLoaded` triển khai phần việc `on Editor Loaded` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khi editor nội dung (iframe) tải xong -> đổ nội dung hiện có vào.
 
   void _onEditorLoaded() {
     _editorReady = true;
@@ -663,10 +621,7 @@ class _TemplateFormScreenState extends ConsumerState<TemplateFormScreen> {
         ?.postMessage({'type': 'set-read-only', 'value': _editorReadOnly}, '*');
   }
 
-  // Mục đích: Phương thức `_setEditorContent` triển khai phần việc `set Editor Content` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đặt nội dung HTML cho editor.
 
   void _setEditorContent(String content) {
     _editorContentFallback = content;
@@ -678,10 +633,7 @@ class _TemplateFormScreenState extends ConsumerState<TemplateFormScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_setEditorReadOnly` triển khai phần việc `set Editor Read Only` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Bật/tắt chế độ chỉ đọc cho editor.
 
   void _setEditorReadOnly(bool value) {
     _editorReadOnly = value;
@@ -691,10 +643,7 @@ class _TemplateFormScreenState extends ConsumerState<TemplateFormScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_toEditorHtml` triển khai phần việc `to Editor Html` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Bọc nội dung thành HTML đầy đủ để nạp vào editor.
 
   String _toEditorHtml(String content) {
     final trimmed = content.trim();
@@ -719,10 +668,7 @@ class _TemplateFormScreenState extends ConsumerState<TemplateFormScreen> {
     return paragraphs.isNotEmpty ? paragraphs : '<p>$escaped</p>';
   }
 
-  // Mục đích: Phương thức `_handleEditorMessage` triển khai phần việc `handle Editor Message` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nhận message từ iframe editor (nội dung thay đổi/sự kiện).
 
   void _handleEditorMessage(html.MessageEvent event) {
     final data = event.data;
@@ -745,10 +691,7 @@ class _TemplateFormScreenState extends ConsumerState<TemplateFormScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_getContentHtml` triển khai phần việc `get Content Html` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Lấy nội dung HTML hiện tại từ editor (để lưu).
 
   Future<String> _getContentHtml() async {
     if (!_editorReady) return '';
@@ -1331,10 +1274,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
 
   // ── PREFILL (edit mode) ───────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_prefillFromTemplate` triển khai phần việc `prefill From Template` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đổ dữ liệu mẫu có sẵn vào form khi sửa.
 
   void _prefillFromTemplate(tmpl) {
     if (_initialized) return;
@@ -1370,10 +1310,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
     setState(() {});
   }
 
-  // Mục đích: Phương thức `_loadGroupMembers` triển khai phần việc `load Group Members` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nạp danh sách thành viên nhóm để chọn đối tượng chia sẻ ('group-members/').
 
   Future<void> _loadGroupMembers(int? groupId) async {
     if (groupId == null) {
@@ -1423,10 +1360,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
     }
   }
 
-  // Mục đích: Phương thức `_pickAudienceUsers` triển khai phần việc `pick Audience Users` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở hộp thoại chọn người dùng cụ thể được chia sẻ.
 
   // ignore: unused_element
   Future<void> _pickAudienceUsers() async {
@@ -1546,10 +1480,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
 
   // ── AUTO-GENERATE TAGS ────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_generateTags` triển khai phần việc `generate Tags` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút Sinh tag tự động: gọi AI tạo tag từ nội dung ('generate-tags/').
 
   Future<void> _generateTags() async {
     final id = _templateIdForTagGen ?? widget.id;
@@ -1604,10 +1535,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
 
   // ── REPLACE WITH DOCX (edit mode) ────────────────────────────────────────
 
-  // Mục đích: Phương thức `_replaceWithDocx` triển khai phần việc `replace With Docx` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Thay file DOCX của mẫu bằng file mới ('replace-docx/').
 
   Future<void> _replaceWithDocx() async {
     final id = widget.id;
@@ -1729,10 +1657,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
 
   // ── DATE PICKER ───────────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_pickDate` triển khai phần việc `pick Date` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở lịch chọn ngày hiệu lực/hết hạn.
 
   Future<void> _pickDate({required bool isEffective}) async {
     final now = DateTime.now();
@@ -1761,10 +1686,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
     }
   }
 
-  // Mục đích: Phương thức `_showStyledDatePicker` triển khai phần việc `show Styled Date Picker` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Hiển thị lịch chọn ngày tùy biến giao diện.
 
   Future<DateTime?> _showStyledDatePicker({
     required BuildContext context,
@@ -1940,10 +1862,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
     );
   }
 
-  // Mục đích: Phương thức `_buildDateField` triển khai phần việc `build Date Field` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng ô chọn ngày (hiệu lực/hết hạn).
 
   Widget _buildDateField({
     required String label,
@@ -2094,10 +2013,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
     );
   }
 
-  // Mục đích: Phương thức `_pickAndImportDocx` triển khai phần việc `pick And Import Docx` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Chọn file DOCX và nhập làm nội dung mẫu.
 
   Future<void> _pickAndImportDocx() async {
     final result = await FilePicker.platform.pickFiles(
@@ -2212,10 +2128,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
 
   // ── INSERT VARIABLE ───────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_insertVariable` triển khai phần việc `insert Variable` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Chèn 1 biến {{...}} vào nội dung mẫu tại con trỏ.
 
   Future<void> _insertVariable() async {
     final ctrl = TextEditingController();
@@ -2272,10 +2185,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
 
   // ── SAVE ──────────────────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_save` triển khai phần việc `save` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút Lưu: tạo/cập nhật mẫu (POST/PUT 'templates/') rồi mở chi tiết.
 
   Future<void> _save() async {
     setState(() => _loading = true);
@@ -2450,10 +2360,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
     }
   }
 
-  // Mục đích: Phương thức `_saveAsCopy` triển khai phần việc `save As Copy` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút Lưu thành bản sao: tạo mẫu mới từ nội dung hiện tại.
 
   Future<void> _saveAsCopy() async {
     if (!_validateDateRange()) return;
@@ -2598,10 +2505,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
     }
   }
 
-  // Mục đích: Phương thức `_delete` triển khai phần việc `delete` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút Xóa: xóa mẫu (có xác nhận).
 
   Future<void> _delete() async {
     final ok = await showDialog<bool>(
@@ -2643,10 +2547,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
   // ── BUILD ─────────────────────────────────────────────────────────────────
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khung màn form (chọn chế độ tạo + bố cục rộng/hẹp).
 
   Widget build(BuildContext context) {
     if (widget.id != null) {
@@ -2672,10 +2573,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
     return _buildScaffold(context);
   }
 
-  // Mục đích: Phương thức `_buildScaffold` triển khai phần việc `build Scaffold` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng scaffold form (AppBar + thân theo bố cục).
 
   Widget _buildScaffold(BuildContext context, {dynamic tmpl}) {
     final isEdit = widget.id != null;
@@ -2728,10 +2626,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
     );
   }
 
-  // Mục đích: Phương thức `_buildWideLayout` triển khai phần việc `build Wide Layout` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Bố cục rộng: 2 cột (nội dung + thiết lập).
 
   Widget _buildWideLayout(BuildContext context, bool isEdit, {dynamic tmpl}) {
     final settingsCard =
@@ -2746,10 +2641,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
     );
   }
 
-  // Mục đích: Phương thức `_buildNarrowLayout` triển khai phần việc `build Narrow Layout` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Bố cục hẹp: 1 cột xếp dọc.
 
   Widget _buildNarrowLayout(BuildContext context, bool isEdit, {dynamic tmpl}) {
     return Column(
@@ -2764,10 +2656,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
 
   // ── CREATE MODE SELECTOR ──────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_buildModeSelector` triển khai phần việc `build Mode Selector` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khối chọn chế độ tạo mẫu (nhập tay/upload DOCX...).
 
   Widget _buildModeSelector() {
     return Column(
@@ -2840,11 +2729,6 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
       ],
     );
   }
-
-  // Mục đích: Phương thức `_buildDocxImportArea` triển khai phần việc `build Docx Import Area` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
 
   // Ô nhập prompt tùy chỉnh giúp AI nhận diện biến tốt hơn (phải nhập TRƯỚC khi chọn file).
   Widget _buildDetectionPromptSection() {
@@ -3082,10 +2966,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
 
   // ── MAIN FIELDS ───────────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_buildSourceImportArea` triển khai phần việc `build Source Import Area` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khối nhập nội dung từ URL/nguồn ngoài.
 
   Widget _buildSourceImportArea() {
     final hasSourceUrl = (widget.sourceUrl ?? '').trim().isNotEmpty;
@@ -3205,10 +3086,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
     );
   }
 
-  // Mục đích: Phương thức `_buildMainFields` triển khai phần việc `build Main Fields` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khối các trường chính: tiêu đề, mô tả, danh mục, phạm vi.
 
   Widget _buildMainFields(BuildContext context, bool isEdit, {dynamic tmpl}) {
     return Column(
@@ -3395,10 +3273,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
 
   // ── CONTENT EDITOR (rich text via iframe) ────────────────────────────────
 
-  // Mục đích: Phương thức `_buildContentEditor` triển khai phần việc `build Content Editor` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khối editor nội dung mẫu (iframe).
 
   Widget _buildContentEditor() {
     final editorFrame = ClipRRect(
@@ -3455,10 +3330,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
 
   // ── VARIABLES PANEL ───────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_buildVarsPanel` triển khai phần việc `build Vars Panel` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Panel danh sách biến của mẫu + nút chèn biến.
 
   Widget _buildVarsPanel() {
     return AnimatedContainer(
@@ -3526,10 +3398,7 @@ body { font-family: 'Times New Roman', serif; display: flex; flex-direction: col
 
   // ── SETTINGS CARD ─────────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_buildSettingsCard` triển khai phần việc `build Settings Card` trong flutter_frontend/lib/screens/templates/template_form_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khối thẻ thiết lập mẫu (danh mục, ngày hiệu lực, phạm vi chia sẻ).
 
   // ── KHOI CHIA SE THONG NHAT (Phase 3 sharing roadmap) ──
   // Phai duoc UnifiedShareSheet (cho edit mode) hoac info card (cho create mode).

@@ -3,13 +3,19 @@ from django.db.models import Q
 from django.utils import timezone
 
 
+# class Command là lệnh quản trị 'backfill_prompt_snapshot': tạo applied_prompt_snapshot cho các Document cũ (đã gắn prompt nhưng chưa lưu snapshot prompt tại thời điểm tạo).
+# vd: python manage.py backfill_prompt_snapshot.
 class Command(BaseCommand):
     help = 'Backfill Document.applied_prompt_snapshot tu Prompt cu cho cac Document chua co snapshot.'
 
+    # def add_arguments khai báo --batch và --dry-run.
+    # vd: --dry-run -> chỉ đếm số document cần backfill, không ghi.
     def add_arguments(self, parser):
         parser.add_argument('--batch', type=int, default=500)
         parser.add_argument('--dry-run', action='store_true')
 
+    # def handle tìm Document có prompt nhưng snapshot rỗng, rồi chụp lại nội dung prompt (title, system/rules, raw text, safety...) vào applied_prompt_snapshot để giữ vết bất biến; --dry-run thì không ghi.
+    # vd: doc #70 gắn prompt #5 chưa có snapshot -> lưu snapshot nội dung prompt #5 vào doc.
     def handle(self, *args, **options):
         from documents.models import Document
 

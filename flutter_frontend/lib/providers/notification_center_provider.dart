@@ -1,16 +1,10 @@
-// Trung tâm thông báo (client-side) cho các badge "cần xử lý":
-//   - Chia sẻ chờ duyệt, Yêu cầu ký, Đề xuất ký, Hòm thư ký số.
-//
-// Cơ chế "đã đọc" theo MỐC ĐÃ XEM (last-seen): lưu một mốc số lượng (ack) cho
-// mỗi mục trong SharedPreferences. Badge hiển thị = max(0, số hiện tại - ack).
-// Bấm "đã đọc" (hoặc mở đúng màn của mục đó) -> ack = số hiện tại -> badge về 0.
-// Khi có mục MỚI (số hiện tại tăng vượt ack) -> badge lại hiện phần chênh lệch.
+import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'sharing_provider.dart';
-import 'signing_summary_provider.dart';
+import '../core/api_client.dart';
+import 'auth_provider.dart';
 
 const String kNotifShareApprovals = 'share_approvals';
 const String kNotifSigningTasks = 'signing_tasks';
@@ -25,10 +19,10 @@ const List<String> kNotifCategories = [
 ];
 
 String notifCategoryLabel(String key) => switch (key) {
-      kNotifShareApprovals => 'Chia sẻ chờ duyệt',
-      kNotifSigningTasks => 'Yêu cầu ký',
-      kNotifSigningProposals => 'Đề xuất ký',
-      kNotifMailbox => 'Hòm thư ký số',
+      kNotifShareApprovals => 'Chia se cho duyet',
+      kNotifSigningTasks => 'Yeu cau ky',
+      kNotifSigningProposals => 'De xuat ky',
+      kNotifMailbox => 'Hom thu ky so',
       _ => key,
     };
 
@@ -40,84 +34,185 @@ String notifCategoryRoute(String key) => switch (key) {
       _ => '/',
     };
 
-/// Map route -> category (để app_shell tự đánh dấu đã đọc khi mở màn).
 String? notifCategoryForRoute(String route) {
-  for (final key in kNotifCategories) {
-    if (notifCategoryRoute(key) == route) return key;
+  if (route.startsWith('/sharing/pending')) return kNotifShareApprovals;
+  if (route.startsWith('/signing/tasks')) return kNotifSigningTasks;
+  if (route.startsWith('/signing/proposals/review')) {
+    return kNotifSigningProposals;
   }
+  if (route.startsWith('/mailbox')) return kNotifMailbox;
   return null;
 }
 
-int notifUnread(int current, int ack) {
-  final u = current - ack;
-  return u < 0 ? 0 : u;
+String? notifCategoryForSourceType(String sourceType) => switch (sourceType) {
+      'share_approval' => kNotifShareApprovals,
+      'signing_task' => kNotifSigningTasks,
+      'signing_proposal_pending' => kNotifSigningProposals,
+      'mailbox_pending' => kNotifMailbox,
+      _ => null,
+    };
+
+class NotificationQueueSnapshot {
+  final Map<String, Set<String>> ids;
+  final Map<String, String> signatures;
+
+  const NotificationQueueSnapshot({
+    required this.ids,
+    required this.signatures,
+  });
+
+  factory NotificationQueueSnapshot.fromPayload(List<dynamic> payload) {
+    final ids = {
+      for (final category in kNotifCategories) category: <String>[],
+    };
+    for (final raw in payload) {
+      final item = Map<String, dynamic>.from(raw as Map);
+      final category =
+          notifCategoryForSourceType((item['source_type'] ?? '').toString());
+      if (category == null) continue;
+      ids[category]!.add(
+        '${item['source_type']}:${item['source_id']}',
+      );
+    }
+
+    final signatures = <String, String>{};
+    for (final category in kNotifCategories) {
+      final categoryIds = ids[category]!..sort();
+      signatures[category] = categoryIds.join('|');
+    }
+    return NotificationQueueSnapshot(
+      ids: {
+        for (final category in kNotifCategories)
+          category: ids[category]!.toSet(),
+      },
+      signatures: signatures,
+    );
+  }
 }
 
-/// Số lượng hiện tại (raw) mỗi mục, lấy từ các provider đếm sẵn có.
-final notificationCurrentCountsProvider = Provider<Map<String, int>>((ref) {
-  final share = ref.watch(sharingPendingCountProvider).asData?.value ?? 0;
-  final signing = ref.watch(signingSummaryProvider).asData?.value;
-  int sv(dynamic v) => (v is int) ? v : 0;
-  return {
-    kNotifShareApprovals: share,
-    kNotifSigningTasks: sv(signing?.tasksAvailable),
-    kNotifSigningProposals: sv(signing?.hrPendingProposals),
-    kNotifMailbox: sv(signing?.mailboxPendingThreads),
-  };
+final notificationQueueSnapshotProvider =
+    StreamProvider.autoDispose<NotificationQueueSnapshot>((ref) {
+  final controller = StreamController<NotificationQueueSnapshot>();
+  const refreshInterval = Duration(seconds: 5);
+
+  Timer? timer;
+  var disposed = false;
+  var inFlight = false;
+  NotificationQueueSnapshot? latest;
+
+  Future<void> refresh() async {
+    if (disposed || inFlight) return;
+    inFlight = true;
+    try {
+      final response = await ApiClient().dio.get(
+        'notifications/aggregate/',
+        queryParameters: const {
+          'actionable_only': true,
+          'limit': 100,
+        },
+      );
+      latest = NotificationQueueSnapshot.fromPayload(
+        response.data as List<dynamic>,
+      );
+      if (!disposed) controller.add(latest!);
+    } catch (error, stackTrace) {
+      if (disposed) return;
+      if (latest != null) {
+        controller.add(latest!);
+      } else {
+        controller.addError(error, stackTrace);
+      }
+    } finally {
+      inFlight = false;
+    }
+  }
+
+  Future.microtask(refresh);
+  timer = Timer.periodic(refreshInterval, (_) => refresh());
+  ref.onDispose(() {
+    disposed = true;
+    timer?.cancel();
+    controller.close();
+  });
+  return controller.stream;
 });
 
-/// Mốc đã xem (ack) mỗi mục, lưu bền trong SharedPreferences.
-class NotificationAckNotifier extends Notifier<Map<String, int>> {
-  static const _prefix = 'notif_ack_';
-  SharedPreferences? _prefs;
+class NotificationQueueAckNotifier extends Notifier<Map<String, String>> {
+  static const _prefix = 'notification_queue_ack';
+  String _userScope = 'anonymous';
 
   @override
-  Map<String, int> build() {
-    _load();
-    return {for (final k in kNotifCategories) k: 0};
+  Map<String, String> build() {
+    final scope = ref.watch(
+      currentUserProvider.select(
+        (user) => user == null
+            ? null
+            : '${user.id}_${user.company?.id ?? 0}',
+      ),
+    );
+    _userScope = scope ?? 'anonymous';
+    _load(_userScope);
+    return const {};
   }
 
-  Future<void> _load() async {
-    _prefs = await SharedPreferences.getInstance();
-    state = {
-      for (final k in kNotifCategories) k: _prefs!.getInt('$_prefix$k') ?? 0,
+  Future<void> _load(String scope) async {
+    final preferences = await SharedPreferences.getInstance();
+    if (scope != _userScope) return;
+    final loaded = {
+      for (final category in kNotifCategories)
+        category:
+            preferences.getString('${_prefix}_${scope}_$category') ?? '',
     };
+    state = {...loaded, ...state};
   }
 
-  Future<void> markRead(String category, int currentCount) async {
-    _prefs ??= await SharedPreferences.getInstance();
-    await _prefs!.setInt('$_prefix$category', currentCount);
-    state = {...state, category: currentCount};
+  Future<void> markRead(String category, String signature) async {
+    state = {...state, category: signature};
+    final scope = _userScope;
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(
+      '${_prefix}_${scope}_$category',
+      signature,
+    );
   }
 
-  Future<void> markAllRead(Map<String, int> currentCounts) async {
-    _prefs ??= await SharedPreferences.getInstance();
-    final Map<String, int> next = {...state};
-    for (final entry in currentCounts.entries) {
-      await _prefs!.setInt('$_prefix${entry.key}', entry.value);
-      next[entry.key] = entry.value;
+  Future<void> markAllRead(NotificationQueueSnapshot snapshot) async {
+    state = {...state, ...snapshot.signatures};
+    final scope = _userScope;
+    final preferences = await SharedPreferences.getInstance();
+    for (final category in kNotifCategories) {
+      await preferences.setString(
+        '${_prefix}_${scope}_$category',
+        snapshot.signatures[category] ?? '',
+      );
     }
-    state = next;
   }
 }
 
-final notificationAckProvider =
-    NotifierProvider<NotificationAckNotifier, Map<String, int>>(
-  NotificationAckNotifier.new,
+final notificationQueueAckProvider =
+    NotifierProvider<NotificationQueueAckNotifier, Map<String, String>>(
+  NotificationQueueAckNotifier.new,
 );
 
-/// Số "chưa đọc" mỗi mục = max(0, hiện tại - ack).
-final notificationUnreadByCategoryProvider = Provider<Map<String, int>>((ref) {
-  final current = ref.watch(notificationCurrentCountsProvider);
-  final ack = ref.watch(notificationAckProvider);
+final notificationUnreadByCategoryProvider =
+    Provider<Map<String, int>>((ref) {
+  final snapshot = ref.watch(notificationQueueSnapshotProvider).asData?.value;
+  if (snapshot == null) {
+    return {for (final category in kNotifCategories) category: 0};
+  }
+  final acknowledged = ref.watch(notificationQueueAckProvider);
   return {
-    for (final k in kNotifCategories)
-      k: notifUnread(current[k] ?? 0, ack[k] ?? 0),
+    for (final category in kNotifCategories) category: () {
+      final acknowledgedIds = (acknowledged[category] ?? '')
+          .split('|')
+          .where((id) => id.isNotEmpty)
+          .toSet();
+      return snapshot.ids[category]!.difference(acknowledgedIds).length;
+    }(),
   };
 });
 
-/// Tổng số chưa đọc của tất cả mục cần xử lý.
 final notificationTotalUnreadProvider = Provider<int>((ref) {
   final unread = ref.watch(notificationUnreadByCategoryProvider);
-  return unread.values.fold<int>(0, (sum, v) => sum + v);
+  return unread.values.fold<int>(0, (sum, value) => sum + value);
 });

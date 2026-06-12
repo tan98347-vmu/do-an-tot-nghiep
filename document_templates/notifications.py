@@ -10,6 +10,8 @@ from django.utils import timezone
 
 from .models import TemplateReviewNotification
 
+# def create_template_review_notification tạo thông báo duyệt mẫu gửi cho chủ mẫu (owner) khi có hành động (duyệt/từ chối/yêu cầu sửa...); bỏ qua nếu actor chính là owner.
+# vd: trưởng nhóm từ chối mẫu -> tạo thông báo 'rejected' cho owner.
 def create_template_review_notification(template, *, action, actor=None, comment=''):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -32,6 +34,8 @@ def create_template_review_notification(template, *, action, actor=None, comment
         comment=comment or '',
     )
 
+# def mark_template_notifications_read đánh dấu đã đọc các thông báo duyệt của 1 mẫu cho 1 người nhận; trả số bản ghi đã cập nhật.
+# vd: owner mở mẫu #5 -> các thông báo của mẫu #5 chuyển is_read=True.
 def mark_template_notifications_read(*, recipient, template_id):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).

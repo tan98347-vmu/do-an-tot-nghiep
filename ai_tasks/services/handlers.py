@@ -1,6 +1,8 @@
 """r3/M6 + r5 — Register cac task kind cho dispatch_task.
 
 Cac handler nhe tai day; logic nang van nam o module nghiep vu, handler chi orchestrate.
+
+note: file này hiện không phân luồng tác vụ UI thực tế nào và gần như là code chưa được sử dụng trong production flow.
 """
 
 from __future__ import annotations
@@ -19,12 +21,16 @@ log = logging.getLogger(__name__)
 
 
 # --- echo (smoke test) ---
+# def _echo_handler là handler smoke-test: cập nhật tiến độ rồi hoàn tất với chính payload (echo).
+# vd: payload={'x':1} -> result={'echo':{'x':1}}.
 def _echo_handler(task: AITaskProgress, payload: dict) -> None:
     update_task_progress(task.task_id, percent=50, stage='echo', detail='processing')
     complete_task(task.task_id, result={'echo': payload})
 
 
 # --- company_backup_export (r5/M10) ---
+# def _company_backup_export_handler là handler chạy pipeline xuất backup công ty chạy ngầm (đồng bộ trong handler để báo tiến độ).
+# vd: payload={'company_id':1,'components':[...],'kind':'manual'} -> tạo backup và trả backup_id.
 def _company_backup_export_handler(task: AITaskProgress, payload: dict) -> None:
     """Pipeline backup chay ngam.
 
@@ -79,6 +85,8 @@ _DEFAULT_HANDLERS = {
 }
 
 
+# def install_handlers để đăng ký toàn bộ handler mặc định (idempotent), gọi ở app ready().
+# vd: gọi 1 lần khi khởi động -> 'echo' và 'company_backup_export' sẵn sàng nhận dispatch.
 def install_handlers() -> None:
     """Register tat ca handler. Idempotent."""
     for kind, fn in _DEFAULT_HANDLERS.items():

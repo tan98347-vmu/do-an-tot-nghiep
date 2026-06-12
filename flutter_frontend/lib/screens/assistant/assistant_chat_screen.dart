@@ -1,8 +1,9 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH CHAT AI (trợ lý văn bản) ===
+// Hội thoại với trợ lý: sidebar phiên (_loadSessions 'assistant/sessions/'), _loadMessages, gửi câu hỏi async (_send -> 'assistant/turn-async/', theo dõi tiến độ qua aiTaskProgressProvider).
+// - Trợ lý có thể sinh văn bản / hỏi mẫu-tài liệu / chuẩn bị ký nhanh -> _applyAssistantTaskResult mở /documents/<id>, /templates/<id> hoặc chuyển RAG (_fallbackRagRoute).
+// - Chọn/lưu prompt (_pickChatSavedPrompt/_saveChatPrompt), đổi model (chatAiModelProvider); link sang voice (/chat/voice).
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
 import 'dart:html' as html;
 
 import 'package:dio/dio.dart';
@@ -15,6 +16,7 @@ import '../../core/api_client.dart';
 import '../../core/conversation_bootstrap.dart';
 import '../../l10n/app_strings.dart';
 import '../../models/ai_task_state.dart';
+import '../../models/assistant_quick_sign.dart';
 import '../../models/chat.dart';
 import '../../providers/ai_task_progress_provider.dart';
 import '../../providers/chat_ai_model_provider.dart';
@@ -27,10 +29,7 @@ import '../../widgets/ai/prefill_toggle_row.dart';
 import '../../widgets/ai_loading/ai_task_circular_progress.dart';
 import '../../widgets/tasks/task_done_popup.dart';
 
-// Mục đích: Widget `AssistantChatScreen` triển khai phần việc `Assistant Chat Screen` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn CHATAI VĂN BẢN (StatefulWidget).
 
 class AssistantChatScreen extends StatefulWidget {
   final int? conversationId;
@@ -44,10 +43,7 @@ class AssistantChatScreen extends StatefulWidget {
   State<AssistantChatScreen> createState() => _AssistantChatScreenState();
 }
 
-// Mục đích: Widget `_AssistantChatScreenState` triển khai phần việc `Assistant Chat Screen State` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn chat: phiên hội thoại, tin nhắn, tác vụ AI, điều hướng theo kết quả.
 
 class _AssistantChatScreenState extends State<AssistantChatScreen> {
   static const _featureKey = ConversationBootstrapStore.assistantTextFeature;
@@ -75,20 +71,14 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở màn: nạp phiên hội thoại gần nhất.
 
   void initState() {
     super.initState();
     _loadSessions(preferredSessionId: widget.conversationId);
   }
 
-  // Mục đích: Phương thức `_loadSessions` triển khai phần việc `load Sessions` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nạp danh sách phiên chat (ưu tiên 1 phiên cụ thể nếu có).
 
   Future<void> _loadSessions({int? preferredSessionId}) async {
     if (!mounted) return;
@@ -151,10 +141,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_loadMessages` triển khai phần việc `load Messages` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nạp tin nhắn của 1 phiên chat.
 
   Future<void> _loadMessages(int sessionId) async {
     if (!mounted) return;
@@ -191,10 +178,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_newConversation` triển khai phần việc `new Conversation` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút Trò chuyện mới: tạo phiên chat mới.
 
   Future<void> _newConversation() async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -209,10 +193,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
     await ConversationBootstrapStore.rememberSession(_featureKey, null);
   }
 
-  // Mục đích: Phương thức `_openHistoryManager` triển khai phần việc `open History Manager` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở trình quản lý lịch sử chat (đổi tên/xóa phiên).
 
   Future<void> _openHistoryManager() async {
     final strings = AppStrings.of(context);
@@ -475,10 +456,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_send` triển khai phần việc `send` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Xử lý kết quả tác vụ trợ lý: hiển thị trả lời + điều hướng/thẻ hành động (RAG/ký nhanh...).
 
   void _applyAssistantTaskResult(Map<String, dynamic> result) {
     final rawSession = result['session'];
@@ -729,10 +707,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_fallbackRagRoute` triển khai phần việc `fallback Rag Route` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Suy ra route RAG dự phòng từ payload kết quả.
 
   String _fallbackRagRoute(Map<String, dynamic> payload) {
     final assistantSessionId =
@@ -754,10 +729,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
     return uri.toString();
   }
 
-  // Mục đích: Phương thức `_readableError` triển khai phần việc `readable Error` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đổi lỗi thành thông điệp dễ đọc.
 
   String _readableError(Object error) {
     final strings = AppStrings.of(context);
@@ -773,20 +745,14 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
     return strings.pick('Đã xảy ra lỗi: $error', 'An error occurred: $error');
   }
 
-  // Mục đích: Phương thức `_showError` triển khai phần việc `show Error` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Hiện thông báo lỗi.
 
   void _showError(String message) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  // Mục đích: Phương thức `_scrollToBottom` triển khai phần việc `scroll To Bottom` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Cuộn khung chat xuống cuối (tin mới nhất).
 
   void _scrollToBottom({bool jump = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -802,10 +768,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khung màn chat: chọn bố cục mobile/desktop.
 
   Widget build(BuildContext context) {
     final isWide = MediaQuery.sizeOf(context).width >= 1100;
@@ -837,10 +800,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_buildMobileLayout` triển khai phần việc `build Mobile Layout` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Bố cục mobile: hội thoại toàn màn + ngăn kéo lịch sử.
 
   Widget _buildMobileLayout(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -1137,10 +1097,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_buildConversation` triển khai phần việc `build Conversation` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khung hội thoại: danh sách tin nhắn + ô nhập + nút gửi.
 
   Widget _buildConversation(BuildContext context, {bool showHeader = true}) {
     final strings = AppStrings.of(context);
@@ -1386,10 +1343,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Rời màn: dọn controller + tài nguyên.
 
   void dispose() {
     _composerCtrl.dispose();
@@ -1399,10 +1353,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
   }
 }
 
-// Mục đích: Lớp `_Sidebar` triển khai phần việc `Sidebar` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Thanh bên: danh sách phiên chat + nút tạo mới (ConsumerWidget).
 
 class _Sidebar extends ConsumerWidget {
   final List<ChatSession> sessions;
@@ -1424,10 +1375,7 @@ class _Sidebar extends ConsumerWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng thanh bên danh sách phiên.
 
   Widget build(BuildContext context, WidgetRef ref) {
     final modelName =
@@ -1573,10 +1521,7 @@ class _Sidebar extends ConsumerWidget {
   }
 }
 
-// Mục đích: Lớp `_EmptyState` triển khai phần việc `Empty State` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Trạng thái trống khi chưa có tin nhắn.
 
 class _EmptyState extends StatelessWidget {
   final bool isCompact;
@@ -1594,10 +1539,7 @@ class _EmptyState extends StatelessWidget {
   ];
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng trạng thái trống (gợi ý bắt đầu chat).
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -1723,20 +1665,14 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_TypingCard` triển khai phần việc `Typing Card` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Thẻ hiệu ứng 'đang trả lời' khi AI đang sinh nội dung.
 
 // ignore: unused_element
 class _TypingCard extends ConsumerWidget {
   const _TypingCard();
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng thẻ đang gõ.
 
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = AppStrings.of(context);
@@ -1773,10 +1709,7 @@ class _TypingCard extends ConsumerWidget {
   }
 }
 
-// Mục đích: Lớp `_MessageCard` triển khai phần việc `Message Card` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Header hiển thị tác vụ AI đang chạy (tiến độ/hủy).
 
 class _PendingTaskHeader extends ConsumerWidget {
   final String taskId;
@@ -2046,10 +1979,7 @@ class _MessageCard extends StatelessWidget {
   const _MessageCard({required this.message});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng header tác vụ đang chạy.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -2155,6 +2085,14 @@ class _MessageCard extends StatelessWidget {
                     ]),
             ),
           ],
+          if (payload['kind'] == 'assistant_quick_sign_plan') ...[
+            const SizedBox(height: 16),
+            _buildQuickSignCard(context, payload, isCompact),
+          ],
+          if (payload['kind'] == 'recipient_resolution') ...[
+            const SizedBox(height: 16),
+            _buildRecipientResolutionCard(context, payload, isCompact),
+          ],
           if (message.citations.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text(
@@ -2173,10 +2111,290 @@ class _MessageCard extends StatelessWidget {
     );
   }
 
-  // Mục đích: Phương thức `_withAssistantReturn` triển khai phần việc `with Assistant Return` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng thẻ quick-sign trong chat text: hiển thị văn bản đã sinh + nút 'Mở văn bản' (đồng bộ màn Giọng nói AI).
+  Widget _buildQuickSignCard(
+    BuildContext context,
+    Map<String, dynamic> payload,
+    bool isCompact,
+  ) {
+    final strings = AppStrings.of(context);
+    final plan = AssistantQuickSignPlanAction.fromJson(payload);
+    final recipient = plan.recipient;
+    final route = plan.route.trim();
+    final title = plan.isCompleted
+        ? strings.pick('Quick-sign đã hoàn tất', 'Quick sign completed')
+        : plan.isPartial
+            ? strings.pick(
+                'Đã ký xong, cần gửi lại', 'Signed, forward retry needed')
+            : plan.isFailed
+                ? strings.pick('Quick-sign gặp lỗi', 'Quick sign failed')
+                : plan.isBlocked
+                    ? strings.pick(
+                        'Quick-sign chưa sẵn sàng', 'Quick sign is not ready')
+                    : strings.pick(
+                        'Quick-sign đã sẵn sàng', 'Quick sign is ready');
+    final summary = plan.blockingReason.trim().isNotEmpty
+        ? plan.blockingReason
+        : plan.lastErrorMessage.trim().isNotEmpty
+            ? plan.lastErrorMessage
+            : plan.message;
+    final icon = plan.isCompleted
+        ? Icons.verified_outlined
+        : plan.isPartial
+            ? Icons.forward_to_inbox_outlined
+            : plan.isFailed
+                ? Icons.error_outline
+                : plan.isBlocked
+                    ? Icons.lock_outline
+                    : Icons.bolt_outlined;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFDCE7F7)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: const Color(0xFF1D4ED8)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    if (summary.trim().isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        summary,
+                        style: const TextStyle(
+                          color: Color(0xFF475569),
+                          height: 1.45,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (recipient != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    strings.pick('Người nhận dự kiến', 'Planned recipient'),
+                    style: const TextStyle(
+                      color: Color(0xFF64748B),
+                      fontSize: 12.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    recipient.displayName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  if (recipient.subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      recipient.subtitle,
+                      style: const TextStyle(
+                        color: Color(0xFF475569),
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+          if (route.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.tonalIcon(
+                onPressed: () =>
+                    context.go(_withAssistantReturn(context, route)),
+                icon: const Icon(Icons.open_in_new),
+                label: Text(
+                  plan.isCompleted
+                      ? strings.pick('Mở văn bản', 'Open document')
+                      : strings.pick(
+                          'Mở văn bản để ký nhanh', 'Open document to sign'),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // Dựng thẻ xác nhận/đề xuất người nhận trong chat text (đồng bộ màn Giọng nói AI).
+  Widget _buildRecipientResolutionCard(
+    BuildContext context,
+    Map<String, dynamic> payload,
+    bool isCompact,
+  ) {
+    final strings = AppStrings.of(context);
+    final resolution = payload['recipient_resolution'] is Map
+        ? QuickSignRecipientResolution.fromJson(
+            Map<String, dynamic>.from(payload['recipient_resolution'] as Map),
+          )
+        : const QuickSignRecipientResolution(
+            status: 'not_found', recipient: null);
+    final prompt = (payload['clarification_prompt']?.toString() ??
+            payload['message']?.toString() ??
+            '')
+        .trim();
+    final isAmbiguous = resolution.status == 'ambiguous';
+    final candidates = resolution.candidates.take(isCompact ? 2 : 3).toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFDCE7F7)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                isAmbiguous
+                    ? Icons.help_outline
+                    : Icons.person_search_outlined,
+                color: const Color(0xFF1D4ED8),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isAmbiguous
+                          ? strings.pick('Cần xác nhận người nhận',
+                              'Recipient confirmation needed')
+                          : strings.pick('Chưa tìm thấy người nhận',
+                              'Recipient not found'),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    if (prompt.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        prompt,
+                        style: const TextStyle(
+                          color: Color(0xFF475569),
+                          height: 1.45,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (candidates.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            ...candidates.map(
+              (candidate) => Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      candidate.displayName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    if (candidate.subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        candidate.subtitle,
+                        style: const TextStyle(
+                          color: Color(0xFF475569),
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                    if (candidate.aliasSummary.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        strings.pick(
+                          'Alias: ${candidate.aliasSummary}',
+                          'Aliases: ${candidate.aliasSummary}',
+                        ),
+                        style: const TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 12.5,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+          if (isAmbiguous) ...[
+            const SizedBox(height: 4),
+            Text(
+              strings.pick(
+                'Trả lời tiếp bằng tên, phòng ban, tài khoản hoặc alias của người dùng cần gửi.',
+                'Reply with the recipient name, department, username, or alias.',
+              ),
+              style: const TextStyle(
+                color: Color(0xFF64748B),
+                fontSize: 12.5,
+                height: 1.45,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // Gắn tham số 'quay lại chat' vào route khi điều hướng đi nơi khác.
 
   String _withAssistantReturn(BuildContext context, String route) {
     final strings = AppStrings.of(context);
@@ -2187,10 +2405,7 @@ class _MessageCard extends StatelessWidget {
     return uri.replace(queryParameters: params).toString();
   }
 
-  // Mục đích: Phương thức `_fallbackRagRoute` triển khai phần việc `fallback Rag Route` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Suy ra route RAG dự phòng từ payload (bản có context, hiện không dùng).
 
   // ignore: unused_element
   String _fallbackRagRoute(BuildContext context, Map<String, dynamic> payload) {
@@ -2262,10 +2477,7 @@ class _MessageCard extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_CitationSection` triển khai phần việc `Citation Section` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Khối nguồn trích dẫn (citations) dưới câu trả lời RAG.
 
 class _CitationSection extends StatelessWidget {
   final String title;
@@ -2279,10 +2491,7 @@ class _CitationSection extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng danh sách nguồn trích dẫn.
 
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -2355,10 +2564,7 @@ class _CitationSection extends StatelessWidget {
     }
   }
 
-  // Mục đích: Phương thức `_meta` triển khai phần việc `meta` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Chuỗi metadata 1 trích dẫn (nguồn/trang).
 
   String _meta(Map<String, dynamic> citation) {
     final parts = <String>[
@@ -2370,10 +2576,7 @@ class _CitationSection extends StatelessWidget {
     return parts.join(' | ');
   }
 
-  // Mục đích: Phương thức `_openCitation` triển khai phần việc `open Citation` trong flutter_frontend/lib/screens/assistant/assistant_chat_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở tài liệu nguồn của 1 trích dẫn.
 
   void _openCitation(BuildContext context, Map<String, dynamic> citation) {
     final external =

@@ -1,9 +1,26 @@
 """
-Thuoc chuc nang nao: Endpoint REST cho tro ly AI moi, bao gom text, voice va cau noi sang man RAG.
-Vai tro backend: File nay nhan request tu frontend assistant, quan ly session/message/audio, goi `run_assistant_turn`, mirror ket qua RAG sang session RAG rieng va tra action de client dieu huong.
-Vai tro cua no trong frontend: Man assistant text, voice, lich su session va danh sach audio tren frontend goi truc tiep cac endpoint trong file nay.
-Moi lien he voi nhung ham / source khac: Su dung `ChatSession`, `ChatMessage`, `ChatAudioAttachment` trong `ai_engine.models`, engine `run_assistant_turn` trong `ai_engine.assistant_engine`, serializer chat va `soft_delete_chat_sessions`.
-Tac dung: Dong vai tro lop API bien luong tro ly AI thanh response JSON/phat file phu hop cho frontend.
+là lớp API điều phối Trợ lý AI dạng hội thoại.
+
+  Nó phục vụ trực tiếp:
+
+  - Chat AI tại /chat/text.
+  - Giọng nói AI tại /chat/voice.
+  - Lịch sử phiên trò chuyện.
+  - Tệp PDF/ảnh đính kèm.
+  - Danh sách và tải lại audio.
+  - Điều hướng kết quả tìm kiếm RAG.
+
+  Bản chất của file:
+
+  Flutter gửi câu hỏi
+  → assistant.py kiểm tra request, session và file
+  → gọi assistant_engine
+  → lưu câu hỏi và câu trả lời
+  → trả JSON/action cho Flutter
+
+  Nó không chứa trí thông minh chính của trợ lý. Phần suy luận, chọn tool và gọi LLM nằm trong:
+
+  ai_engine.assistant_engine.run_assistant_turn()
 """
 
 import time
@@ -24,6 +41,11 @@ from accounts.tenancy import get_user_company
 from ..serializers.chat import ChatAudioAttachmentSerializer, ChatMessageSerializer, ChatSessionSerializer
 from ..trash_services import soft_delete_chat_sessions
 
+# Là gì: `_stash_attachments_to_disk` là helper nội bộ của module `assistant.py`, phục vụ nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm.
+# Chức năng backend: Hàm xử lý phần việc `stash attachments to disk` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình `/chat/text` và `/chat/voice`.
+# Mối liên hệ: Hàm phối hợp với `lower`, `os.path.join`, `os.makedirs` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect lên tệp hoặc storage.
 def _stash_attachments_to_disk(uploaded_files, *, prefix: str = 'chat_attach', max_per_request: int = 10):
     """Luu cac UploadedFile vao thu muc tam de background thread doc lai.
 
@@ -71,6 +93,8 @@ def _stash_attachments_to_disk(uploaded_files, *, prefix: str = 'chat_attach', m
     return out_paths
 
 
+# class _FilelikeBytes là lớp gom logic/dữ liệu liên quan.
+# vd: gom các thuộc tính/method liên quan vào một nơi.
 class _FilelikeBytes:
     """File-like wrapper cho bytes da doc tu disk, du de extract_pdf_text / OCR doc.
 
@@ -78,21 +102,46 @@ class _FilelikeBytes:
     (do `run_in_thread` se chay khi request da dong). Luu path tam o disk, doc
     nhi phan ra bytes va wrap qua class nay.
     """
+    # Là gì: `__init__` là phương thức của lớp `_FilelikeBytes` trong nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm.
+    # Chức năng backend: Hàm xử lý phần việc `init` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình `/chat/text` và `/chat/voice`.
+    # Mối liên hệ: Hàm phối hợp với `io.BytesIO` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: phương thức đóng gói hành vi gắn với đối tượng hiện tại; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def __init__(self, raw_bytes: bytes, name: str = 'attachment'):
         import io
         self._buf = io.BytesIO(raw_bytes)
         self.name = name
 
+    # Là gì: `read` là phương thức của lớp `_FilelikeBytes` trong nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm.
+    # Chức năng backend: Hàm đọc dữ liệu từ nguồn được chỉ định; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình `/chat/text` và `/chat/voice`.
+    # Mối liên hệ: Hàm phối hợp với `self._buf.read` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: phương thức đóng gói hành vi gắn với đối tượng hiện tại; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def read(self, *args, **kwargs):
         return self._buf.read(*args, **kwargs)
 
+    # Là gì: `seek` là phương thức của lớp `_FilelikeBytes` trong nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm.
+    # Chức năng backend: Hàm xử lý phần việc `seek` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình `/chat/text` và `/chat/voice`.
+    # Mối liên hệ: Hàm phối hợp với `self._buf.seek` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: phương thức đóng gói hành vi gắn với đối tượng hiện tại; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def seek(self, *args, **kwargs):
         return self._buf.seek(*args, **kwargs)
 
+    # Là gì: `tell` là phương thức của lớp `_FilelikeBytes` trong nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm.
+    # Chức năng backend: Hàm xử lý phần việc `tell` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình `/chat/text` và `/chat/voice`.
+    # Mối liên hệ: Hàm phối hợp với `self._buf.tell` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: phương thức đóng gói hành vi gắn với đối tượng hiện tại; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def tell(self):
         return self._buf.tell()
 
 
+# Là gì: `_parse_prefill_flag` là helper nội bộ của module `assistant.py`, phục vụ nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm.
+# Chức năng backend: Hàm tự động điền các trường còn trống từ ngữ cảnh có sẵn, đồng thời phân tích dữ liệu thô thành cấu trúc có thể sử dụng; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình `/chat/text` và `/chat/voice`.
+# Mối liên hệ: Hàm phối hợp với `str.strip.lower`, `str.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _parse_prefill_flag(value, default: bool = True) -> bool:
     """Doc co prefill (auto_fill_profile / auto_fill_company) tu request.
 
@@ -111,6 +160,11 @@ def _parse_prefill_flag(value, default: bool = True) -> bool:
     return default
 
 
+# Là gì: `_assistant_view_debug` là helper nội bộ của module `assistant.py`, phục vụ nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm.
+# Chức năng backend: Hàm xử lý phần việc `assistant view debug` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình `/chat/text` và `/chat/voice`.
+# Mối liên hệ: Hàm được các endpoint hoặc helper cùng module gọi khi cần cùng quy tắc xử lý.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _assistant_view_debug(message):
     """
     Thuoc chuc nang nao: Ghi log debug cho lop API assistant.
@@ -121,6 +175,11 @@ def _assistant_view_debug(message):
     """
     print(f'[assistant_api] {message}', flush=True)
 
+# Là gì: `_session_type_from_mode` là helper nội bộ của module `assistant.py`, phục vụ nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm.
+# Chức năng backend: Hàm xử lý phần việc `session type from mode` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình `/chat/text` và `/chat/voice`.
+# Mối liên hệ: Hàm phối hợp với `str.strip.lower`, `str.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _session_type_from_mode(mode):
     """
     Thuoc chuc nang nao: Anh xa mode giao dien sang loai session AI trong database.
@@ -135,6 +194,11 @@ def _session_type_from_mode(mode):
         else ChatSession.SESSION_ASSISTANT
     )
 
+# Là gì: `_session_title_from_question` là helper nội bộ của module `assistant.py`, phục vụ nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm.
+# Chức năng backend: Hàm xử lý phần việc `session title from question` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình `/chat/text` và `/chat/voice`.
+# Mối liên hệ: Hàm phối hợp với `strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _session_title_from_question(question):
     """
     Thuoc chuc nang nao: Dat tieu de mac dinh cho session assistant moi.
@@ -146,6 +210,11 @@ def _session_title_from_question(question):
     question = (question or '').strip()
     return question[:80] or 'Cuoc tro chuyen moi'
 
+# Là gì: `_rag_return_target` là helper nội bộ của module `assistant.py`, phục vụ nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm.
+# Chức năng backend: Hàm xử lý phần việc `rag return target` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình `/chat/text` và `/chat/voice`.
+# Mối liên hệ: Hàm phối hợp với `str.strip.lower`, `str.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _rag_return_target(mode):
     """
     Thuoc chuc nang nao: Xac dinh route quay ve sau khi mo man ket qua RAG.
@@ -158,6 +227,11 @@ def _rag_return_target(mode):
         return '/chat/voice', 'Quay về Giọng nói AI'
     return '/chat/text', 'Quay về Chat AI'
 
+# Là gì: `_mirror_rag_result_to_session` là helper nội bộ của module `assistant.py`, phục vụ nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm.
+# Chức năng backend: Hàm xử lý phần việc `mirror rag result to session` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình `/chat/text` và `/chat/voice`.
+# Mối liên hệ: Hàm phối hợp với `ChatSession.objects.create`, `get_user_company`, `_session_title_from_question` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect ghi cơ sở dữ liệu.
 def _mirror_rag_result_to_session(*, user, question, answer, citations, source_mode):
     """
     Thuoc chuc nang nao: Nhan ban ket qua RAG tu assistant sang session RAG rieng.
@@ -198,6 +272,11 @@ def _mirror_rag_result_to_session(*, user, question, answer, citations, source_m
     return rag_session, rag_message
 
 
+# Là gì: `_persist_cancelled_stream_message` là helper nội bộ của module `assistant.py`, phục vụ nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm.
+# Chức năng backend: Hàm phát dữ liệu từng phần trong khi tiến trình đang chạy; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình `/chat/text` và `/chat/voice`.
+# Mối liên hệ: Hàm phối hợp với `str.strip`, `ChatMessage.objects.create`, `session.save` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect ghi cơ sở dữ liệu.
 def _persist_cancelled_stream_message(*, session, content):
     text = str(content or '').strip()
     if not text:
@@ -214,7 +293,13 @@ def _persist_cancelled_stream_message(*, session, content):
     session.save(update_fields=['updated_at'])
     return message
 
-
+# cụ thể chức năng này là lưu lại một message với trạng thái "cancelled" khi quá trình streaming bị hủy, giúp ghi nhận và hiển thị thông tin này trong lịch sử chat của người dùng.
+# vd: khi người dùng đang nhận câu trả lời từ trợ lý AI và quyết định hủy bỏ quá trình đó, hàm này sẽ được gọi để lưu lại một message đặc biệt trong session chat, cho biết rằng quá trình đã bị hủy và có thể hiển thị thông tin này trong giao diện người dùng.
+# Là gì: `_finalize_assistant_turn_result` là helper nội bộ của module `assistant.py`, phục vụ nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm.
+# Chức năng backend: Hàm xử lý phần việc `finalize assistant turn result` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình `/chat/text` và `/chat/voice`.
+# Mối liên hệ: Hàm phối hợp với `str.strip.lower`, `_mirror_rag_result_to_session`, `payload.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect ghi cơ sở dữ liệu.
 def _finalize_assistant_turn_result(*, user, session, question, mode, result):
     payload = dict(result.payload or {}) if isinstance(result.payload, dict) else result.payload
     response_action = (
@@ -283,7 +368,13 @@ def _finalize_assistant_turn_result(*, user, session, question, mode, result):
     session.save(update_fields=update_fields)
     return assistant_message, response_action
 
-
+# cụ thể chức năng này là xử lý kết quả trả về từ một lượt tương tác của trợ lý AI, lưu lại câu trả lời vào cơ sở dữ liệu và chuẩn bị các thông tin cần thiết để frontend có thể điều hướng người
+# vd: khi một lượt tương tác của trợ lý AI hoàn tất và trả về kết quả, hàm này sẽ được gọi để lưu lại câu trả lời vào cơ sở dữ liệu, đồng thời kiểm tra nếu kết quả có liên quan đến RAG (Retrieval-Augmented Generation) để tạo một session riêng cho RAG và chuẩn bị các thông tin điều hướng cần thiết cho frontend, giúp người dùng có thể dễ dàng truy cập vào kết quả RAG nếu cần thiết.
+# Là gì: `_serialize_assistant_turn_payload` là helper nội bộ của module `assistant.py`, phục vụ nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm.
+# Chức năng backend: Hàm chuyển đối tượng nội bộ thành dữ liệu có thể trả cho client; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình `/chat/text` và `/chat/voice`.
+# Mối liên hệ: Hàm phối hợp với `ChatSessionSerializer`, `ChatMessageSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _serialize_assistant_turn_payload(*, session, assistant_message, response_action, request=None):
     context = {'request': request} if request is not None else {}
     return {
@@ -292,7 +383,13 @@ def _serialize_assistant_turn_payload(*, session, assistant_message, response_ac
         'action': response_action,
     }
 
-
+# cụ thể chức năng này là chuẩn bị dữ liệu trả về cho frontend sau khi một lượt tương tác của trợ lý AI hoàn tất, chuyển đổi các đối tượng nội bộ như session và message thành định dạng JSON có thể sử dụng được bởi frontend, đồng thời bao gồm các thông tin về hành động tiếp theo mà frontend cần thực hiện dựa trên kết quả của lượt tương tác đó.
+# vd: sau khi một lượt tương tác của trợ lý AI hoàn tất và kết quả đã được xử lý, hàm này sẽ được gọi để chuẩn bị dữ liệu trả về cho frontend, bao gồm thông tin về session hiện tại, message mới nhất từ trợ lý AI và các hành động mà frontend cần thực hiện tiếp theo, giúp frontend có thể cập nhật giao diện người dùng một cách chính xác và kịp thời dựa trên kết quả của lượt tương tác đó.
+# Là gì: `_do_assistant_turn_task` là helper nội bộ của module `assistant.py`, phục vụ nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm.
+# Chức năng backend: Hàm thực thi phần xử lý nội bộ của luồng hiện tại; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình `/chat/text` và `/chat/voice`.
+# Mối liên hệ: Hàm phối hợp với `User.objects.get`, `ChatSession.objects.get`, `streamed_chunks.append` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect lên tệp hoặc storage.
 def _do_assistant_turn_task(task_id, user_id, session_id, question, mode, history, voice_audio_path,
                               voice_duration, voice_mime,
                               use_profile=True, use_company=True,
@@ -312,6 +409,13 @@ def _do_assistant_turn_task(task_id, user_id, session_id, question, mode, histor
     token_count = [0]
     expected_max_tokens = 500
 
+    # cụ thể chức năng này là thực hiện một lượt tương tác của trợ lý AI trong một tiến trình nền, bao gồm việc cập nhật tiến độ của các giai đoạn khác nhau trong quá trình xử lý, cũng như streaming các token trả về từ trợ lý AI để có thể hiển thị dần dần cho người dùng, đồng thời kiểm tra nếu có yêu cầu hủy bỏ quá trình đó để dừng kịp thời nếu người dùng quyết định hủy.
+    # vd: khi một lượt tương tác của trợ lý AI được thực hiện, hàm này sẽ chạy trong một tiến trình nền để xử lý yêu cầu, cập nhật tiến độ cho người dùng biết về các giai đoạn khác nhau của quá trình xử lý, đồng thời streaming các token trả về từ trợ lý AI để người dùng có thể thấy câu trả lời dần dần thay vì phải chờ đợi toàn bộ câu trả lời được tạo ra, và nếu người dùng quyết
+    # Là gì: `_on_token` là hàm cục bộ bên trong `_do_assistant_turn_task`, chỉ phục vụ bước xử lý nội bộ của nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm.
+    # Chức năng backend: Hàm xử lý phần việc `on token` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình `/chat/text` và `/chat/voice`.
+    # Mối liên hệ: Hàm phối hợp với `streamed_chunks.append`, `update_progress`, `append_stream_chunk` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def _on_token(chunk):
         token = str(chunk or '')
         if not token:
@@ -493,7 +597,13 @@ def _do_assistant_turn_task(task_id, user_id, session_id, question, mode, histor
 
     return payload
 
-
+# cụ thể chức năng này là thực hiện toàn bộ quá trình xử lý một lượt tương tác của trợ lý AI trong một tiến trình nền, bao gồm việc cập nhật tiến độ, streaming token, xử lý kết quả trả về, lưu lại vào cơ sở dữ liệu và chuẩn bị dữ liệu trả về cho frontend, đồng thời kiểm tra nếu có yêu cầu hủy bỏ để dừng kịp thời nếu người dùng quyết định hủy.
+# vd: khi một lượt tương tác của trợ lý AI được thực hiện, hàm này sẽ chạy trong một tiến trình nền để xử lý yêu cầu, cập nhật tiến độ cho người dùng biết về các giai đoạn khác nhau của quá trình xử lý, đồng thời streaming các token trả về từ trợ lý AI để người dùng có thể thấy câu trả lời dần dần thay vì
+# Là gì: `assistant_turn_async` là endpoint REST của nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `assistant turn async` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình `/chat/text` và `/chat/voice` sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `strip`, `request.data.get`, `str.strip.lower` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def assistant_turn_async(request):
@@ -580,7 +690,13 @@ def assistant_turn_async(request):
         'status': 'queued',
     }, status=status.HTTP_202_ACCEPTED)
 
-
+# cụ thể chức năng này là nhận một request từ frontend để bắt đầu một lượt tương tác của trợ lý AI, tạo một task trong hệ thống để xử lý lượt tương tác đó trong tiến trình nền, và trả về thông tin về task đó cho frontend để có thể theo dõi tiến độ và kết quả của lượt tương tác đó.
+# vd: khi người dùng gửi một câu hỏi hoặc yêu cầu đến trợ lý AI thông qua frontend, hàm này sẽ nhận request đó, kiểm tra và chuẩn hóa dữ liệu đầu vào, tạo một task mới trong hệ thống để xử lý lượt tương tác đó trong tiến trình nền, và
+# Là gì: `assistant_turn` là endpoint REST của nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `assistant turn` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình `/chat/text` và `/chat/voice` sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `time.perf_counter`, `strip`, `request.data.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def assistant_turn(request):
@@ -711,6 +827,11 @@ def assistant_turn(request):
         )
     )
 
+# Là gì: `assistant_sessions` là endpoint REST của nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `assistant sessions` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình `/chat/text` và `/chat/voice` sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `str.strip.lower`, `request.data.get`, `soft_delete_chat_sessions` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def assistant_sessions(request):
@@ -751,6 +872,11 @@ def assistant_sessions(request):
     ).order_by('-updated_at', '-created_at')
     return Response(ChatSessionSerializer(sessions, many=True, context={'request': request}).data)
 
+# Là gì: `assistant_session_messages` là endpoint REST của nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `assistant session messages` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình `/chat/text` và `/chat/voice` sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `get_user_company`, `session.messages.order_by` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def assistant_session_messages(request, session_id):
@@ -778,6 +904,11 @@ def assistant_session_messages(request, session_id):
     messages = session.messages.order_by('created_at')
     return Response(ChatMessageSerializer(messages, many=True, context={'request': request}).data)
 
+# Là gì: `assistant_audio_list` là endpoint REST của nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình `/chat/text` và `/chat/voice` sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.GET.get`, `ChatAudioAttachment.objects.filter.select_related`, `ChatAudioAttachment.objects.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def assistant_audio_list(request):
@@ -798,6 +929,11 @@ def assistant_audio_list(request):
         items = items.filter(session_id=session_id)
     return Response(ChatAudioAttachmentSerializer(items.order_by('-created_at'), many=True, context={'request': request}).data)
 
+# Là gì: `assistant_audio_download` là endpoint REST của nhóm Trợ lý AI dạng chat, giọng nói, phiên hội thoại và tệp đính kèm; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm chuẩn bị và trả tệp cho phía client tải xuống; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình `/chat/text` và `/chat/voice` sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `get_user_company`, `CompanyRuntimeGuard.assert_file_field` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect lên tệp hoặc storage; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def assistant_audio_download(request, audio_id):

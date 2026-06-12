@@ -28,6 +28,11 @@ from ..serializers.notifications import (
 )
 
 
+# Là gì: `_serialize_task_notification` là helper nội bộ của module `notifications.py`, phục vụ nhóm liệt kê, đọc và cập nhật trạng thái thông báo.
+# Chức năng backend: Hàm chuyển đối tượng nội bộ thành dữ liệu có thể trả cho client; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ trung tâm thông báo và badge chưa đọc.
+# Mối liên hệ: Hàm phối hợp với `task.updated_at.isoformat` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _serialize_task_notification(task):
     return {
         'kind': 'task',
@@ -43,6 +48,11 @@ def _serialize_task_notification(task):
         'is_read': task.is_dismissed,
     }
 
+# Là gì: `notification_list` là endpoint REST của nhóm liệt kê, đọc và cập nhật trạng thái thông báo; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được trung tâm thông báo và badge chưa đọc sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `str.strip.lower`, `str.strip`, `request.GET.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def notification_list(request):
@@ -80,6 +90,11 @@ def notification_list(request):
     serializer = TemplateReviewNotificationSerializer(qs[:limit], many=True)
     return Response(serializer.data)
 
+# Là gì: `notification_unread_count` là endpoint REST của nhóm liệt kê, đọc và cập nhật trạng thái thông báo; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đếm số bản ghi thỏa điều kiện; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được trung tâm thông báo và badge chưa đọc sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `TemplateReviewNotification.objects.filter.count`, `TemplateReviewNotification.objects.filter`, `str.lower` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def notification_unread_count(request):
@@ -104,6 +119,11 @@ def notification_unread_count(request):
                 count += 1
     return Response({'count': count})
 
+# Là gì: `notification_mark_read` là endpoint REST của nhóm liệt kê, đọc và cập nhật trạng thái thông báo; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm ghi nhận một cờ hoặc trạng thái mới cho dữ liệu, đồng thời đọc dữ liệu từ nguồn được chỉ định; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được trung tâm thông báo và badge chưa đọc sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `TemplateReviewNotification.objects.filter`, `timezone.now` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def notification_mark_read(request, pk):
@@ -124,6 +144,11 @@ def notification_mark_read(request, pk):
         notification.save(update_fields=['is_read', 'read_at'])
     return Response({'status': 'ok'})
 
+# Là gì: `notification_mark_template_read` là endpoint REST của nhóm liệt kê, đọc và cập nhật trạng thái thông báo; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm ghi nhận một cờ hoặc trạng thái mới cho dữ liệu, đồng thời đọc dữ liệu từ nguồn được chỉ định; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được trung tâm thông báo và badge chưa đọc sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.data.get`, `mark_template_notifications_read` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def notification_mark_template_read(request):
@@ -144,6 +169,11 @@ def notification_mark_template_read(request):
     return Response({'updated': updated})
 
 
+# Là gì: `aggregate_notification_list` là endpoint REST của nhóm liệt kê, đọc và cập nhật trạng thái thông báo; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được trung tâm thông báo và badge chưa đọc sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.GET.get`, `str.lower`, `build_aggregate_notifications` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def aggregate_notification_list(request):
@@ -162,6 +192,11 @@ def aggregate_notification_list(request):
     return Response(serializer.data)
 
 
+# Là gì: `aggregate_notification_unread_count` là endpoint REST của nhóm liệt kê, đọc và cập nhật trạng thái thông báo; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đếm số bản ghi thỏa điều kiện; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được trung tâm thông báo và badge chưa đọc sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `str.lower`, `request.GET.get`, `get_aggregate_unread_count` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def aggregate_notification_unread_count(request):
@@ -176,6 +211,11 @@ def aggregate_notification_unread_count(request):
     )
 
 
+# Là gì: `aggregate_notification_mark_read` là endpoint REST của nhóm liệt kê, đọc và cập nhật trạng thái thông báo; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm ghi nhận một cờ hoặc trạng thái mới cho dữ liệu, đồng thời đọc dữ liệu từ nguồn được chỉ định; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được trung tâm thông báo và badge chưa đọc sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `AggregateNotificationReadSerializer`, `serializer.is_valid`, `mark_aggregate_notification_read` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def aggregate_notification_mark_read(request):
@@ -191,6 +231,11 @@ def aggregate_notification_mark_read(request):
     return Response({'updated': True})
 
 
+# Là gì: `aggregate_notification_mark_all_read` là endpoint REST của nhóm liệt kê, đọc và cập nhật trạng thái thông báo; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm ghi nhận một cờ hoặc trạng thái mới cho dữ liệu, đồng thời đọc dữ liệu từ nguồn được chỉ định; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được trung tâm thông báo và badge chưa đọc sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `mark_all_aggregate_notifications_read` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def aggregate_notification_mark_all_read(request):

@@ -8,6 +8,7 @@ from .models import KnowledgeBase, ChatSession, ChatMessage
 
 # [Web] `KnowledgeBaseAdmin` gom một cụm xử lý backend dùng chung cho nhóm màn AI và hỏi đáp tài liệu.
 
+# vd: trang admin KnowledgeBase hiện cột title/owner/is_shared/source_type và lọc theo is_shared.
 @admin.register(KnowledgeBase)
 class KnowledgeBaseAdmin(admin.ModelAdmin):
     list_display = ('title', 'owner', 'is_shared', 'source_type', 'created_at')
@@ -16,6 +17,7 @@ class KnowledgeBaseAdmin(admin.ModelAdmin):
 
 # [Web] `ChatSessionAdmin` gom một cụm xử lý backend dùng chung cho nhóm màn AI và hỏi đáp tài liệu.
 
+# vd: trang admin ChatSession, tìm theo username hoặc title.
 @admin.register(ChatSession)
 class ChatSessionAdmin(admin.ModelAdmin):
     list_display = ('user', 'title', 'created_at')
@@ -23,6 +25,7 @@ class ChatSessionAdmin(admin.ModelAdmin):
 
 # [Web] `ChatMessageAdmin` gom một cụm xử lý backend dùng chung cho nhóm màn AI và hỏi đáp tài liệu.
 
+# vd: trang admin ChatMessage, lọc theo role (user/assistant).
 @admin.register(ChatMessage)
 class ChatMessageAdmin(admin.ModelAdmin):
     list_display = ('session', 'role', 'created_at')

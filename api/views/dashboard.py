@@ -14,6 +14,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+# Là gì: `_scope_item` là helper nội bộ của module `dashboard.py`, phục vụ nhóm tổng hợp số liệu và trạng thái hoạt động của hệ thống.
+# Chức năng backend: Hàm xử lý phần việc `scope item` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ bảng điều khiển và các thẻ thống kê.
+# Mối liên hệ: Hàm được các endpoint hoặc helper cùng module gọi khi cần cùng quy tắc xử lý.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _scope_item(key, label, description, count):
     """
     Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -29,6 +34,11 @@ def _scope_item(key, label, description, count):
         'count': count,
     }
 
+# Là gì: `_person_name` là helper nội bộ của module `dashboard.py`, phục vụ nhóm tổng hợp số liệu và trạng thái hoạt động của hệ thống.
+# Chức năng backend: Hàm xử lý phần việc `person name` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ bảng điều khiển và các thẻ thống kê.
+# Mối liên hệ: Hàm phối hợp với `strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _person_name(user):
     """
     Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -40,6 +50,11 @@ def _person_name(user):
     full_name = f'{user.first_name} {user.last_name}'.strip()
     return full_name or user.username
 
+# Là gì: `_person_title` là helper nội bộ của module `dashboard.py`, phục vụ nhóm tổng hợp số liệu và trạng thái hoạt động của hệ thống.
+# Chức năng backend: Hàm xử lý phần việc `person title` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ bảng điều khiển và các thẻ thống kê.
+# Mối liên hệ: Hàm phối hợp với `strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _person_title(user):
     """
     Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -59,6 +74,11 @@ def _person_title(user):
         return 'Quản trị viên'
     return 'Nhân viên'
 
+# Là gì: `_build_org_structure` là helper nội bộ của module `dashboard.py`, phục vụ nhóm tổng hợp số liệu và trạng thái hoạt động của hệ thống.
+# Chức năng backend: Hàm tổng hợp dữ liệu đầu vào thành cấu trúc phục vụ bước tiếp theo; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ bảng điều khiển và các thẻ thống kê.
+# Mối liên hệ: Hàm phối hợp với `UserGroupMembership.objects.select_related.filter`, `UserGroupMembership.objects.select_related`, `User.objects.filter.select_related.prefetch_related` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _build_org_structure(company=None):
     from collections import defaultdict
     from django.contrib.auth.models import User
@@ -119,6 +139,11 @@ def _build_org_structure(company=None):
 
     
 
+    # Là gì: `make_person` là hàm cục bộ bên trong `_build_org_structure`, chỉ phục vụ bước xử lý nội bộ của nhóm tổng hợp số liệu và trạng thái hoạt động của hệ thống.
+    # Chức năng backend: Hàm xử lý phần việc `make person` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ bảng điều khiển và các thẻ thống kê.
+    # Mối liên hệ: Hàm phối hợp với `_person_name`, `_person_title`, `user_groups.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def make_person(user, role):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -206,6 +231,11 @@ def _build_org_structure(company=None):
 
     
 
+    # Là gì: `unique_edges` là hàm cục bộ bên trong `_build_org_structure`, chỉ phục vụ bước xử lý nội bộ của nhóm tổng hợp số liệu và trạng thái hoạt động của hệ thống.
+    # Chức năng backend: Hàm xử lý phần việc `unique edges` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ bảng điều khiển và các thẻ thống kê.
+    # Mối liên hệ: Hàm phối hợp với `seen.add`, `result.append` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def unique_edges(edges):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -245,6 +275,11 @@ def _build_org_structure(company=None):
         'team_edges': team_edges,
     }
 
+# Là gì: `_managed_user_ids` là helper nội bộ của module `dashboard.py`, phục vụ nhóm tổng hợp số liệu và trạng thái hoạt động của hệ thống.
+# Chức năng backend: Hàm xử lý phần việc `managed user ids` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ bảng điều khiển và các thẻ thống kê.
+# Mối liên hệ: Hàm phối hợp với `UserGroupMembership.objects.filter.values_list`, `UserGroupMembership.objects.filter`, `managed_ids.discard` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _managed_user_ids(viewer):
     """
     Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -274,6 +309,11 @@ def _managed_user_ids(viewer):
     managed_ids.discard(viewer.id)
     return managed_ids
 
+# Là gì: `_can_view_org_node_stats` là helper nội bộ của module `dashboard.py`, phục vụ nhóm tổng hợp số liệu và trạng thái hoạt động của hệ thống.
+# Chức năng backend: Hàm tổng hợp số liệu thống kê cho phạm vi hiện tại, đồng thời đánh giá quyền hoặc điều kiện cho phép thao tác; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ bảng điều khiển và các thẻ thống kê.
+# Mối liên hệ: Hàm phối hợp với `_managed_user_ids` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _can_view_org_node_stats(viewer, target_user):
     """
     Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -286,6 +326,11 @@ def _can_view_org_node_stats(viewer, target_user):
         return True
     return target_user.id in _managed_user_ids(viewer)
 
+# Là gì: `_dashboard_stats_legacy` là endpoint REST của nhóm tổng hợp số liệu và trạng thái hoạt động của hệ thống; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tổng hợp số liệu thống kê cho phạm vi hiện tại; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được bảng điều khiển và các thẻ thống kê sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `timezone.now`, `now.date`, `today.replace` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def _dashboard_stats_legacy(request):
@@ -369,6 +414,11 @@ def _dashboard_stats_legacy(request):
         'recent_documents': recent_documents,
     })
 
+# Là gì: `dashboard_stats` là endpoint REST của nhóm tổng hợp số liệu và trạng thái hoạt động của hệ thống; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tổng hợp số liệu thống kê cho phạm vi hiện tại; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được bảng điều khiển và các thẻ thống kê sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `timezone.localdate`, `today.replace`, `get_user_company` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def dashboard_stats(request):
@@ -619,6 +669,11 @@ def dashboard_stats(request):
         'org_structure': org_structure,
     })
 
+# Là gì: `dashboard_org_node_stats` là endpoint REST của nhóm tổng hợp số liệu và trạng thái hoạt động của hệ thống; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tổng hợp số liệu thống kê cho phạm vi hiện tại; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được bảng điều khiển và các thẻ thống kê sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_user_company`, `User.objects.select_related.filter`, `User.objects.select_related` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def dashboard_org_node_stats(request, user_id):
@@ -692,6 +747,11 @@ def dashboard_org_node_stats(request, user_id):
         'activity_total': sum(item['count'] for item in activity_last_7_days),
     })
 
+# Là gì: `pending_approvals_count` là endpoint REST của nhóm tổng hợp số liệu và trạng thái hoạt động của hệ thống; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đếm số bản ghi thỏa điều kiện; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được bảng điều khiển và các thẻ thống kê sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `UserGroupMembership.objects.filter.values_list`, `UserGroupMembership.objects.filter`, `DocumentTemplate.objects.none` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def pending_approvals_count(request):

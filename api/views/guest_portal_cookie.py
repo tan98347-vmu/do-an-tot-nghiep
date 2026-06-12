@@ -27,6 +27,11 @@ _GUEST_COOKIE_SID = 'guest_sid'
 _GUEST_COOKIE_USERNAME = 'guest_username'
 _GUEST_META_FILE = 'guest_meta.json'
 
+# Là gì: `_vn_norm` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+# Chức năng backend: Hàm xử lý phần việc `vn norm` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+# Mối liên hệ: Hàm phối hợp với `unicodedata.normalize`, `join.lower.strip`, `join.lower` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _vn_norm(text: str) -> str:
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -38,6 +43,11 @@ def _vn_norm(text: str) -> str:
     nfkd = unicodedata.normalize('NFKD', text)
     return ''.join(c for c in nfkd if not unicodedata.combining(c)).lower().strip()
 
+# Là gì: `_guest_root` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+# Chức năng backend: Hàm xử lý phần việc `guest root` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+# Mối liên hệ: Hàm phối hợp với `Path`, `root.mkdir` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _guest_root() -> Path:
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -50,6 +60,11 @@ def _guest_root() -> Path:
     root.mkdir(parents=True, exist_ok=True)
     return root
 
+# Là gì: `_cleanup_stale_guest_dirs` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+# Chức năng backend: Hàm dọn tài nguyên tạm hoặc dữ liệu không còn hiệu lực; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+# Mối liên hệ: Hàm phối hợp với `_guest_root`, `time.time`, `root.iterdir` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _cleanup_stale_guest_dirs(max_age_seconds: int = 60 * 60 * 12) -> None:
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -67,6 +82,11 @@ def _cleanup_stale_guest_dirs(max_age_seconds: int = 60 * 60 * 12) -> None:
         except Exception:
             continue
 
+# Là gì: `_safe_cookie` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+# Chức năng backend: Hàm xử lý phần việc `safe cookie` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+# Mối liên hệ: Hàm phối hợp với `re.fullmatch` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _safe_cookie(value: str | None, pattern: str, fallback: str) -> str:
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -79,6 +99,11 @@ def _safe_cookie(value: str | None, pattern: str, fallback: str) -> str:
         return value
     return fallback
 
+# Là gì: `_ensure_guest_identity` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+# Chức năng backend: Hàm bảo đảm điều kiện hoặc bản ghi cần thiết đã tồn tại; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+# Mối liên hệ: Hàm phối hợp với `_cleanup_stale_guest_dirs`, `_safe_cookie`, `request.COOKIES.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _ensure_guest_identity(request):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -104,6 +129,11 @@ def _ensure_guest_identity(request):
     setattr(request, '_guest_identity', cached)
     return cached
 
+# Là gì: `_meta_path` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+# Chức năng backend: Hàm xử lý phần việc `meta path` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+# Mối liên hệ: Hàm được các endpoint hoặc helper cùng module gọi khi cần cùng quy tắc xử lý.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _meta_path(guest_dir: Path) -> Path:
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -114,6 +144,11 @@ def _meta_path(guest_dir: Path) -> Path:
     """
     return guest_dir / _GUEST_META_FILE
 
+# Là gì: `_read_guest_meta` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+# Chức năng backend: Hàm đọc dữ liệu từ nguồn được chỉ định; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+# Mối liên hệ: Hàm phối hợp với `_ensure_guest_identity`, `_meta_path`, `path.exists` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _read_guest_meta(request) -> dict:
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -135,6 +170,11 @@ def _read_guest_meta(request) -> dict:
     except Exception:
         return {'username': username}
 
+# Là gì: `_write_guest_meta` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+# Chức năng backend: Hàm ghi dữ liệu ra storage hoặc cấu trúc đích; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+# Mối liên hệ: Hàm phối hợp với `_ensure_guest_identity`, `_meta_path.write_text`, `json.dumps` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _write_guest_meta(request, meta: dict) -> dict:
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -149,6 +189,11 @@ def _write_guest_meta(request, meta: dict) -> dict:
     _meta_path(guest_dir).write_text(json.dumps(payload, ensure_ascii=True), encoding='utf-8')
     return payload
 
+# Là gì: `_guest_file` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+# Chức năng backend: Hàm xử lý phần việc `guest file` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+# Mối liên hệ: Hàm phối hợp với `_ensure_guest_identity`, `_read_guest_meta`, `meta.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _guest_file(request, meta_key: str) -> Path | None:
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -171,6 +216,11 @@ def _guest_file(request, meta_key: str) -> Path | None:
         return None
     return path
 
+# Là gì: `_clear_generated_document_meta` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+# Chức năng backend: Hàm xử lý phần việc `clear generated document meta` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+# Mối liên hệ: Hàm phối hợp với `_read_guest_meta`, `_guest_file`, `path.exists` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _clear_generated_document_meta(request) -> None:
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -190,6 +240,11 @@ def _clear_generated_document_meta(request) -> None:
         meta.pop(key, None)
     _write_guest_meta(request, meta)
 
+# Là gì: `_guest_response` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+# Chức năng backend: Hàm xử lý phần việc `guest response` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+# Mối liên hệ: Hàm phối hợp với `_ensure_guest_identity`, `response.set_cookie` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 def _guest_response(request, data, *, http_status=status.HTTP_200_OK) -> Response:
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -204,6 +259,11 @@ def _guest_response(request, data, *, http_status=status.HTTP_200_OK) -> Respons
     response.set_cookie(_GUEST_COOKIE_USERNAME, username, httponly=False, samesite='Lax')
     return response
 
+# Là gì: `_attach_guest_cookies` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+# Chức năng backend: Hàm xử lý phần việc `attach guest cookies` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+# Mối liên hệ: Hàm phối hợp với `_ensure_guest_identity`, `response.set_cookie` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _attach_guest_cookies(request, response):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -217,6 +277,11 @@ def _attach_guest_cookies(request, response):
     response.set_cookie(_GUEST_COOKIE_USERNAME, username, httponly=False, samesite='Lax')
     return response
 
+# Là gì: `_store_guest_template` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+# Chức năng backend: Hàm xử lý phần việc `store guest template` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+# Mối liên hệ: Hàm phối hợp với `_ensure_guest_identity`, `_read_guest_meta`, `_guest_file` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect lên tệp hoặc storage.
 def _store_guest_template(request, docx_file) -> Path:
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -248,6 +313,11 @@ def _store_guest_template(request, docx_file) -> Path:
     _clear_generated_document_meta(request)
     return template_path
 
+# Là gì: `_extract_docx_text` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+# Chức năng backend: Hàm trích xuất nội dung hoặc giá trị cần thiết từ dữ liệu nguồn; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+# Mối liên hệ: Hàm phối hợp với `para.text.strip`, `parts.append`, `join` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _extract_docx_text(doc) -> str:
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -268,6 +338,11 @@ def _extract_docx_text(doc) -> str:
                         parts.append(para.text)
     return '\n'.join(parts)
 
+# Là gì: `_apply_replacements_to_docx` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+# Chức năng backend: Hàm xử lý phần việc `apply replacements to docx` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+# Mối liên hệ: Hàm phối hợp với `Document`, `replacements.items`, `join` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect ghi cơ sở dữ liệu.
 def _apply_replacements_to_docx(template_path: Path, replacements: dict[str, str]) -> None:
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -282,6 +357,11 @@ def _apply_replacements_to_docx(template_path: Path, replacements: dict[str, str
 
     
 
+    # Là gì: `_apply_to_para` là hàm cục bộ bên trong `_apply_replacements_to_docx`, chỉ phục vụ bước xử lý nội bộ của nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+    # Chức năng backend: Hàm xử lý phần việc `apply to para` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+    # Mối liên hệ: Hàm phối hợp với `replacements.items`, `join`, `full.replace` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def _apply_to_para(para):
         """
         Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -318,6 +398,11 @@ def _apply_replacements_to_docx(template_path: Path, replacements: dict[str, str
 
     doc.save(str(template_path))
 
+# Là gì: `_auto_detect_template_variables` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+# Chức năng backend: Hàm xử lý phần việc `auto detect template variables` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+# Mối liên hệ: Hàm phối hợp với `GlobalAIConfig.get_config`, `time.perf_counter`, `urllib.request.urlopen` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect lên tệp hoặc storage.
 def _auto_detect_template_variables(template_path: Path, content: str, existing_vars: list[str]) -> tuple[str, list[str]]:
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -388,6 +473,11 @@ def _auto_detect_template_variables(template_path: Path, content: str, existing_
 
     return modified_content, detected_vars
 
+# Là gì: `_guest_document_payload` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+# Chức năng backend: Hàm xử lý phần việc `guest document payload` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+# Mối liên hệ: Hàm phối hợp với `_read_guest_meta`, `_guest_file`, `_ensure_guest_identity` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _guest_document_payload(request):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -430,6 +520,11 @@ def _guest_document_payload(request):
         'is_favorite': False,
     }
 
+# Là gì: `_guest_html_page` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+# Chức năng backend: Hàm xử lý phần việc `guest html page` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+# Mối liên hệ: Hàm được các endpoint hoặc helper cùng module gọi khi cần cùng quy tắc xử lý.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _guest_html_page(html_body: str) -> str:
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -470,6 +565,11 @@ def _guest_html_page(html_body: str) -> str:
 </body>
 </html>"""
 
+# Là gì: `_extract_pdf_text` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+# Chức năng backend: Hàm trích xuất nội dung hoặc giá trị cần thiết từ dữ liệu nguồn; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+# Mối liên hệ: Hàm phối hợp với `pypdf.PdfReader`, `join`, `page.extract_text` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect lên tệp hoặc storage.
 def _extract_pdf_text(pdf_file) -> str:
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -504,6 +604,11 @@ def _extract_pdf_text(pdf_file) -> str:
 
     return text.strip()
 
+# Là gì: `guest_session_info` là endpoint REST của nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `guest session info` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình guest portal sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_ensure_guest_identity`, `_read_guest_meta`, `_guest_document_payload` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 @api_view(['GET'])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -529,6 +634,11 @@ def guest_session_info(request):
         },
     )
 
+# Là gì: `guest_cleanup` là endpoint REST của nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm dọn tài nguyên tạm hoặc dữ liệu không còn hiệu lực; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình guest portal sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.COOKIES.get`, `re.fullmatch`, `shutil.rmtree` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -550,6 +660,11 @@ def guest_cleanup(request):
     response.delete_cookie(_GUEST_COOKIE_USERNAME)
     return response
 
+# Là gì: `guest_parse_template` là endpoint REST của nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm phân tích dữ liệu thô thành cấu trúc có thể sử dụng; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình guest portal sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.FILES.get`, `str.lower`, `request.data.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -610,6 +725,11 @@ def guest_parse_template(request):
             http_status=status.HTTP_400_BAD_REQUEST,
         )
 
+# Là gì: `guest_parse_info` là endpoint REST của nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm phân tích dữ liệu thô thành cấu trúc có thể sử dụng; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình guest portal sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.FILES.get`, `_guest_response`, `openpyxl.load_workbook` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -657,6 +777,11 @@ def guest_parse_info(request):
             http_status=status.HTTP_400_BAD_REQUEST,
         )
 
+# Là gì: `guest_parse_pdf` là endpoint REST của nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm phân tích dữ liệu thô thành cấu trúc có thể sử dụng; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình guest portal sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.FILES.get`, `_guest_response`, `request.data.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -733,6 +858,11 @@ def guest_parse_pdf(request):
         },
     )
 
+# Là gì: `guest_generate` là endpoint REST của nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm sinh nội dung hoặc tệp mới từ dữ liệu đầu vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình guest portal sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_ensure_guest_identity`, `_guest_file`, `request.FILES.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu.
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -769,6 +899,11 @@ def guest_generate(request):
 
         
 
+        # Là gì: `_fill_para` là helper nội bộ của module `guest_portal_cookie.py`, phục vụ nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách.
+        # Chức năng backend: Hàm xử lý phần việc `fill para` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+        # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình guest portal.
+        # Mối liên hệ: Hàm phối hợp với `vals.items`, `join`, `full.replace` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+        # Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
         def _fill_para(para, vals):
             """
             Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -831,6 +966,11 @@ def guest_generate(request):
             http_status=status.HTTP_400_BAD_REQUEST,
         )
 
+# Là gì: `guest_document_detail` là endpoint REST của nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình guest portal sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_guest_document_payload`, `_guest_response` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 @api_view(['GET'])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -851,6 +991,11 @@ def guest_document_detail(request):
         )
     return _guest_response(request, payload)
 
+# Là gì: `guest_document_content_html` là endpoint REST của nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `guest document content html` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình guest portal sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_guest_file`, `_guest_response`, `doc_path.open` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect lên tệp hoặc storage.
 @api_view(['GET'])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -881,6 +1026,11 @@ def guest_document_content_html(request):
 
     return _guest_response(request, {'html': _guest_html_page(html_body)})
 
+# Là gì: `guest_document_download` là endpoint REST của nhóm cổng khách, phiên truy cập bằng cookie và thao tác văn bản dành cho khách; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm chuẩn bị và trả tệp cho phía client tải xuống; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình guest portal sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_guest_file`, `_guest_response`, `_read_guest_meta` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect lên tệp hoặc storage; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @authentication_classes([])
 @permission_classes([AllowAny])

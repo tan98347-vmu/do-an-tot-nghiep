@@ -63,6 +63,31 @@ class AuthProfileApiTests(TestCase):
         payload = response.json()
         self.assertEqual(payload['user']['username'], 'employee_user')
 
+    def test_login_is_rate_limited_against_bruteforce(self):
+        """HIGH-1: truoc day login khong gioi han -> brute-force/credential stuffing.
+        Nay throttle theo dinh danh (mac dinh 8/min) phai tra 429 khi vuot."""
+        from django.core.cache import cache
+
+        cache.clear()  # throttle dung cache -> reset truoc khi do
+        url = reverse('api:login')
+        statuses = []
+        for _ in range(12):
+            resp = self.client.post(
+                url,
+                data={
+                    'identifier': 'NV001',
+                    'password': 'sai-mat-khau',
+                    'login_scope': 'company',
+                    'company_id': self.company.pk,
+                },
+            )
+            statuses.append(resp.status_code)
+
+        self.assertIn(429, statuses, f'Login khong bi throttle: {statuses}')
+        # Cac lan dau van la 401 (sai mat khau) chu khong phai khoa ngay tu dau
+        self.assertEqual(statuses[0], 401, statuses)
+        cache.clear()
+
     # [Web] `test_me_patch_rejects_invalid_phone` là bước nội bộ của class để hỗ trợ dữ liệu hoặc trạng thái mà nhóm màn Hồ sơ, tài khoản và quản trị người dùng đang cần.
 
     def test_me_patch_rejects_invalid_phone(self):
@@ -236,3 +261,80 @@ class AuthProfileApiTests(TestCase):
         self.assertEqual(response.json()['variables']['ho_ten'], 'Employee User')
         pdf_cloud_ocr_mock.assert_called_once()
         extract_variables_mock.assert_called_once()
+
+    @patch('ai_engine.rag_engine.get_llm')
+    @patch('api.views.ai_doc._extract_text_from_pdf_with_cloud_ocr')
+    @patch('ai_engine.rag_engine.extract_pdf_text')
+    def test_extract_pdf_ocr_fills_from_pdf_not_from_profile(
+        self,
+        extract_pdf_text_mock,
+        pdf_cloud_ocr_mock,
+        get_llm_mock,
+    ):
+        """BUG: PDF scan can OCR -> truoc day prompt nhung ca ho so nhan vien khien
+        LLM 'nhay' sang dien tu ho so thay vi tu noi dung PDF. Trich xuat PDF/anh
+        chi duoc dien tu NOI DUNG NGUON (text OCR), khong duoc lay tu ho so."""
+        self.user.profile.so_yeu_ly_lich = 'DAU_VAN_HO_SO_KHONG_DUOC_LO'
+        self.user.profile.save(update_fields=['so_yeu_ly_lich'])
+
+        extract_pdf_text_mock.return_value = ''  # PDF scan -> phai OCR
+        pdf_cloud_ocr_mock.return_value = 'DAU_VAN_TRONG_PDF_OCR Ho ten: Nguyen Van A'
+
+        captured = {}
+
+        class _FakeResp:
+            content = '{"ho_ten": "Nguyen Van A", "ten_cong_ty": ""}'
+
+        class _FakeLLM:
+            def invoke(self, messages):
+                captured['messages'] = messages
+                return _FakeResp()
+
+        get_llm_mock.return_value = _FakeLLM()
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse('api:ai_doc_extract_pdf'),
+            data={
+                'template_id': self.template.pk,
+                'pdf_file': SimpleUploadedFile('scan.pdf', b'%PDF-scan%', content_type='application/pdf'),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        prompt_text = '\n'.join(str(getattr(m, 'content', '')) for m in captured['messages'])
+        # Ho so nhan vien KHONG duoc xuat hien trong prompt
+        self.assertNotIn('DAU_VAN_HO_SO_KHONG_DUOC_LO', prompt_text)
+        self.assertNotIn('HO SO NHAN VIEN', prompt_text)
+        # Noi dung PDF (OCR) PHAI la nguon duy nhat
+        self.assertIn('DAU_VAN_TRONG_PDF_OCR', prompt_text)
+        self.assertEqual(response.json()['variables']['ho_ten'], 'Nguyen Van A')
+
+    @patch('ai_engine.rag_engine.get_llm')
+    @patch('api.views.ai_doc._extract_text_from_pdf_with_cloud_ocr')
+    @patch('ai_engine.rag_engine.extract_pdf_text')
+    def test_extract_pdf_empty_ocr_returns_blank_without_profile_fallback(
+        self,
+        extract_pdf_text_mock,
+        pdf_cloud_ocr_mock,
+        get_llm_mock,
+    ):
+        """OCR khong doc ra chu -> tra ve cac bien rong, KHONG goi LLM va KHONG
+        dien tu ho so."""
+        extract_pdf_text_mock.return_value = ''
+        pdf_cloud_ocr_mock.return_value = ''  # OCR rong
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse('api:ai_doc_extract_pdf'),
+            data={
+                'template_id': self.template.pk,
+                'pdf_file': SimpleUploadedFile('scan.pdf', b'%PDF-scan%', content_type='application/pdf'),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        variables = response.json()['variables']
+        self.assertEqual(variables.get('ho_ten', ''), '')
+        self.assertEqual(variables.get('ten_cong_ty', ''), '')
+        get_llm_mock.assert_not_called()

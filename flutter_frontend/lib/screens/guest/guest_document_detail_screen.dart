@@ -1,8 +1,7 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/guest/guest_document_detail_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH CỔNG KHÁCH — CHI TIẾT VĂN BẢN KHÁCH ===
+// Xem trước (_buildPreview 'guest/document/content-html/') và tải DOCX (_downloadDocx 'guest/document/download/') cho văn bản khách vừa tạo.
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/guest/guest_document_detail_screen.dart.
 import 'dart:html' as html;
 import 'dart:ui_web' as ui;
 
@@ -13,22 +12,17 @@ import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/iframe_blocker.dart';
 
-// Mục đích: Widget `GuestDocumentDetailScreen` triển khai phần việc `Guest Document Detail Screen` trong flutter_frontend/lib/screens/guest/guest_document_detail_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn CHI TIẾT VĂN BẢN KHÁCH (cổng guest).
 
 class GuestDocumentDetailScreen extends StatefulWidget {
+  // Widget màn CHI TIẾT VĂN BẢN KHÁCH (cổng guest, không đăng nhập).
   const GuestDocumentDetailScreen({super.key});
 
   @override
   State<GuestDocumentDetailScreen> createState() => _GuestDocumentDetailScreenState();
 }
 
-// Mục đích: Widget `_GuestDocumentDetailScreenState` triển khai phần việc `Guest Document Detail Screen State` trong flutter_frontend/lib/screens/guest/guest_document_detail_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn khách: tải văn bản vừa tạo, xem trước, tải DOCX.
 
 class _GuestDocumentDetailScreenState extends State<GuestDocumentDetailScreen> {
   Map<String, dynamic>? _document;
@@ -38,20 +32,13 @@ class _GuestDocumentDetailScreenState extends State<GuestDocumentDetailScreen> {
   int _iframeKey = 0;
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/guest/guest_document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Mở màn: nạp văn bản khách vừa tạo (_load 'guest/document/').
   void initState() {
     super.initState();
     _load();
   }
 
-  // Mục đích: Phương thức `_load` triển khai phần việc `load` trong flutter_frontend/lib/screens/guest/guest_document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tải văn bản khách từ server ('guest/document/').
 
   Future<void> _load() async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -93,11 +80,7 @@ class _GuestDocumentDetailScreenState extends State<GuestDocumentDetailScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_downloadDocx` triển khai phần việc `download Docx` trong flutter_frontend/lib/screens/guest/guest_document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Tải file DOCX của văn bản khách ('guest/document/download/').
   Future<void> _downloadDocx() async {
     try {
       // Gọi API hoặc tác vụ bất đồng bộ rồi chờ kết quả trước khi cập nhật giao diện.
@@ -125,11 +108,7 @@ class _GuestDocumentDetailScreenState extends State<GuestDocumentDetailScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_buildPreview` triển khai phần việc `build Preview` trong flutter_frontend/lib/screens/guest/guest_document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Dựng khung xem trước nội dung HTML của văn bản ('content-html/').
   Widget _buildPreview() {
     if (_contentHtml == null || _contentHtml!.isEmpty) {
       return const SizedBox(
@@ -156,11 +135,7 @@ class _GuestDocumentDetailScreenState extends State<GuestDocumentDetailScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/guest/guest_document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Dựng màn: thông tin + xem trước + nút tải; nút quay về cổng khách (/guest).
   Widget build(BuildContext context) {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
@@ -345,21 +320,14 @@ class _GuestDocumentDetailScreenState extends State<GuestDocumentDetailScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_shortDate` triển khai phần việc `short Date` trong flutter_frontend/lib/screens/guest/guest_document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Định dạng ngày ngắn gọn để hiển thị.
   String _shortDate(String value) {
     if (value.length >= 10) return value.substring(0, 10);
     return value;
   }
 }
 
-// Mục đích: Lớp `_InfoRow` triển khai phần việc `Info Row` trong flutter_frontend/lib/screens/guest/guest_document_detail_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget dòng thông tin (nhãn + giá trị).
 
 class _InfoRow extends StatelessWidget {
   final String label;
@@ -367,10 +335,7 @@ class _InfoRow extends StatelessWidget {
   const _InfoRow(this.label, this.value);
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/guest/guest_document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng 1 dòng thông tin.
 
   Widget build(BuildContext context) {
     return Padding(
@@ -391,10 +356,7 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_MetaBadge` triển khai phần việc `Meta Badge` trong flutter_frontend/lib/screens/guest/guest_document_detail_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget badge metadata nhỏ.
 
 class _MetaBadge extends StatelessWidget {
   final IconData icon;
@@ -402,10 +364,7 @@ class _MetaBadge extends StatelessWidget {
   const _MetaBadge({required this.icon, required this.label});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/guest/guest_document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng badge metadata.
 
   Widget build(BuildContext context) {
     return Container(

@@ -9,6 +9,7 @@ from django.test import TestCase, override_settings
 
 from accounts.company_services import create_company_user
 from accounts.models import Company, CompanyRole, CompanyStatus
+from accounts.storage_paths import company_storage_slug
 from ai_engine.doc_creator import create_document_from_intent
 from document_templates.models import DocumentTemplate
 
@@ -81,6 +82,11 @@ class DocCreatorContextPrefillTests(TestCase):
             self.assertIn('CTY PREFILL', document.content)
             self.assertIn('Cong tac ngan han', document.content)
             self.assertIn('Don cong tac', answer)
+            self.assertTrue(
+                document.output_file.name.startswith(
+                    f'companies/{company_storage_slug(self.company)}/generated_docs/'
+                )
+            )
             self.assertNotIn('NGU CANH HE THONG', fake_llm.calls[0][1].content)
             self.assertIn('EFFECTIVE CONTEXT', fake_llm.calls[1][1].content)
         finally:

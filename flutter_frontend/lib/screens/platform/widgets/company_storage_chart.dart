@@ -1,3 +1,6 @@
+// === BIỂU ĐỒ DUNG LƯỢNG LƯU TRỮ CÔNG TY ===
+// Vẽ biểu đồ phân bổ dung lượng (theo loại dữ liệu) cho 1 công ty — widget trình bày.
+
 // r5/M9 — Bar chart hien thi storage breakdown theo subdir (media/companies/<slug>/*).
 
 import 'package:fl_chart/fl_chart.dart';

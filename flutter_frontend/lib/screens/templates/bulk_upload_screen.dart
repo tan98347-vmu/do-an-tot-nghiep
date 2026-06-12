@@ -1,8 +1,8 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH UPLOAD HÀNG LOẠT BIỂU MẪU ===
+// Tải nhiều file DOCX cùng lúc (chọn thư mục _FolderPicker), parse Excel danh sách (_parseExcel 'templates/bulk/parse-excel/'), chọn prompt nhận diện biến (_pickDetectionPrompt/_saveDetectionPrompt).
+// - _startUpload: upload từng file ('templates/bulk/upload-single/') với tiến độ từng dòng (_FileRow); xong mở /templates/<id>. _cancelUpload để dừng.
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:html' as html;
@@ -22,10 +22,7 @@ import '../../widgets/ai/save_prompt_dialog.dart';
 // Singleton folder picker – registered once, reused across rebuilds
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Mục đích: Lớp `_FolderPicker` triển khai phần việc `Folder Picker` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Bộ chọn thư mục (web): lấy nhiều file DOCX cùng lúc qua input HTML.
 
 class _FolderPicker {
   static _FolderPicker? _instance;
@@ -50,10 +47,7 @@ class _FolderPicker {
   }
 
   /// Set callback for when files are selected. Replaces any previous callback.
-  // Mục đích: Phương thức `onFiles` triển khai phần việc `on Files` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đăng ký callback khi người dùng chọn file từ thư mục.
 
   void onFiles(void Function(List<html.File>) cb) {
     _changeSub?.cancel();
@@ -67,10 +61,7 @@ class _FolderPicker {
     });
   }
 
-  // Mục đích: Phương thức `setEnabled` triển khai phần việc `set Enabled` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Bật/tắt bộ chọn thư mục.
 
   void setEnabled(bool v) {
     input.style.pointerEvents = v ? 'auto' : 'none';
@@ -81,23 +72,14 @@ class _FolderPicker {
 // Models
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Mục đích: Lớp `_RowStatus` triển khai phần việc `Row Status` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Trạng thái 1 dòng file upload: chờ/đang xử lý/xong/lỗi/đã hủy.
 
 enum _RowStatus { waiting, processing, done, error, cancelled }
-// Mục đích: Lớp `_BulkUploadMode` triển khai phần việc `Bulk Upload Mode` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Chế độ upload hàng loạt: AI nhận diện biến / dùng biến dựng sẵn.
 
 enum _BulkUploadMode { aiDetect, prebuiltVariables }
 
-// Mục đích: Lớp `_FileRow` triển khai phần việc `File Row` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Mô hình 1 dòng file trong bảng upload (tên, trạng thái, biến, lỗi).
 
 class _FileRow {
   final String filename;
@@ -135,10 +117,7 @@ class _FileRow {
 // Screen
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Mục đích: Widget `BulkUploadScreen` triển khai phần việc `Bulk Upload Screen` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn UPLOAD HÀNG LOẠT MẪU — ConsumerStatefulWidget.
 
 class BulkUploadScreen extends ConsumerStatefulWidget {
   const BulkUploadScreen({super.key});
@@ -147,10 +126,7 @@ class BulkUploadScreen extends ConsumerStatefulWidget {
   ConsumerState<BulkUploadScreen> createState() => _BulkUploadScreenState();
 }
 
-// Mục đích: Widget `_BulkUploadScreenState` triển khai phần việc `Bulk Upload Screen State` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn upload hàng loạt: chọn file/thư mục, parse Excel, upload từng file có tiến độ.
 
 class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
   List<_FileRow> _rows = [];
@@ -178,10 +154,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
   AppStrings get _s => AppStrings.of(context);
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở màn: khởi tạo bộ chọn thư mục + lắng nghe chọn file.
 
   void initState() {
     super.initState();
@@ -191,10 +164,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Rời màn: dọn bộ chọn + tài nguyên.
 
   void dispose() {
     _picker.onFiles((_) {}); // detach callback
@@ -203,10 +173,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
   }
 
   // ── Called when user selects a folder via the HTML overlay ────────────────
-  // Mục đích: Phương thức `_onFilesFromPicker` triển khai phần việc `on Files From Picker` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khi chọn file từ thư mục -> dựng danh sách dòng + (nếu có) parse Excel kèm theo.
 
   void _onFilesFromPicker(List<html.File> files) async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -312,10 +279,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
       ? _s.pick('Đang kiểm tra biến có sẵn...', 'Checking existing variables...')
       : _s.pick('Đang xử lý AI...', 'Running AI detection...');
 
-  // Mục đích: Phương thức `_buildModeSelector` triển khai phần việc `build Mode Selector` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khối chọn chế độ upload (AI nhận diện biến / biến dựng sẵn).
 
   Widget _buildModeSelector() {
     final busy = _uploading || _loadingBytes || _parsingExcel;
@@ -509,10 +473,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_readBytes` triển khai phần việc `read Bytes` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đọc bytes 1 file (web FileReader).
 
   Future<Uint8List?> _readBytes(html.File file) {
     final c = Completer<Uint8List?>();
@@ -532,10 +493,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
     return c.future;
   }
 
-  // Mục đích: Phương thức `_relPath` triển khai phần việc `rel Path` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Lấy đường dẫn tương đối của file trong thư mục đã chọn.
 
   String _relPath(html.File f) {
     try {
@@ -546,10 +504,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
   }
 
   // ── Parse Excel metadata ─────────────────────────────────────────────────
-  // Mục đích: Phương thức `_parseExcel` triển khai phần việc `parse Excel` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Parse file Excel danh sách ('templates/bulk/parse-excel/') để gán biến cho từng DOCX.
 
   Future<void> _parseExcel(Uint8List bytes, String name, List<_FileRow> rows) async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -624,10 +579,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
   }
 
   // ── Bulk upload ───────────────────────────────────────────────────────────
-  // Mục đích: Phương thức `_startUpload` triển khai phần việc `start Upload` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút Bắt đầu upload: upload từng file ('templates/bulk/upload-single/') với tiến độ từng dòng.
 
   Future<void> _startUpload() async {
     if (_rows.isEmpty || _uploading) return;
@@ -808,10 +760,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_cancelUpload` triển khai phần việc `cancel Upload` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút Hủy: dừng quá trình upload hàng loạt.
 
   void _cancelUpload() {
     if (!_uploading) return;
@@ -858,10 +807,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
   // ─────────────────────────────────────────────────────────────────────────
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng màn: panel cấu hình + tiến độ + bảng/danh sách file.
 
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.sizeOf(context).width < 700;
@@ -906,10 +852,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
   }
 
   // ── Top panel ─────────────────────────────────────────────────────────────
-  // Mục đích: Phương thức `_buildTopPanel` triển khai phần việc `build Top Panel` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Panel trên: chọn chế độ, chọn thư mục/file, chọn prompt nhận diện biến.
 
   Widget _buildTopPanel() {
     final busy = _uploading || _loadingBytes || _parsingExcel;
@@ -1120,10 +1063,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
   }
 
   // ── Progress bar ──────────────────────────────────────────────────────────
-  // Mục đích: Phương thức `_buildProgress` triển khai phần việc `build Progress` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Thanh tiến độ tổng (done/total/đang xử lý).
 
   Widget _buildProgress(int done, int total, int processing) {
     final allDone = !_uploading && done > 0;
@@ -1199,10 +1139,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
   }
 
   // ── Empty state ───────────────────────────────────────────────────────────
-  // Mục đích: Phương thức `_buildEmpty` triển khai phần việc `build Empty` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Trạng thái trống khi chưa chọn file.
 
   Widget _buildEmpty() {
     return Center(
@@ -1233,10 +1170,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
   }
 
   // ── Desktop table ─────────────────────────────────────────────────────────
-  // Mục đích: Phương thức `_buildTable` triển khai phần việc `build Table` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Bảng danh sách file upload (bố cục rộng).
 
   Widget _buildTable() {
     return SingleChildScrollView(
@@ -1277,10 +1211,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_buildRow` triển khai phần việc `build Row` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng 1 hàng file trong bảng.
 
   Widget _buildRow(int i) {
     final row = _rows[i];
@@ -1346,10 +1277,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_statusWidget` triển khai phần việc `status Widget` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Widget hiển thị trạng thái 1 dòng file (icon + nhãn).
 
   Widget _statusWidget(_FileRow row) {
     if (row.status == _RowStatus.processing) {
@@ -1384,10 +1312,7 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
   }
 
   // ── Mobile card list ──────────────────────────────────────────────────────
-  // Mục đích: Phương thức `_buildCardList` triển khai phần việc `build Card List` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Danh sách file dạng thẻ (bố cục hẹp).
 
   Widget _buildCardList() {
     return ListView.separated(
@@ -1454,19 +1379,13 @@ class _BulkUploadScreenState extends ConsumerState<BulkUploadScreen> {
 // Small helper widgets
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Mục đích: Lớp `_Step` triển khai phần việc `Step` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget 1 bước trong chỉ dẫn quy trình.
 
 class _Step extends StatelessWidget {
   final String n, text;
   const _Step(this.n, this.text);
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng 1 bước chỉ dẫn.
 
   Widget build(BuildContext ctx) => Row(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1483,20 +1402,14 @@ class _Step extends StatelessWidget {
   );
 }
 
-// Mục đích: Lớp `_Banner` triển khai phần việc `Banner` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget banner thông báo.
 
 class _Banner extends StatelessWidget {
   final String text;
   final bool isError, isWarning;
   const _Banner({required this.text, this.isError = false, this.isWarning = false});
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng banner.
 
   Widget build(BuildContext ctx) {
     final color = isError ? Colors.red : isWarning ? Colors.orange : Colors.green;
@@ -1520,19 +1433,13 @@ class _Banner extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_TagChip` triển khai phần việc `Tag Chip` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget chip hiển thị 1 biến/tag.
 
 class _TagChip extends StatelessWidget {
   final String label;
   const _TagChip(this.label);
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chip tag.
 
   Widget build(BuildContext ctx) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -1561,19 +1468,13 @@ class _GroupChip extends StatelessWidget {
   );
 }
 
-// Mục đích: Lớp `_StatusIcon` triển khai phần việc `Status Icon` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget icon theo trạng thái dòng file.
 
 class _StatusIcon extends StatelessWidget {
   final _RowStatus s;
   const _StatusIcon(this.s);
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng icon trạng thái.
 
   Widget build(BuildContext ctx) => switch (s) {
     _RowStatus.done       => const Icon(Icons.check_circle, color: Colors.green, size: 20),
@@ -1585,10 +1486,7 @@ class _StatusIcon extends StatelessWidget {
   };
 }
 
-// Mục đích: Lớp `_TH` triển khai phần việc `TH` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget ô tiêu đề cột bảng.
 
 class _TH extends StatelessWidget {
   final String label;
@@ -1596,10 +1494,7 @@ class _TH extends StatelessWidget {
   final double? w;
   const _TH(this.label, {this.f = 1, this.w});
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/templates/bulk_upload_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng ô tiêu đề cột.
 
   Widget build(BuildContext ctx) {
     final child = Padding(

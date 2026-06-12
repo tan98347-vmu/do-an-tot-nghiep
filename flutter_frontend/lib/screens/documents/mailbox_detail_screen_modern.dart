@@ -1,8 +1,8 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/documents/mailbox_detail_screen_modern.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH CHI TIẾT HÒM THƯ (1 luồng forward/ký) ===
+// Xem luồng chuyển tiếp một văn bản / PDF đã ký (_load 'mailbox/<threadId>/'), xem trước + verify PDF.
+// - Thao tác trên lượt của mình (_entryForCurrentUser): KÝ (_signCurrentEntry 'sign/'), FORWARD tiếp (_forwardEntry 'forward/', chọn người qua 'signing/candidates/'), hoàn thành/từ chối (_actEntry), tải/xác minh (_verify).
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/documents/mailbox_detail_screen_modern.dart.
 import 'dart:async';
 import 'dart:html' as html;
 
@@ -18,13 +18,11 @@ import '../../providers/auth_provider.dart';
 import '../../providers/signing_summary_provider.dart';
 import '../../widgets/pdf/web_pdf_frame.dart';
 
-// Mục đích: Widget `MailboxDetailScreen` triển khai phần việc `Mailbox Detail Screen` trong flutter_frontend/lib/screens/documents/mailbox_detail_screen_modern.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn CHI TIẾT HÒM THƯ (1 luồng); nhận threadId.
 
 class MailboxDetailScreen extends ConsumerStatefulWidget {
   final int threadId;
+  // Widget màn CHI TIẾT HÒM THƯ (1 luồng forward/ký); nhận threadId.
   const MailboxDetailScreen({super.key, required this.threadId});
 
   @override
@@ -32,13 +30,11 @@ class MailboxDetailScreen extends ConsumerStatefulWidget {
       _MailboxDetailScreenState();
 }
 
-// Mục đích: Widget `_MailboxDetailScreenState` triển khai phần việc `Mailbox Detail Screen State` trong flutter_frontend/lib/screens/documents/mailbox_detail_screen_modern.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn chi tiết hòm thư: tải luồng, xem trước PDF, ký/forward/hoàn thành lượt.
 
 class _MailboxDetailScreenState extends ConsumerState<MailboxDetailScreen> {
   AppStrings get _strings => AppStrings.of(context);
+  // Chọn chuỗi hiển thị VI/EN (i18n).
   String _pick(String vi, String en) => _strings.pick(vi, en);
 
   final _timelineSearchController = TextEditingController();
@@ -53,22 +49,14 @@ class _MailboxDetailScreenState extends ConsumerState<MailboxDetailScreen> {
   Timer? _pdfAutoReloadTimer;
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/documents/mailbox_detail_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Mở màn: nạp chi tiết luồng (_load 'mailbox/<threadId>/') + bật auto-reload PDF.
   void initState() {
     super.initState();
     _load();
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/documents/mailbox_detail_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Rời màn: dừng auto-reload PDF + dọn tài nguyên.
   void dispose() {
     _stopPdfAutoReload();
     _timelineSearchController.dispose();
@@ -83,6 +71,7 @@ class _MailboxDetailScreenState extends ConsumerState<MailboxDetailScreen> {
     _pdfAutoReloadTimer = null;
   }
 
+  // Khởi động lại tự tải lại PDF xem trước.
   void _restartPdfAutoReload() {
     _stopPdfAutoReload();
     _pdfAutoReloadTimer = Timer.periodic(const Duration(seconds: 10), (_) {
@@ -92,6 +81,7 @@ class _MailboxDetailScreenState extends ConsumerState<MailboxDetailScreen> {
     });
   }
 
+  // Tìm lượt dành cho user hiện tại trong luồng (để hiện nút Ký/Forward).
   MailboxEntryItem? _entryForCurrentUser(MailboxThreadItem thread) {
     // Đọc provider theo nhu cầu hành động mà không buộc widget đăng ký rebuild liên tục.
 
@@ -108,30 +98,19 @@ class _MailboxDetailScreenState extends ConsumerState<MailboxDetailScreen> {
     return mine.first;
   }
 
-  // Mục đích: Phương thức `_previewPath` triển khai phần việc `preview Path` trong flutter_frontend/lib/screens/documents/mailbox_detail_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Đường dẫn API xem trước PDF của lượt/luồng.
   String _previewPath(MailboxThreadItem thread, MailboxEntryItem? entry) =>
       entry != null
           ? 'mailbox/entries/${entry.id}/preview-pdf/'
           : 'mailbox/${thread.id}/preview-pdf/';
 
-  // Mục đích: Phương thức `_verifyPath` triển khai phần việc `verify Path` trong flutter_frontend/lib/screens/documents/mailbox_detail_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Đường dẫn API xác minh PDF của lượt/luồng.
   String _verifyPath(MailboxThreadItem thread, MailboxEntryItem? entry) =>
       entry != null
           ? 'mailbox/entries/${entry.id}/verify/'
           : 'mailbox/${thread.id}/verify/';
 
-  // Mục đích: Phương thức `_load` triển khai phần việc `load` trong flutter_frontend/lib/screens/documents/mailbox_detail_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tải chi tiết luồng hòm thư từ server ('mailbox/<threadId>/').
 
   Future<void> _load({bool silent = false}) async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -224,11 +203,7 @@ class _MailboxDetailScreenState extends ConsumerState<MailboxDetailScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_showSnack` triển khai phần việc `show Snack` trong flutter_frontend/lib/screens/documents/mailbox_detail_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Hiện snackbar thông báo (thường/lỗi).
   void _showSnack(String message, {bool error = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -237,11 +212,7 @@ class _MailboxDetailScreenState extends ConsumerState<MailboxDetailScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_verify` triển khai phần việc `verify` trong flutter_frontend/lib/screens/documents/mailbox_detail_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nút Xác minh: kiểm tra chữ ký PDF đang xem.
   Future<void> _verify() async {
     final thread = _thread;
     if (thread == null) return;
@@ -279,11 +250,7 @@ class _MailboxDetailScreenState extends ConsumerState<MailboxDetailScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_downloadPreview` triển khai phần việc `download Preview` trong flutter_frontend/lib/screens/documents/mailbox_detail_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Tải PDF xem trước về máy.
   Future<void> _downloadPreview() async {
     final thread = _thread;
     if (thread == null) return;
@@ -308,11 +275,7 @@ class _MailboxDetailScreenState extends ConsumerState<MailboxDetailScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_signCurrentEntry` triển khai phần việc `sign Current Entry` trong flutter_frontend/lib/screens/documents/mailbox_detail_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nút KÝ: ký lượt của mình ('entries/<id>/sign/').
   Future<void> _signCurrentEntry() async {
     final thread = _thread;
     final entry = thread == null ? null : _entryForCurrentUser(thread);
@@ -350,11 +313,7 @@ class _MailboxDetailScreenState extends ConsumerState<MailboxDetailScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_actEntry` triển khai phần việc `act Entry` trong flutter_frontend/lib/screens/documents/mailbox_detail_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Hoàn thành / từ chối lượt ('entries/<id>/<action>/').
   Future<void> _actEntry(String action) async {
     final thread = _thread;
     final entry = thread == null ? null : _entryForCurrentUser(thread);
@@ -415,11 +374,7 @@ class _MailboxDetailScreenState extends ConsumerState<MailboxDetailScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_forwardEntry` triển khai phần việc `forward Entry` trong flutter_frontend/lib/screens/documents/mailbox_detail_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nút FORWARD: chuyển tiếp cho người khác (chọn qua 'signing/candidates/', 'entries/<id>/forward/').
   Future<void> _forwardEntry() async {
     final thread = _thread;
     final entry = thread == null ? null : _entryForCurrentUser(thread);
@@ -571,11 +526,7 @@ class _MailboxDetailScreenState extends ConsumerState<MailboxDetailScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_formatDateTime` triển khai phần việc `format Date Time` trong flutter_frontend/lib/screens/documents/mailbox_detail_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Định dạng thời điểm để hiển thị.
   String _formatDateTime(String value) {
     if (value.trim().isEmpty) return '—';
     try {
@@ -590,11 +541,7 @@ class _MailboxDetailScreenState extends ConsumerState<MailboxDetailScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_statusLabel` triển khai phần việc `status Label` trong flutter_frontend/lib/screens/documents/mailbox_detail_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nhãn trạng thái lượt/luồng.
   String _statusLabel(String status) {
     switch (status) {
       case 'completed':
@@ -610,6 +557,7 @@ class _MailboxDetailScreenState extends ConsumerState<MailboxDetailScreen> {
     }
   }
 
+  // Màu theo trạng thái.
   Color _statusColor(String status) {
     switch (status) {
       case 'completed':
@@ -625,6 +573,7 @@ class _MailboxDetailScreenState extends ConsumerState<MailboxDetailScreen> {
     }
   }
 
+  // Lọc/sắp xếp các lượt thành dòng thời gian hiển thị.
   List<MailboxEntryItem> _filteredTimeline(List<MailboxEntryItem> entries) {
     return entries.where((entry) {
       if (_timelineStatusFilter != 'all' &&
@@ -643,11 +592,7 @@ class _MailboxDetailScreenState extends ConsumerState<MailboxDetailScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/mailbox_detail_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Dựng màn: xem trước PDF + dòng thời gian forward/ký + nút Ký/Forward/Hoàn thành cho lượt của mình.
   Widget build(BuildContext context) {
     final thread = _thread;
     final currentEntry = thread == null ? null : _entryForCurrentUser(thread);
@@ -683,10 +628,7 @@ class _MailboxDetailScreenState extends ConsumerState<MailboxDetailScreen> {
                   'Could not load the mailbox thread.'))));
     }
 
-    // Mục đích: Phương thức `chip` triển khai phần việc `chip` trong flutter_frontend/lib/screens/documents/mailbox_detail_screen_modern.dart.
-    // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-    // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-    // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+    // Dựng chip nhỏ hiển thị nhãn:giá trị trong dòng thời gian.
 
     Widget chip(String label, String value) {
       final active = _timelineStatusFilter == value;

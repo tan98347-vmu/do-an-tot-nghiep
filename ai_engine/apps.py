@@ -8,6 +8,8 @@ Tac dung: Dat diem khoi dong trung tam cho toan bo backend AI.
 
 from django.apps import AppConfig
 
+# class AiEngineConfig là cấu hình khởi động của app ai_engine: khai báo tên app cho Django và cung cấp hook ready() để nạp signal đúng thời điểm.
+# vd: khi Django nạp INSTALLED_APPS, app này được khởi tạo trước khi các API chat/assistant/audio nhận request.
 class AiEngineConfig(AppConfig):
     """
     Thuoc chuc nang nao: Cau hinh khoi dong cho app nghiep vu AI.
@@ -22,6 +24,8 @@ class AiEngineConfig(AppConfig):
 
     
 
+    # def ready để nạp module signals của app sau khi Django khởi tạo xong, nhờ đó receiver dọn file audio (post_delete của ChatAudioAttachment) được đăng ký vào vòng đời model.
+    # vd: ngay khi server khởi động, import .signals chạy nên xóa 1 bản ghi audio sẽ tự kéo theo xóa file .webm/.wav tương ứng.
     def ready(self):
         """
         Thuoc chuc nang nao: Nap signal phuc vu app AI.

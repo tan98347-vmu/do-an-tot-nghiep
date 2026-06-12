@@ -18,6 +18,11 @@ from ..trash_services import (
     restore_trash_items,
 )
 
+# Là gì: `trash_entries` là endpoint REST của nhóm thùng rác, khôi phục và xóa vĩnh viễn văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `trash entries` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình thùng rác sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `purge_expired_trash`, `request.GET.get`, `list_trash_entries` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def trash_entries(request):
@@ -38,6 +43,11 @@ def trash_entries(request):
     )
     return Response(payload)
 
+# Là gì: `trash_restore` là endpoint REST của nhóm thùng rác, khôi phục và xóa vĩnh viễn văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm khôi phục dữ liệu về trạng thái hoạt động; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình thùng rác sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `purge_expired_trash`, `request.data.get`, `restore_trash_items` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def trash_restore(request):
@@ -58,6 +68,11 @@ def trash_restore(request):
     payload = restore_trash_items(request.user, items)
     return Response(payload)
 
+# Là gì: `trash_delete` là endpoint REST của nhóm thùng rác, khôi phục và xóa vĩnh viễn văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xóa hoặc đánh dấu xóa dữ liệu được chỉ định; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình thùng rác sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `purge_expired_trash`, `request.data.get`, `permanently_delete_trash_items` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def trash_delete(request):

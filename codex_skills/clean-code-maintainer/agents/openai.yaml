@@ -1,4 +1,0 @@
-interface:
-  display_name: "Clean Code Maintainer"
-  short_description: "Keep repo code small, clear, and maintainable"
-  default_prompt: "Use $clean-code-maintainer to add or refactor code in this repo without duplication, oversized modules, or confusing ownership."

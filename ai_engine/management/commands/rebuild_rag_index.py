@@ -16,6 +16,8 @@ from ai_engine.rag_index import (
     template_index_stats,
 )
 
+# class Command là lệnh quản trị 'rebuild_rag_index' để xem thống kê hoặc dựng lại chỉ mục vector RAG cho mẫu văn bản và tài liệu.
+# vd: python manage.py rebuild_rag_index --scope templates --company-code VNNET.
 class Command(BaseCommand):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -28,6 +30,8 @@ class Command(BaseCommand):
 
     
 
+    # def add_arguments để khai báo tham số dòng lệnh: --scope (all/templates/documents), --dry-run (chỉ in thống kê), --company-id / --company-code (giới hạn theo một công ty).
+    # vd: thêm cờ --dry-run để chỉ xem thống kê mà không dựng lại chỉ mục.
     def add_arguments(self, parser):
         """
         Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -59,6 +63,8 @@ class Command(BaseCommand):
 
     
 
+    # def handle để thực thi lệnh: in thống kê live/stale/missing của chỉ mục; nếu --dry-run thì dừng, ngược lại dựng lại chỉ mục template và/hoặc document theo scope và công ty đã chọn.
+    # vd: --dry-run -> in 'live/stale/missing' rồi dừng; không có cờ -> xóa và đánh chỉ mục lại.
     def handle(self, *args, **options):
         """
         Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.

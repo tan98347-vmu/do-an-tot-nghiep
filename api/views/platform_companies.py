@@ -32,6 +32,11 @@ from ..serializers.companies import (
 )
 
 
+# Là gì: `_company_creation_payload` là helper nội bộ của module `platform_companies.py`, phục vụ nhóm quản trị công ty ở cấp nền tảng.
+# Chức năng backend: Hàm xử lý phần việc `company creation payload` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình platform admin quản lý doanh nghiệp.
+# Mối liên hệ: Hàm phối hợp với `serialize_company_credential_rows`, `CompanyDetailSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _company_creation_payload(result):
     return {
         'company': CompanyDetailSerializer(result.company).data,
@@ -46,16 +51,31 @@ def _company_creation_payload(result):
     }
 
 
+# Là gì: `_platform_forbidden_response` là helper nội bộ của module `platform_companies.py`, phục vụ nhóm quản trị công ty ở cấp nền tảng.
+# Chức năng backend: Hàm xử lý phần việc `platform forbidden response` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình platform admin quản lý doanh nghiệp.
+# Mối liên hệ: Hàm được các endpoint hoặc helper cùng module gọi khi cần cùng quy tắc xử lý.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 def _platform_forbidden_response():
     return Response({'detail': 'Chi platform admin moi duoc thao tac.'}, status=status.HTTP_403_FORBIDDEN)
 
 
+# Là gì: `_require_platform_admin` là helper nội bộ của module `platform_companies.py`, phục vụ nhóm quản trị công ty ở cấp nền tảng.
+# Chức năng backend: Hàm xử lý phần việc `require platform admin` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình platform admin quản lý doanh nghiệp.
+# Mối liên hệ: Hàm phối hợp với `is_platform_admin`, `_platform_forbidden_response` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _require_platform_admin(request):
     if not is_platform_admin(request.user):
         return _platform_forbidden_response()
     return None
 
 
+# Là gì: `_company_trash_payload` là helper nội bộ của module `platform_companies.py`, phục vụ nhóm quản trị công ty ở cấp nền tảng.
+# Chức năng backend: Hàm xử lý phần việc `company trash payload` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình platform admin quản lý doanh nghiệp.
+# Mối liên hệ: Hàm phối hợp với `CompanySummarySerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _company_trash_payload(item):
     company = item.company
     return {
@@ -66,6 +86,11 @@ def _company_trash_payload(item):
     }
 
 
+# Là gì: `public_company_suggest` là endpoint REST của nhóm quản trị công ty ở cấp nền tảng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `public company suggest` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình platform admin quản lý doanh nghiệp sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `str.strip`, `request.query_params.get`, `Company.objects.filter.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def public_company_suggest(request):
@@ -98,6 +123,11 @@ def public_company_suggest(request):
     )
 
 
+# Là gì: `platform_company_list_create` là endpoint REST của nhóm quản trị công ty ở cấp nền tảng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp, đồng thời kiểm tra đầu vào và tạo dữ liệu mới; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình platform admin quản lý doanh nghiệp sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_require_platform_admin`, `str.strip`, `str.strip.lower` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def platform_company_list_create(request):
@@ -138,6 +168,11 @@ def platform_company_list_create(request):
     return Response(_company_creation_payload(result), status=status.HTTP_201_CREATED)
 
 
+# Là gì: `platform_company_detail` là endpoint REST của nhóm quản trị công ty ở cấp nền tảng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình platform admin quản lý doanh nghiệp sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_require_platform_admin`, `get_object_or_404`, `CompanyDetailSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def platform_company_detail(request, pk):
@@ -180,6 +215,11 @@ def platform_company_detail(request, pk):
     return Response(CompanyDetailSerializer(company).data)
 
 
+# Là gì: `platform_company_trash` là endpoint REST của nhóm quản trị công ty ở cấp nền tảng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `platform company trash` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình platform admin quản lý doanh nghiệp sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_require_platform_admin`, `str.strip`, `request.query_params.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def platform_company_trash(request):
@@ -192,6 +232,11 @@ def platform_company_trash(request):
     return Response([_company_trash_payload(item) for item in items])
 
 
+# Là gì: `platform_company_restore` là endpoint REST của nhóm quản trị công ty ở cấp nền tảng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm khôi phục dữ liệu về trạng thái hoạt động; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình platform admin quản lý doanh nghiệp sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_require_platform_admin`, `get_object_or_404`, `restore_company_from_trash` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def platform_company_restore(request, pk):
@@ -207,6 +252,11 @@ def platform_company_restore(request, pk):
     return Response(CompanyDetailSerializer(company).data)
 
 
+# Là gì: `platform_company_hard_delete` là endpoint REST của nhóm quản trị công ty ở cấp nền tảng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xóa hoặc đánh dấu xóa dữ liệu được chỉ định; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình platform admin quản lý doanh nghiệp sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_require_platform_admin`, `get_object_or_404`, `hard_delete_company` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def platform_company_hard_delete(request, pk):
@@ -235,6 +285,11 @@ def platform_company_hard_delete(request, pk):
     )
 
 
+# Là gì: `platform_admin_change_password` là endpoint REST của nhóm quản trị công ty ở cấp nền tảng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `platform admin change password` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình platform admin quản lý doanh nghiệp sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_require_platform_admin`, `request.data.get`, `request.user.check_password` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def platform_admin_change_password(request):
@@ -267,6 +322,11 @@ def platform_admin_change_password(request):
     return Response({'detail': 'Da doi mat khau thanh cong.'})
 
 
+# Là gì: `platform_company_ai_config` là endpoint REST của nhóm quản trị công ty ở cấp nền tảng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `platform company ai config` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình platform admin quản lý doanh nghiệp sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_require_platform_admin`, `get_object_or_404`, `CompanyAIConfig.seed_defaults` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def platform_company_ai_config(request, pk):
@@ -288,6 +348,11 @@ def platform_company_ai_config(request, pk):
     return Response(CompanyAIConfigSerializer(config).data)
 
 
+# Là gì: `platform_company_import_preview` là endpoint REST của nhóm quản trị công ty ở cấp nền tảng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc dữ liệu đầu vào và chuyển thành bản ghi hệ thống, đồng thời tạo dữ liệu xem trước mà chưa ghi nhận thay đổi cuối cùng; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình platform admin quản lý doanh nghiệp sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_require_platform_admin`, `request.FILES.get`, `preview_company_import` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def platform_company_import_preview(request):
@@ -310,6 +375,11 @@ def platform_company_import_preview(request):
     )
 
 
+# Là gì: `platform_company_import_batches` là endpoint REST của nhóm quản trị công ty ở cấp nền tảng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc dữ liệu đầu vào và chuyển thành bản ghi hệ thống; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình platform admin quản lý doanh nghiệp sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_require_platform_admin`, `CompanyImportBatch.objects.select_related.order_by`, `CompanyImportBatch.objects.select_related` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def platform_company_import_batches(request):
@@ -335,6 +405,11 @@ def platform_company_import_batches(request):
     )
 
 
+# Là gì: `platform_company_import_commit` là endpoint REST của nhóm quản trị công ty ở cấp nền tảng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc dữ liệu đầu vào và chuyển thành bản ghi hệ thống; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình platform admin quản lý doanh nghiệp sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_require_platform_admin`, `get_object_or_404`, `commit_company_import` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def platform_company_import_commit(request, batch_id):
@@ -353,6 +428,11 @@ def platform_company_import_commit(request, batch_id):
     return Response(payload)
 
 
+# Là gì: `platform_company_bootstrap_reset` là endpoint REST của nhóm quản trị công ty ở cấp nền tảng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `platform company bootstrap reset` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình platform admin quản lý doanh nghiệp sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_require_platform_admin`, `get_object_or_404`, `reset_company_bootstrap_admin` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def platform_company_bootstrap_reset(request, pk):
@@ -372,6 +452,11 @@ def platform_company_bootstrap_reset(request, pk):
     )
 
 
+# Là gì: `platform_company_import_template` là endpoint REST của nhóm quản trị công ty ở cấp nền tảng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc dữ liệu đầu vào và chuyển thành bản ghi hệ thống; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình platform admin quản lý doanh nghiệp sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_require_platform_admin`, `HttpResponse`, `build_company_import_template_bytes` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def platform_company_import_template(request):
@@ -388,6 +473,12 @@ def platform_company_import_template(request):
 
 
 # === BEGIN R5: platform company dashboard + activity ===
+# vd: client gọi endpoint này -> nhận JSON kết quả tương ứng.
+# Là gì: `platform_company_dashboard` là endpoint REST của nhóm quản trị công ty ở cấp nền tảng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `platform company dashboard` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình platform admin quản lý doanh nghiệp sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_require_platform_admin`, `get_object_or_404`, `compute_company_stats` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def platform_company_dashboard(request, pk):
@@ -399,6 +490,11 @@ def platform_company_dashboard(request, pk):
     return Response(compute_company_stats(company))
 
 
+# Là gì: `platform_company_activity` là endpoint REST của nhóm quản trị công ty ở cấp nền tảng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `platform company activity` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình platform admin quản lý doanh nghiệp sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_require_platform_admin`, `get_object_or_404`, `request.query_params.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def platform_company_activity(request, pk):
@@ -455,6 +551,12 @@ def platform_company_activity(request, pk):
 # === END R5 ===
 
 
+# vd: client gọi endpoint này -> nhận JSON kết quả tương ứng.
+# Là gì: `platform_company_credentials_workbook` là endpoint REST của nhóm quản trị công ty ở cấp nền tảng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `platform company credentials workbook` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình platform admin quản lý doanh nghiệp sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_require_platform_admin`, `str.strip`, `request.data.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def platform_company_credentials_workbook(request):

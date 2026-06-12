@@ -1,3 +1,6 @@
+// === THẺ TỔNG QUAN CÔNG TY ===
+// Hiển thị thông tin cơ bản của 1 công ty (avatar, tên, mã, badge trạng thái) — widget trình bày, không gọi API.
+
 // r5/M9 — Info card hien thi tat ca metadata cua 1 cong ty.
 
 import 'package:flutter/material.dart';

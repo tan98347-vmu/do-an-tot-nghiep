@@ -2,11 +2,15 @@ import os
 from django.apps import AppConfig
 
 
+# class CompanyBackupsConfig là cấu hình khởi động của app.
+# vd: gom các thuộc tính/method liên quan vào một nơi.
 class CompanyBackupsConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'company_backups'
     verbose_name = 'Sao luu du lieu doanh nghiep'
 
+    # def ready để ready.
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def ready(self):
         if os.environ.get('RUN_MAIN') != 'true' and not os.environ.get('COMPANY_BACKUPS_FORCE_START'):
             return

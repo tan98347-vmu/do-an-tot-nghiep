@@ -7,6 +7,7 @@ from django.apps import AppConfig
 
 # [Web] `DocumentsConfig` gom một cụm xử lý backend dùng chung cho nhóm màn Văn bản và Hòm thư.
 
+# vd: gom các thuộc tính/method liên quan vào một nơi.
 class DocumentsConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'documents'
@@ -14,5 +15,6 @@ class DocumentsConfig(AppConfig):
 
     # [Web] `ready` là bước nội bộ của class để hỗ trợ dữ liệu hoặc trạng thái mà nhóm màn Văn bản và Hòm thư đang cần.
 
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def ready(self):
         from . import signals  # noqa: F401

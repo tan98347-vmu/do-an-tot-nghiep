@@ -5,19 +5,40 @@
 
 """
 Management command: reset_db
-Xoa toan bo du lieu tru admin, tao/cap nhat admin:admin123.
+Xoa toan bo du lieu tru admin, tao/cap nhat tai khoan admin.
+
+BAO MAT: truoc day lenh nay hard-code mat khau 'admin123' (default credentials).
+Nay mat khau lay tu env RESET_DB_ADMIN_PASSWORD; neu khong dat se SINH NGAU NHIEN
+va in ra mot lan duy nhat. Lenh tu choi chay khi DEBUG=False (moi truong that)
+tru khi truyen --force, de tranh vo tinh reset DB production.
 """
-from django.core.management.base import BaseCommand
+import os
+import secrets
+
+from django.conf import settings
+from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import User
 
 # [Web] `Command` gom tác vụ vận hành nền làm mới dữ liệu hoặc cấu hình mà các màn web đang dựa vào.
 
 class Command(BaseCommand):
-    help = 'Reset DB: delete all data except admin, create/update admin:admin123'
+    help = 'Reset DB: delete all data except admin, recreate the admin account (password from env or random)'
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--force',
+            action='store_true',
+            help='Cho phep chay ngay ca khi DEBUG=False (moi truong production).',
+        )
 
     # [Web] `handle` là điểm chạy chính của lệnh nền này; admin dùng nó để sửa dữ liệu ngoài giao diện web.
 
     def handle(self, *args, **options):
+        if not settings.DEBUG and not options.get('force'):
+            raise CommandError(
+                'reset_db bi chan khi DEBUG=False. Day la lenh xoa toan bo du lieu. '
+                'Neu thuc su muon chay tren moi truong nay, them co --force.'
+            )
         self.stdout.write('Starting DB reset...')
 
         # 1. AI engine data
@@ -47,8 +68,13 @@ class Command(BaseCommand):
         self.stdout.write(f'  Deleted {deleted_count} users (kept admin)')
 
         # 6. Create/update admin
+        raw_password = os.getenv('RESET_DB_ADMIN_PASSWORD', '').strip()
+        generated = False
+        if not raw_password:
+            raw_password = secrets.token_urlsafe(18)
+            generated = True
         admin, created = User.objects.get_or_create(username='admin')
-        admin.set_password('admin123')
+        admin.set_password(raw_password)
         admin.is_superuser = True
         admin.is_staff = True
         admin.is_active = True
@@ -57,7 +83,12 @@ class Command(BaseCommand):
         admin.last_name = ''
         admin.save()
         action = 'Created' if created else 'Updated'
-        self.stdout.write(f'  {action} admin -> username=admin, password=admin123')
+        if generated:
+            self.stdout.write(self.style.WARNING(
+                f'  {action} admin -> username=admin, password (sinh ngau nhien, luu lai ngay): {raw_password}'
+            ))
+        else:
+            self.stdout.write(f'  {action} admin -> username=admin (mat khau lay tu RESET_DB_ADMIN_PASSWORD)')
 
         self.stdout.write(self.style.SUCCESS('DB reset complete!'))
 

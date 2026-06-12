@@ -10,6 +10,11 @@ from accounts.models import (
 from accounts.tenancy import get_user_company
 
 
+# Là gì: `peer_search` là endpoint REST của nhóm tìm người dùng có thể tham gia hoặc nhận tài nguyên; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tìm kiếm và lọc các bản ghi phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các ô tìm kiếm người dùng trên Flutter sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_user_company`, `strip`, `request.GET.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def peer_search(request):
@@ -104,6 +109,11 @@ def peer_search(request):
     })
 
 
+# Là gì: `peer_search_filters` là endpoint REST của nhóm tìm người dùng có thể tham gia hoặc nhận tài nguyên; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tìm kiếm và lọc các bản ghi phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các ô tìm kiếm người dùng trên Flutter sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_user_company`, `Department.objects.filter.order_by.values`, `Department.objects.filter.order_by` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def peer_search_filters(request):

@@ -17,6 +17,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 VARIABLE_TOKEN_RE = re.compile(r'\{\{\s*(\w+)\s*\}\}')
 
 
+# def extract_template_variables trích tập tên biến {{ten}} từ nội dung (bỏ HTML, cho phép khoảng trắng quanh tên), trả danh sách đã sắp xếp + khử trùng.
+# vd: '{{ho_ten}} {{ ngay }}' -> ['ho_ten','ngay'].
 def extract_template_variables(content):
     """Trich xuat danh sach ten bien duy nhat tu noi dung mau (da bo tag HTML).
 
@@ -26,6 +28,8 @@ def extract_template_variables(content):
     return sorted({match for match in VARIABLE_TOKEN_RE.findall(plain) if match})
 
 
+# def fill_variables_in_text thay mọi {{ten}} trong text bằng giá trị tương ứng (cho phép khoảng trắng quanh tên).
+# vd: '{{ho_ten}}' + {'ho_ten':'A'} -> 'A'.
 def fill_variables_in_text(text, variables):
     """Thay the cac placeholder `{{ten}}`/`{{ ten }}` trong text bang gia tri."""
     if not text:
@@ -36,6 +40,8 @@ def fill_variables_in_text(text, variables):
         result = pattern.sub(lambda _m, _v=str(value): _v, result)
     return result
 
+# def extract_text_from_docx đọc toàn bộ text từ file DOCX (đoạn văn + ô bảng) để dò biến / đánh chỉ mục.
+# vd: file DOCX -> chuỗi text gồm các dòng nội dung.
 def extract_text_from_docx(docx_file):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -56,6 +62,8 @@ def extract_text_from_docx(docx_file):
                         lines.append(para.text)
     return '\n'.join(lines)
 
+# def docx_preview_as_html chuyển file DOCX sang HTML (mammoth) để xem trước trên web; lỗi -> None.
+# vd: mẫu DOCX -> HTML preview hiển thị trong trình duyệt.
 def docx_preview_as_html(docx_path):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -72,6 +80,8 @@ def docx_preview_as_html(docx_path):
     except Exception:
         return None
 
+# def _replace_in_paragraph thay biến trong 1 đoạn văn DOCX nhưng GIỮ định dạng: gộp text các run, điền biến, rồi đặt lại vào run đầu và xóa text các run sau.
+# vd: đoạn '{{ho_ten}}' -> 'A' mà vẫn giữ font/format.
 def _replace_in_paragraph(para, variables):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -94,6 +104,8 @@ def _replace_in_paragraph(para, variables):
         for run in para.runs[1:]:
             run.text = ''
 
+# def _replace_in_table thay biến trong mọi ô của 1 bảng DOCX.
+# vd: bảng có ô '{{ngay}}' -> điền giá trị vào ô.
 def _replace_in_table(table, variables):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -106,6 +118,8 @@ def _replace_in_table(table, variables):
         for cell in row.cells:
             _replace_in_cell(cell, variables)
 
+# def _replace_in_cell thay biến trong 1 ô bảng (cả đoạn văn lẫn bảng lồng bên trong).
+# vd: ô chứa bảng con -> đệ quy thay biến.
 def _replace_in_cell(cell, variables):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -119,6 +133,8 @@ def _replace_in_cell(cell, variables):
     for nested_table in cell.tables:
         _replace_in_table(nested_table, variables)
 
+# def _replace_in_document_part thay biến trong 1 phần tài liệu (thân / header / footer): mọi đoạn văn + bảng.
+# vd: dùng cho cả phần thân lẫn header/footer của DOCX.
 def _replace_in_document_part(doc_part, variables):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -132,6 +148,8 @@ def _replace_in_document_part(doc_part, variables):
     for table in getattr(doc_part, 'tables', []):
         _replace_in_table(table, variables)
 
+# def render_docx_from_template mở file DOCX mẫu, thay biến trong thân + header + footer (giữ nguyên định dạng), trả file DOCX (BytesIO) đã điền.
+# vd: mẫu DOCX 'Đơn xin nghỉ' + biến -> file DOCX điền sẵn, giữ layout.
 def render_docx_from_template(docx_path, variables):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -153,6 +171,8 @@ def render_docx_from_template(docx_path, variables):
     output.seek(0)
     return output
 
+# def create_docx_from_html dựng file DOCX từ nội dung HTML (html2docx); HTML rỗng -> 1 đoạn trống.
+# vd: mẫu thủ công (content HTML) -> file DOCX.
 def create_docx_from_html(html_content):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -172,6 +192,8 @@ def create_docx_from_html(html_content):
     buf.seek(0)
     return buf
 
+# def create_docx_from_text dựng file DOCX đơn giản từ text thuần (mỗi dòng 1 đoạn).
+# vd: text nhiều dòng -> DOCX mỗi dòng 1 paragraph.
 def create_docx_from_text(text):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).

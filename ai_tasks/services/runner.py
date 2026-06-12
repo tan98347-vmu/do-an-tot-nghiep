@@ -22,10 +22,14 @@ log = logging.getLogger(__name__)
 TASK_HANDLERS: dict[str, Callable[[AITaskProgress, dict], None]] = {}
 
 
+# def register_handler để đăng ký hàm xử lý cho một loại tác vụ (kind -> fn).
+# vd: register_handler('echo', _echo_handler).
 def register_handler(kind: str, fn: Callable[[AITaskProgress, dict], None]) -> None:
     TASK_HANDLERS[kind] = fn
 
 
+# def dispatch_task để tạo tác vụ + chạy nền theo handler đã đăng ký; chống trùng theo client_request_id; trả task_id.
+# vd: dispatch_task('company_backup_export', user, payload, deeplink='/backups', title='Xuat backup').
 def dispatch_task(
     kind: str,
     user,
@@ -69,6 +73,8 @@ def dispatch_task(
     return str(task.task_id)
 
 
+# def update_task_progress để cập nhật %/bước/chi tiết cho tác vụ chưa kết thúc (đặt 'running').
+# vd: update_task_progress(id, percent=50, stage='echo').
 def update_task_progress(task_id: str, *, percent: int, stage: str = '', detail: str = '') -> None:
     AITaskProgress.objects.filter(task_id=task_id).exclude(
         status__in=[STATUS_COMPLETED, STATUS_FAILED, STATUS_CANCELLED],
@@ -81,6 +87,8 @@ def update_task_progress(task_id: str, *, percent: int, stage: str = '', detail:
     )
 
 
+# def complete_task để đánh dấu hoàn tất + lưu result; nếu đã có yêu cầu hủy thì chuyển thành cancelled.
+# vd: complete_task(id, result={'backup_id':5}).
 def complete_task(task_id: str, *, result: dict) -> None:
     qs = AITaskProgress.objects.filter(task_id=task_id)
     task = qs.values('cancel_requested').first()
@@ -103,6 +111,8 @@ def complete_task(task_id: str, *, result: dict) -> None:
     )
 
 
+# def fail_task để đánh dấu thất bại + lưu lỗi; nếu đã có yêu cầu hủy thì chuyển thành cancelled.
+# vd: fail_task(id, error_message='Company khong ton tai').
 def fail_task(task_id: str, *, error_message: str) -> None:
     qs = AITaskProgress.objects.filter(task_id=task_id)
     task = qs.values('cancel_requested').first()
@@ -123,6 +133,8 @@ def fail_task(task_id: str, *, error_message: str) -> None:
     )
 
 
+# def _run_task là thân thread của dispatch_task: lấy handler theo task_type rồi gọi; lỗi -> fail_task.
+# vd: task_type='echo' -> gọi _echo_handler(task, payload).
 def _run_task(task_id: str, payload: dict) -> None:
     try:
         task = AITaskProgress.objects.get(task_id=task_id)
@@ -144,6 +156,8 @@ def _run_task(task_id: str, payload: dict) -> None:
         close_old_connections()
 
 
+# def _not_integrated_handler là handler tạm cho các kind đã khai báo nhưng module chủ chưa tích hợp, ném lỗi rõ ràng.
+# vd: kind='word_ai_edit' chưa nối -> ném RuntimeError mô tả.
 def _not_integrated_handler(task: AITaskProgress, payload: dict) -> None:
     raise RuntimeError(
         f'Task kind "{task.task_type}" is exposed by r3 but has not been integrated by its owning module yet.',

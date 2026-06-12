@@ -238,6 +238,7 @@ class DocumentSummaryApi {
     required DocumentSummaryOptions options,
     required String userExtraRules,
     String? previewToken,
+    String? promptCheckToken,
     int? promptId,
   }) async {
     final response = await _dio.post(
@@ -247,6 +248,8 @@ class DocumentSummaryApi {
         'user_extra_rules': userExtraRules.trim(),
         if ((previewToken ?? '').trim().isNotEmpty)
           'preview_token': previewToken!.trim(),
+        if ((promptCheckToken ?? '').trim().isNotEmpty)
+          'prompt_check_token': promptCheckToken!.trim(),
         if (promptId != null) 'prompt_id': promptId,
       },
       options: ApiClient.ollamaOptions(),

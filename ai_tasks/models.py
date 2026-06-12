@@ -61,6 +61,8 @@ CANCEL_MODE_CHOICES = [
 TERMINAL_STATUSES = {STATUS_COMPLETED, STATUS_FAILED, STATUS_CANCELLED}
 
 
+# def validate_deeplink để kiểm tra deeplink hợp lệ: phải bắt đầu bằng '/' và không chứa '\\' hay '..' (chống path traversal).
+# vd: '/documents/5' -> hợp lệ; '../etc' -> ValidationError.
 def validate_deeplink(value: str) -> None:
     if not value:
         return
@@ -70,6 +72,8 @@ def validate_deeplink(value: str) -> None:
         raise ValidationError('deeplink không hợp lệ.')
 
 
+# class AITaskProgress là bản ghi theo dõi tiến độ một tác vụ AI nền (sinh văn bản, OCR, tóm tắt, chat…): trạng thái, % tiến độ, cờ hủy, kết quả, chunk streaming, deeplink mở kết quả.
+# vd: 1 lần 'Sinh văn bản từ mẫu' -> 1 dòng AITaskProgress mà frontend poll để hiện thanh tiến độ.
 class AITaskProgress(models.Model):
     task_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ai_tasks')
@@ -101,6 +105,8 @@ class AITaskProgress(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 
+    # class Meta để đặt tên hiển thị, sắp xếp mới nhất lên đầu, thêm index (user, status) và ràng buộc duy nhất (user, client_request_id) chống tạo trùng tác vụ.
+    # vd: bấm 2 lần cùng client_request_id -> chỉ 1 task được tạo.
     class Meta:
         verbose_name = 'AI Task Progress'
         verbose_name_plural = 'AI Task Progress'
@@ -117,14 +123,20 @@ class AITaskProgress(models.Model):
             ),
         ]
 
+    # def __str__ để hiển thị tác vụ gọn: loại/trạng thái + tiêu đề + % tiến độ.
+    # vd: -> 'doc_create/running Don xin nghi 40%'.
     def __str__(self):
         title = f' {self.title_summary}' if self.title_summary else ''
         return f'{self.task_type}/{self.status}{title} {self.progress_percent}%'
 
+    # def is_terminal (property) cho biết tác vụ đã kết thúc chưa (completed/failed/cancelled).
+    # vd: status='running' -> False; 'completed' -> True.
     @property
     def is_terminal(self) -> bool:
         return self.status in TERMINAL_STATUSES
 
+    # def is_dismissed (property) cho biết người dùng đã ẩn/đóng thông báo kết quả tác vụ chưa (cờ trong result).
+    # vd: result={'dismissed':True} -> True.
     @property
     def is_dismissed(self) -> bool:
         return bool((self.result or {}).get('dismissed'))

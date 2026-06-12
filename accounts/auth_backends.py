@@ -1,35 +1,37 @@
 """
-Thuoc chuc nang nao: Xac thuc dang nhap da kenh cho tai khoan noi bo.
-Vai tro backend: File nay mo rong backend xac thuc mac dinh cua Django de mot tai khoan co the dang nhap bang username, email hoac ma nhan vien luu trong `UserProfile`.
-Vai tro cua no trong frontend: Form dang nhap tren frontend co the nhan mot truong dinh danh duy nhat thay vi ep nguoi dung biet chinh xac backend dang tim theo cot nao.
-Moi lien he voi nhung ham / source khac: Duoc dua vao `AUTHENTICATION_BACKENDS` trong `my_tennis_club.settings`; doc `User` qua `get_user_model()` va join sang `profile__ma_nhan_vien`.
-Tac dung: Tang kha nang dang nhap cho nhan su noi bo ma khong can nhan ban view hay serializer dang nhap.
+auth_backends.py chịu trách nhiệm xác thực tài khoản bằng nhiều loại định danh thay vì chỉ bằng username mặc định của Django.
+
+  File: accounts/auth_backends.py:1.
+
+  ## Vai Trò
+
+  Backend này cho phép nhập một giá trị đăng nhập có thể là:
+
+  Username kỹ thuật
+  Email
+  Mã nhân viên
+
+  Sau đó kiểm tra mật khẩu và trạng thái tài khoản.
+
+  Thông tin đăng nhập
+  → tìm User
+  → kiểm tra password
+  → kiểm tra User có active không
+  → trả User hoặc None
 """
 
 from __future__ import annotations
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
-
+# class EmployeeCodeOrUsernameBackend kế thừa từ ModelBackend của Django, cho phép xác thực người dùng bằng nhiều loại định danh khác nhau như username, email hoặc mã nhân viên. Nó định nghĩa hai phương thức chính: authenticate để xử lý quá trình xác thực và _authenticate_user để kiểm tra mật khẩu và trạng thái của người dùng đã tìm thấy. Phương thức authenticate sẽ lần lượt thử tìm người dùng dựa trên các trường định danh khác nhau và sử dụng _authenticate_user để xác minh thông tin đăng nhập, trả về đối tượng người dùng nếu thành công hoặc None nếu thất bại.
 class EmployeeCodeOrUsernameBackend(ModelBackend):
-    """
-    Thuoc chuc nang nao: Backend xac thuc cho login bang nhieu loai dinh danh.
-    Vai tro backend: Lop nay ke thua `ModelBackend` va dong goi toan bo quy trinh tim user theo username, email hoac ma nhan vien truoc khi kiem tra mat khau.
-    Vai tro cua no trong frontend: Frontend dang nhap khong can biet nguoi dung nhap username hay ma nhan vien; backend nay se tu suy ra cach tim tai khoan.
-    Moi lien he voi nhung ham / source khac: Duoc Django auth goi thong qua `authenticate`; phoi hop voi `_authenticate_user`, `UserProfile` va `user_can_authenticate` tu lop cha.
-    Tac dung: Dat logic dang nhap linh hoat vao dung lop xac thuc thay vi trai sang view.
-    """
+
 
     
-
+# def _authenticate_user để kiểm tra mật khẩu và trạng thái của người dùng đã tìm thấy. Nếu người dùng không tồn tại, nó sẽ trả về None. Nếu người dùng tồn tại và mật khẩu đúng, đồng thời người dùng có quyền đăng nhập (active), nó sẽ trả về đối tượng người dùng đó. Ngược lại, nếu mật khẩu sai hoặc người dùng không có quyền đăng nhập, nó sẽ trả về None.
     def _authenticate_user(self, user, password):
-        """
-        Thuoc chuc nang nao: Kiem tra mat khau va trang thai cho mot user da tim thay.
-        Vai tro backend: Helper nay chi xu ly phan xac minh cuoi cung: neu co user, mat khau dung va user van duoc phep dang nhap thi tra ve doi tuong user, nguoc lai tra `None`.
-        Vai tro cua no trong frontend: Frontend khong goi truc tiep, nhung ket qua cua no quyet dinh form dang nhap nhan token thanh cong hay bi tu choi.
-        Moi lien he voi nhung ham / source khac: Duoc `authenticate` goi lai nhieu lan sau moi chien luoc tim user; dung `check_password` cua model user va `user_can_authenticate` tu `ModelBackend`.
-        Tac dung: Tach rieng buoc "xac nhan user da hop le" khoi buoc "tim user theo dinh danh" de luong dang nhap de doc va de mo rong.
-        """
+       
         if user is None:
             return None
         if user.check_password(password) and self.user_can_authenticate(user):
@@ -37,15 +39,9 @@ class EmployeeCodeOrUsernameBackend(ModelBackend):
         return None
 
     
-
+# def authenticate để xử lý quá trình xác thực người dùng bằng cách nhận vào một giá trị đăng nhập (có thể là username, email hoặc mã nhân viên) và mật khẩu. Nó sẽ lần lượt thử tìm người dùng dựa trên các trường định danh khác nhau (username, email, mã nhân viên) và sử dụng phương thức _authenticate_user để kiểm tra mật khẩu và trạng thái của người dùng đã tìm thấy. Nếu tìm thấy một người dùng hợp lệ, nó sẽ trả về đối tượng người dùng đó; nếu không tìm thấy hoặc thông tin đăng nhập không hợp lệ, nó sẽ trả về None.
     def authenticate(self, request, username=None, password=None, **kwargs):
-        """
-        Thuoc chuc nang nao: Dang nhap bang username, email hoac ma nhan vien.
-        Vai tro backend: Ham nay nhan gia tri dang nhap, lan luot thu tim user theo truong username mac dinh, email va `profile__ma_nhan_vien`, sau moi lan tim deu dung `_authenticate_user` de kiem tra mat khau.
-        Vai tro cua no trong frontend: Day la diem backend ma form login, JWT obtain flow hoac cac API dang nhap duoc huong loi; nguoi dung co trai nghiem dang nhap thong nhat du chon loai dinh danh nao.
-        Moi lien he voi nhung ham / source khac: Duoc Django auth framework goi; doc `USERNAME_FIELD`, `EMAIL_FIELD`, join sang `profile`; phoi hop voi `_authenticate_user` de tranh lap logic kiem tra password.
-        Tac dung: Hop nhat nhieu cach tim tai khoan vao mot backend xac thuc duy nhat.
-        """
+  
         login_value = str(username or kwargs.get("email") or kwargs.get("identifier") or "").strip()
         if not login_value or not password:
             return None

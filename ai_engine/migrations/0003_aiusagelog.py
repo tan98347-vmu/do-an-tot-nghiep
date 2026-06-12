@@ -3,6 +3,8 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 
+# class Migration là bước migration thay đổi cấu trúc CSDL (theo tên file: aiusagelog).
+# vd: chạy "python manage.py migrate" để áp dụng thay đổi schema này vào database.
 class Migration(migrations.Migration):
 
     dependencies = [

@@ -1,3 +1,8 @@
+// === MÀN HÌNH SỬA MẪU THỦ CÔNG (Collabora) ===
+// Mở editor Collabora trong iframe để sửa file DOCX của mẫu:
+// - _loadSession qua templateManualEditApiProvider; _heartbeatSession giữ phiên.
+// - 'Lưu & hoàn tất' (_finishSession): _flushEditorChanges + _waitForWorkingCopySync chờ đồng bộ rồi commit thành version mới; _cancelSession để hủy.
+
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -13,6 +18,7 @@ import '../../providers/templates_provider.dart';
 import '../../widgets/documents/manual_edit_iframe.dart';
 
 class TemplateManualEditScreen extends ConsumerStatefulWidget {
+  // Widget màn SỬA MẪU THỦ CÔNG bằng Collabora; nhận templateId (+ returnTo để điều hướng khi xong).
   const TemplateManualEditScreen({
     super.key,
     required this.templateId,
@@ -47,12 +53,14 @@ class _TemplateManualEditScreenState
 
   AppStrings get _strings => AppStrings.of(context);
 
+  // Mở màn: nạp/khởi tạo phiên sửa (_loadSession) và bật cảnh báo rời trang khi đang sửa dở.
   @override
   void initState() {
     super.initState();
     _loadSession();
   }
 
+  // Rời màn: tắt cảnh báo beforeunload và dừng heartbeat.
   @override
   void dispose() {
     _heartbeatTimer?.cancel();
@@ -80,6 +88,7 @@ class _TemplateManualEditScreenState
     );
   }
 
+  // Làm mới các danh sách mẫu (provider) sau khi sửa xong để UI cập nhật.
   void _refreshTemplateCollections() {
     ref.invalidate(templateDetailProvider(widget.templateId));
     ref.invalidate(templateVersionsProvider(widget.templateId));
@@ -91,6 +100,7 @@ class _TemplateManualEditScreenState
     ref.invalidate(templatesProvider('favorite'));
   }
 
+  // Khởi động lại heartbeat định kỳ giữ phiên Collabora sống.
   void _restartHeartbeat(TemplateManualEditSession session) {
     _heartbeatTimer?.cancel();
     if (!session.isActive) return;
@@ -98,6 +108,7 @@ class _TemplateManualEditScreenState
         Timer.periodic(_heartbeatInterval, (_) => _heartbeatSession());
   }
 
+  // Một nhịp heartbeat gia hạn phiên; phiên hỏng/hết hạn -> cập nhật UI.
   Future<void> _heartbeatSession() async {
     final session = _session;
     if (!mounted || session == null || !session.isActive) return;
@@ -144,22 +155,26 @@ class _TemplateManualEditScreenState
     }
   }
 
+  // Sinh key iframe Collabora theo phiên (ép dựng lại đúng editor khi đổi phiên).
   String _editorViewKey(TemplateManualEditSession session) {
     return 'template-manual-edit-session-${session.id}';
   }
 
+  // Đủ điều kiện hiển thị iframe editor chưa (phiên active + editor_url).
   bool _canRenderEditor(TemplateManualEditSession session) {
     return kIsWeb &&
         session.providerReady &&
         (session.editorUrl ?? '').isNotEmpty;
   }
 
+  // Parse mốc thời gian ISO để so sánh đồng bộ; lỗi -> null.
   DateTime? _parseIsoTimestamp(String? raw) {
     final value = raw?.trim() ?? '';
     if (value.isEmpty) return null;
     return DateTime.tryParse(value)?.toUtc();
   }
 
+  // Working copy đã được Collabora lưu mới hơn mốc trước chưa.
   bool _workingCopySyncAdvanced(String? before, String? after) {
     final beforeTs = _parseIsoTimestamp(before);
     final afterTs = _parseIsoTimestamp(after);
@@ -168,6 +183,7 @@ class _TemplateManualEditScreenState
     return afterTs.isAfter(beforeTs);
   }
 
+  // Chờ working copy đồng bộ (poll) trước khi commit để lấy đúng bản vừa lưu.
   Future<TemplateManualEditSession> _waitForWorkingCopySync(
     int sessionId, {
     required String? previousSyncAt,
@@ -200,6 +216,7 @@ class _TemplateManualEditScreenState
     );
   }
 
+  // Yêu cầu Collabora lưu lần cuối rồi chờ working copy đồng bộ — trước khi hoàn tất.
   Future<TemplateManualEditSession> _flushEditorChanges(
     TemplateManualEditSession session,
   ) async {
@@ -212,6 +229,7 @@ class _TemplateManualEditScreenState
     );
   }
 
+  // Nút 'Lưu & hoàn tất': flush editor -> chờ đồng bộ -> finishSession commit thành version mẫu mới; refresh danh sách + báo thành công.
   Future<void> _finishSession() async {
     final session = _session;
     if (session == null || _finishLoading) return;
@@ -250,6 +268,7 @@ class _TemplateManualEditScreenState
     }
   }
 
+  // Nút 'Hủy': hỏi xác nhận rồi hủy phiên (giữ nguyên mẫu).
   Future<void> _cancelSession() async {
     final session = _session;
     if (session == null || _cancelLoading) return;
@@ -296,11 +315,13 @@ class _TemplateManualEditScreenState
     }
   }
 
+  // Viewport có nhỏ (mobile) không -> chọn layout gọn.
   bool _isCompactViewportSize(Size size) {
     return size.width < _compactLayoutBreakpoint ||
         size.height < _compactHeightBreakpoint;
   }
 
+  // Panel điều khiển có nên thu gọn theo bề rộng không.
   bool _controlsCollapsed(BoxConstraints constraints) {
     final compact = _isCompactViewportSize(
       Size(constraints.maxWidth, constraints.maxHeight),
@@ -308,6 +329,7 @@ class _TemplateManualEditScreenState
     return _controlsCollapsedOverride ?? compact;
   }
 
+  // Panel cạnh editor: thông tin phiên + ô ghi chú thay đổi + nút Lưu & hoàn tất / Hủy.
   Widget _buildSessionSidePanel(
     BuildContext context,
     TemplateManualEditSession session, {
@@ -396,6 +418,7 @@ class _TemplateManualEditScreenState
     );
   }
 
+  // Thân màn: loading/lỗi (nút thử lại) hoặc iframe Collabora + side panel; layout theo kích thước.
   Widget _buildBody() {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
@@ -571,6 +594,7 @@ class _TemplateManualEditScreenState
     );
   }
 
+  // Khung màn (AppBar + PopScope chặn rời trang khi đang sửa) bao quanh _buildBody.
   @override
   Widget build(BuildContext context) {
     final title = _session?.templateTitle ??

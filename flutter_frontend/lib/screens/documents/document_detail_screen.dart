@@ -1,8 +1,9 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH CHI TIẾT VĂN BẢN ===
+// Xem nội dung + xem trước PDF (auto-reload), thông tin, version (documentVersionsProvider: ẩn/khôi phục version).
+// - Thao tác: tải DOCX ('download/'), hoàn tất ('finalize/'), lưu trữ ('archive/'), yêu thích ('favorite/'), sửa thủ công (/documents/<id>/manual-edit), tóm tắt (/summaries/<id>), chỉnh bằng Word AI (_refreshAfterWordAiCompletion).
+// - Khởi tạo quy trình KÝ (chọn người ký _SignerDraftRow) hoặc FORWARD hòm thư (_ForwardRecipientRow). Provider: documentDetailProvider, currentUserProvider.
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
 import 'dart:async';
 import 'dart:html' as html;
 import 'dart:ui_web' as ui;
@@ -18,6 +19,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/signing_summary_provider.dart';
 import '../../models/ai_task_state.dart';
 import '../../models/assistant_quick_sign.dart';
+import '../../models/document_version.dart';
 import '../../models/signing.dart';
 import '../../core/iframe_blocker.dart';
 import '../../widgets/ai_loading/ai_task_linear_progress.dart';
@@ -28,13 +30,11 @@ import '../../widgets/documents/summary_options_dialog.dart';
 import '../../widgets/documents/word_edit_history_panel.dart';
 import '../../widgets/sharing/unified_share_sheet.dart';
 
-// Mục đích: Widget `DocumentDetailScreen` triển khai phần việc `Document Detail Screen` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn CHI TIẾT VĂN BẢN (ConsumerStatefulWidget); nhận id văn bản cần xem.
 
 class DocumentDetailScreen extends ConsumerStatefulWidget {
   final int id;
+  // Widget màn CHI TIẾT VĂN BẢN; nhận id.
   const DocumentDetailScreen({super.key, required this.id});
 
   @override
@@ -42,15 +42,16 @@ class DocumentDetailScreen extends ConsumerStatefulWidget {
       _DocumentDetailScreenState();
 }
 
-// Mục đích: Widget `_DocumentDetailScreenState` triển khai phần việc `Document Detail Screen State` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn chi tiết: giữ controller xem trước PDF/HTML, trạng thái tóm tắt/ký nhanh và toàn bộ thao tác trên văn bản.
 
 class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   AppStrings get _strings => AppStrings.of(context);
 
+  // Tab điều khiển: Nội dung / Lịch sử phiên bản (giống màn chi tiết mẫu văn bản).
+  late final TabController _tabController;
+
+  // Chọn chuỗi hiển thị VI/EN (i18n).
   String _pick(String vi, String en) => _strings.pick(vi, en);
 
   bool _actionLoading = false;
@@ -80,6 +81,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
   Future<void> Function()? _previewAutoReloadAction;
   late final AnimationController _summaryPulseController;
 
+  // Sau khi tác vụ Word-AI xong -> làm mới văn bản + xem trước.
   void _refreshAfterWordAiCompletion() {
     final currentRevision = _currentPreviewRevision;
     setState(() {
@@ -97,9 +99,11 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
     });
   }
 
+  // Mở màn: nạp văn bản, bật auto-reload xem trước PDF, lắng nghe tác vụ tóm tắt/Word-AI.
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _summaryPulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -107,11 +111,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
   }
 
   @override
-  // Mục đích: Phương thức `didUpdateWidget` triển khai phần việc `did Update Widget` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Khi đổi id (sang văn bản khác) -> nạp lại dữ liệu.
   void didUpdateWidget(covariant DocumentDetailScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.id == widget.id) return;
@@ -126,13 +126,10 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Rời màn: dừng auto-reload, thu hồi URL blob PDF, dọn tài nguyên.
   void dispose() {
     _stopPreviewAutoReload();
+    _tabController.dispose();
     _summaryPulseController.dispose();
     _resetPreviewState();
     super.dispose();
@@ -144,6 +141,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
     _previewAutoReloadAction = null;
   }
 
+  // Khởi động lại vòng tự tải lại PDF xem trước.
   void _restartPreviewAutoReload(Future<void> Function() action) {
     _stopPreviewAutoReload();
     _previewAutoReloadAction = action;
@@ -155,22 +153,14 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
     });
   }
 
-  // Mục đích: Phương thức `_setPreviewInteractivity` triển khai phần việc `set Preview Interactivity` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Bật/tắt tương tác khung xem trước (chặn khi đang xử lý).
   void _setPreviewInteractivity(bool enabled) {
     final frame = _contentFrame;
     if (frame == null) return;
     frame.style.pointerEvents = enabled ? 'auto' : 'none';
   }
 
-  // Mục đích: Phương thức `_revokePreviewPdfUrl` triển khai phần việc `revoke Preview Pdf Url` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Thu hồi URL blob của PDF xem trước (giải phóng bộ nhớ).
   void _revokePreviewPdfUrl() {
     final current = _previewPdfUrl;
     if (current == null || current.isEmpty) return;
@@ -178,10 +168,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
     _previewPdfUrl = null;
   }
 
-  // Mục đích: Phương thức `_resetPreviewState` triển khai phần việc `reset Preview State` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Reset trạng thái xem trước (thu hồi URL PDF, xóa cache HTML) khi đổi/tải lại văn bản.
 
   void _resetPreviewState() {
     _stopPreviewAutoReload();
@@ -204,11 +191,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
     _summaryLoading = false;
   }
 
-  // Mục đích: Phương thức `_previewNoticeFromError` triển khai phần việc `preview Notice From Error` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Đổi lỗi tải xem trước thành dòng thông báo nhẹ trên UI.
   String _previewNoticeFromError(Object error) {
     if (error is DioException) {
       final data = error.response?.data;
@@ -226,11 +209,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
     );
   }
 
-  // Mục đích: Phương thức `_previewLoadErrorMessage` triển khai phần việc `preview Load Error Message` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Thông điệp lỗi khi tải PDF xem trước thất bại.
   String _previewLoadErrorMessage(Object error) {
     if (error is DioException) {
       final data = error.response?.data;
@@ -246,17 +225,14 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
     );
   }
 
-  // Mục đích: Phương thức `_previewRevisionToken` triển khai phần việc `preview Revision Token` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Sinh token theo phiên bản tài liệu để ép tải lại đúng bản xem trước mới.
   String _previewRevisionToken(doc) {
     final updatedAt = doc.updatedAt?.toString() ?? '';
     final versionNumber = doc.versionNumber?.toString() ?? '';
     return '$versionNumber:$updatedAt';
   }
 
+  // Tham số query cho request xem trước PDF (revision...).
   Map<String, dynamic> _previewQuery(doc) {
     return <String, dynamic>{
       'rev': _previewRevisionToken(doc),
@@ -264,14 +240,20 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
     };
   }
 
+  // Định dạng thời điểm cập nhật bản tóm tắt để hiển thị.
   String _formatSummaryUpdatedAt(DateTime value) {
     String twoDigits(int number) => number.toString().padLeft(2, '0');
     return '${twoDigits(value.hour)}:${twoDigits(value.minute)}:${twoDigits(value.second)}';
   }
 
+  // Nút Tóm tắt: khởi chạy tác vụ AI tóm tắt văn bản.
   Future<void> _summarizeDocument(doc) async {
     if (_summaryLoading) return;
-    final options = await SummaryOptionsDialog.show(context, initial: _lastSummaryOptions);
+    final options = await SummaryOptionsDialog.show(
+      context,
+      documentId: widget.id,
+      initial: _lastSummaryOptions,
+    );
     if (options == null) return;
     setState(() {
       _summaryLoading = true;
@@ -282,9 +264,16 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
 
     try {
       final response = await ApiClient().dio.post(
-            'documents/${widget.id}/summarize-async/',
-            data: {'options': options.toJson()},
-          );
+        'documents/${widget.id}/summarize-async/',
+        data: {
+          'options': options.toJson(),
+          if (options.userExtraRules.isNotEmpty)
+            'user_extra_rules': options.userExtraRules,
+          if (options.userExtraRules.isNotEmpty &&
+              options.promptCheckToken != null)
+            'prompt_check_token': options.promptCheckToken,
+        },
+      );
       final data = (response.data as Map).cast<String, dynamic>();
       final taskId = '${data['task_id'] ?? ''}'.trim();
       if (taskId.isEmpty) {
@@ -321,6 +310,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
     }
   }
 
+  // Khi tác vụ tóm tắt xong -> đổ kết quả tóm tắt vào UI.
   void _handleSummaryTaskComplete(doc, AITaskState state) {
     final result = state.result ?? const <String, dynamic>{};
     if (!mounted) return;
@@ -335,6 +325,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
     });
   }
 
+  // Khi tóm tắt bị hủy -> phục hồi trạng thái UI.
   void _handleSummaryTaskCancelled() {
     if (!mounted) return;
     setState(() {
@@ -350,6 +341,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
     );
   }
 
+  // Khi tóm tắt lỗi -> báo lỗi trên UI.
   void _handleSummaryTaskFailed(String message) {
     if (!mounted) return;
     setState(() {
@@ -359,11 +351,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
     });
   }
 
-  // Mục đích: Phương thức `_loadContentPreview` triển khai phần việc `load Content Preview` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nạp nội dung xem trước (HTML reader) của văn bản.
   Future<void> _loadContentPreview(doc, {bool force = false}) async {
     if (_contentLoading) return;
     if (!force && (_previewPdfUrl != null || _contentHtml != null)) return;
@@ -445,11 +433,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
     }
   }
 
-  // Mục đích: Phương thức `_readerHtml` triển khai phần việc `reader Html` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Dựng HTML hiển thị nội dung văn bản trong khung đọc.
   String _readerHtml(String rawHtml, {required bool isCompact}) {
     final readerCss = '''
 <style>
@@ -488,10 +472,7 @@ p, li, span, div {
     return '<html><head>$viewport$readerCss</head><body>$rawHtml</body></html>';
   }
 
-  // Mục đích: Phương thức `_buildContentFrame` triển khai phần việc `build Content Frame` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng khung hiển thị nội dung HTML của văn bản (khung đọc).
 
   Widget _buildContentFrame({
     required String htmlContent,
@@ -568,10 +549,7 @@ p, li, span, div {
     );
   }
 
-  // Mục đích: Phương thức `_buildPdfFrame` triển khai phần việc `build Pdf Frame` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng khung iframe xem trước PDF của văn bản (auto-reload).
 
   Widget _buildPdfFrame({
     required String pdfUrl,
@@ -593,10 +571,7 @@ p, li, span, div {
     return _withIframeBlocker(HtmlElementView(viewType: viewKey));
   }
 
-  // Mục đích: Phương thức `_openContentPreviewDialog` triển khai phần việc `open Content Preview Dialog` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở dialog xem trước nội dung văn bản phóng to.
 
   Future<void> _openContentPreviewDialog(doc) async {
     await _loadContentPreview(doc, force: true);
@@ -679,10 +654,7 @@ p, li, span, div {
         .toList();
   }
 
-  // Mục đích: Phương thức `_candidateSubtitle` triển khai phần việc `candidate Subtitle` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dòng phụ mô tả 1 ứng viên người ký (email/chức danh) trong danh sách chọn.
 
   String _candidateSubtitle(SigningCandidate candidate) {
     final parts = <String>[
@@ -692,10 +664,7 @@ p, li, span, div {
     return parts.join(' • ');
   }
 
-  // Mục đích: Phương thức `_candidateSelectionLabel` triển khai phần việc `candidate Selection Label` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nhãn hiển thị khi đã chọn 1 ứng viên người ký.
 
   String _candidateSelectionLabel(SigningCandidate candidate) {
     final base = candidate.fullName.trim().isEmpty
@@ -707,10 +676,7 @@ p, li, span, div {
     return '$base (@${candidate.username.trim()})';
   }
 
-  // Mục đích: Phương thức `_showStartedSignersDialog` triển khai phần việc `show Started Signers Dialog` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dialog cảnh báo: quy trình ký đã bắt đầu với những người ký nào (không sửa được nữa).
 
   Future<void> _showStartedSignersDialog(SigningProposal proposal) async {
     if (!mounted) return;
@@ -758,10 +724,7 @@ p, li, span, div {
     );
   }
 
-  // Mục đích: Phương thức `_startSigningFlow` triển khai phần việc `start Signing Flow` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khởi tạo quy trình ký: tạo đề xuất/nhiệm vụ ký với danh sách người ký đã chọn.
 
   Future<SigningProposal> _startSigningFlow({
     required List<Map<String, dynamic>> signers,
@@ -780,10 +743,7 @@ p, li, span, div {
         Map<String, dynamic>.from(resp.data as Map));
   }
 
-  // Mục đích: Phương thức `_startSigningForCurrentUser` triển khai phần việc `start Signing For Current User` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Bắt đầu ký cho chính người dùng hiện tại (luồng tự ký).
 
   Future<void> _startSigningForCurrentUser() async {
     // Đọc provider theo nhu cầu hành động mà không buộc widget đăng ký rebuild liên tục.
@@ -833,10 +793,7 @@ p, li, span, div {
     }
   }
 
-  // Mục đích: Phương thức `_pickSigningCandidate` triển khai phần việc `pick Signing Candidate` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở hộp thoại tìm & chọn 1 người ký (gọi 'signing/candidates/').
 
   Future<SigningCandidate?> _pickSigningCandidate(
     List<SigningCandidate> candidates, {
@@ -926,10 +883,7 @@ p, li, span, div {
     ).whenComplete(searchCtrl.dispose);
   }
 
-  // Mục đích: Phương thức `_showSigningProposalDialog` triển khai phần việc `show Signing Proposal Dialog` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút Khởi tạo ký: mở dialog chọn người ký rồi gửi đề xuất ký cho văn bản.
 
   Future<void> _showSigningProposalDialog(doc) async {
     List<SigningCandidate> candidates = const [];
@@ -1200,10 +1154,7 @@ p, li, span, div {
     }
   }
 
-  // Mục đích: Phương thức `_showForwardDialog` triển khai phần việc `show Forward Dialog` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút Forward hòm thư: mở dialog chọn người nhận rồi chuyển tiếp văn bản qua hòm thư.
 
   Future<void> _showForwardDialog(doc) async {
     if (doc.canForwardNow != true) {
@@ -1406,11 +1357,7 @@ p, li, span, div {
     }
   }
 
-  // Mục đích: Phương thức `_showShareDialog` triển khai phần việc `show Share Dialog` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nút Chia sẻ: mở hộp thoại cấp/quản lý quyền chia sẻ văn bản.
   Future<void> _showShareDialog(doc) async {
     // Phase 3 (sharing roadmap): mo UnifiedShareSheet thay vi dialog visibility cu.
     if (!mounted) return;
@@ -1647,11 +1594,7 @@ p, li, span, div {
     }
   }
 
-  // Mục đích: Phương thức `_downloadDocx` triển khai phần việc `download Docx` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Tải file DOCX của văn bản về máy.
   Future<void> _downloadDocx({String title = 'VanBan'}) async {
     try {
       // Gọi API hoặc tác vụ bất đồng bộ rồi chờ kết quả trước khi cập nhật giao diện.
@@ -1675,7 +1618,9 @@ p, li, span, div {
     }
   }
 
-  Future<void> _downloadPdf({String title = 'VanBan', int? versionNumber}) async {
+  // Tải file PDF của văn bản về máy.
+  Future<void> _downloadPdf(
+      {String title = 'VanBan', int? versionNumber}) async {
     final url = versionNumber != null
         ? 'documents/${widget.id}/versions/$versionNumber/download-pdf/'
         : 'documents/${widget.id}/download-pdf/';
@@ -1690,9 +1635,8 @@ p, li, span, div {
       final bytes = resp.data as List<int>;
       final blob = html.Blob([bytes], 'application/pdf');
       final href = html.Url.createObjectUrlFromBlob(blob);
-      final filename = versionNumber != null
-          ? '${title}_v$versionNumber.pdf'
-          : '$title.pdf';
+      final filename =
+          versionNumber != null ? '${title}_v$versionNumber.pdf' : '$title.pdf';
       html.AnchorElement(href: href)
         ..setAttribute('download', filename)
         ..click();
@@ -1714,11 +1658,7 @@ p, li, span, div {
     }
   }
 
-  // Mục đích: Phương thức `_finalize` triển khai phần việc `finalize` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nút Hoàn tất: chốt văn bản (chuyển trạng thái cuối, khóa sửa).
   Future<void> _finalize() async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
 
@@ -1738,11 +1678,7 @@ p, li, span, div {
     }
   }
 
-  // Mục đích: Phương thức `_archive` triển khai phần việc `archive` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nút Lưu trữ: đưa văn bản vào kho lưu trữ.
   Future<void> _archive() async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
 
@@ -1762,11 +1698,7 @@ p, li, span, div {
     }
   }
 
-  // Mục đích: Phương thức `_unarchive` triển khai phần việc `unarchive` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nút Bỏ lưu trữ: đưa văn bản trở lại danh sách thường.
   Future<void> _unarchive() async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
 
@@ -1786,11 +1718,7 @@ p, li, span, div {
     }
   }
 
-  // Mục đích: Phương thức `_delete` triển khai phần việc `delete` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nút Xóa: chuyển văn bản vào thùng rác (có xác nhận).
   Future<void> _delete() async {
     final ok = await showDialog<bool>(
       context: context,
@@ -1826,20 +1754,13 @@ p, li, span, div {
     }
   }
 
-  // Mục đích: Phương thức `_refreshDocumentQueries` triển khai phần việc `refresh Document Queries` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Làm mới các provider liên quan tới văn bản (chi tiết + danh sách) sau thao tác.
 
   void _refreshDocumentQueries() {
     refreshDocumentCollections(ref);
   }
 
-  // Mục đích: Phương thức `_resetPreviewAndRefreshDocument` triển khai phần việc `reset Preview And Refresh Document` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Reset xem trước + tải lại văn bản (sau thao tác làm đổi nội dung).
   void _resetPreviewAndRefreshDocument() {
     if (mounted) {
       // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -1864,11 +1785,7 @@ p, li, span, div {
     _refreshDocumentQueries();
   }
 
-  // Mục đích: Phương thức `_toggleFavorite` triển khai phần việc `toggle Favorite` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nút Yêu thích: bật/tắt đánh dấu yêu thích văn bản.
   Future<void> _toggleFavorite() async {
     try {
       // Gọi API hoặc tác vụ bất đồng bộ rồi chờ kết quả trước khi cập nhật giao diện.
@@ -1880,11 +1797,7 @@ p, li, span, div {
     }
   }
 
-  // Mục đích: Phương thức `_showSnack` triển khai phần việc `show Snack` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Suy ra kế hoạch 'ký nhanh qua trợ lý' phù hợp cho văn bản này.
   AssistantQuickSignPlanAction? _assistantPlanForDocument(doc) {
     final serverPlan = doc.assistantAction as AssistantQuickSignPlanAction?;
     final localPlan = _assistantPlanOverride;
@@ -1918,12 +1831,14 @@ p, li, span, div {
     return localPlan;
   }
 
+  // Sau khi ký nhanh xong -> làm mới văn bản.
   void _refreshDocumentAfterQuickSign() {
     refreshDocumentCollections(ref);
     ref.invalidate(documentDetailProvider(widget.id));
     ref.invalidate(signingSummaryProvider);
   }
 
+  // Đặt trạng thái đang xử lý cho luồng ký nhanh (khóa nút).
   void _setQuickSignBusy(bool value, {String? label}) {
     if (!mounted) {
       return;
@@ -1934,6 +1849,7 @@ p, li, span, div {
     });
   }
 
+  // Rút thông điệp lỗi gọn từ lỗi API để hiển thị.
   String _apiErrorMessage(Object error, {String? fallback}) {
     final strings = AppStrings.of(context);
     final fallbackMessage = fallback ??
@@ -1959,6 +1875,7 @@ p, li, span, div {
     return fallbackMessage;
   }
 
+  // Khi ký nhanh báo lỗi -> trích kế hoạch khắc phục từ phản hồi lỗi.
   AssistantQuickSignPlanAction? _assistantPlanFromError(Object error) {
     if (error is! DioException) {
       return null;
@@ -1972,6 +1889,7 @@ p, li, span, div {
     );
   }
 
+  // Nhãn lý do khớp người nhận do trợ lý gợi ý.
   String _assistantMatchReasonLabel(String value) {
     final strings = AppStrings.of(context);
     switch (value) {
@@ -1991,6 +1909,7 @@ p, li, span, div {
     }
   }
 
+  // Dòng mô tả chi tiết 1 ứng viên người nhận do trợ lý gợi ý.
   String _assistantCandidateDetail(AssistantRecipientCandidate candidate) {
     final strings = AppStrings.of(context);
     final parts = <String>[
@@ -2006,6 +1925,7 @@ p, li, span, div {
     return parts.join('\n');
   }
 
+  // Hỏi mật khẩu chứng thư để ký nhanh.
   Future<String?> _promptQuickSignPassword(
       AssistantQuickSignPlanAction plan) async {
     if (!plan.requiresReauthPassword || plan.alreadySigned) {
@@ -2093,6 +2013,7 @@ p, li, span, div {
     }
   }
 
+  // Tìm ứng viên người nhận cho ký nhanh (gọi API gợi ý).
   Future<List<AssistantRecipientCandidate>> _searchAssistantRecipients(
       String query) async {
     final response = await ApiClient().dio.get(
@@ -2110,6 +2031,7 @@ p, li, span, div {
         .toList();
   }
 
+  // Mở hộp thoại chọn người nhận cho ký nhanh.
   Future<AssistantRecipientCandidate?> _pickAssistantRecipient(
     AssistantQuickSignPlanAction plan,
   ) async {
@@ -2283,6 +2205,7 @@ p, li, span, div {
     }
   }
 
+  // Bỏ qua gợi ý ký nhanh của trợ lý.
   Future<void> _dismissAssistantQuickSignPlan(
       AssistantQuickSignPlanAction plan) async {
     final strings = AppStrings.of(context);
@@ -2325,6 +2248,7 @@ p, li, span, div {
     }
   }
 
+  // Cập nhật người nhận đã chọn cho kế hoạch ký nhanh.
   Future<void> _updateAssistantQuickSignRecipient(
       AssistantQuickSignPlanAction plan) async {
     final strings = AppStrings.of(context);
@@ -2385,6 +2309,7 @@ p, li, span, div {
     }
   }
 
+  // Thực thi kế hoạch ký nhanh (tạo nhiệm vụ ký + gửi).
   Future<void> _executeAssistantQuickSignPlan(
       AssistantQuickSignPlanAction plan) async {
     final strings = AppStrings.of(context);
@@ -2458,11 +2383,7 @@ p, li, span, div {
     ));
   }
 
-  // Mục đích: Phương thức `_buildVersionsTab` triển khai phần việc `build Versions Tab` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Tab Phiên bản: liệt kê các version của văn bản + thao tác khôi phục/ẩn.
   Widget _buildVersionsTab(
     BuildContext context,
     int docId,
@@ -2538,25 +2459,90 @@ p, li, span, div {
                           fontWeight: FontWeight.bold,
                           color: hidden ? Colors.grey : Colors.blue.shade700)),
                 ),
-                title: Text(
-                    'Phiên bản ${ver.versionNumber}${hidden ? ' (ẩn)' : ''}',
+                title: Row(children: [
+                  Text(
+                    'Phiên bản ${ver.versionNumber}',
                     style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: hidden ? Colors.grey : null)),
+                      fontWeight: FontWeight.w500,
+                      decoration: hidden ? TextDecoration.lineThrough : null,
+                      color: hidden ? Colors.grey : null,
+                    ),
+                  ),
+                  if (hidden) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(_pick('Đã ẩn', 'Hidden'),
+                          style:
+                              const TextStyle(fontSize: 10, color: Colors.grey)),
+                    ),
+                  ],
+                ]),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (ver.changeNote != null && ver.changeNote!.isNotEmpty)
+                    const SizedBox(height: 2),
+                    // Dòng riêng: thông tin người chỉnh sửa phiên bản.
+                    Row(children: [
+                      Icon(Icons.person_outline,
+                          size: 13, color: Colors.grey.shade600),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          ver.createdByName.trim().isNotEmpty
+                              ? ver.createdByName.trim()
+                              : _pick('Không rõ người chỉnh sửa',
+                                  'Unknown editor'),
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w500),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 2),
+                    Row(children: [
+                      Icon(Icons.schedule,
+                          size: 13, color: Colors.grey.shade500),
+                      const SizedBox(width: 4),
+                      Text(dateStr,
+                          style: TextStyle(
+                              fontSize: 11.5, color: Colors.grey.shade600)),
+                    ]),
+                    if (ver.changeNote != null && ver.changeNote!.isNotEmpty) ...[
+                      const SizedBox(height: 2),
                       Text(ver.changeNote!,
-                          style: const TextStyle(fontSize: 12)),
-                    Text('$dateStr · ${ver.createdByName}',
-                        style: TextStyle(
-                            fontSize: 11, color: Colors.grey.shade500)),
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade600)),
+                    ],
                   ],
                 ),
+                isThreeLine: true,
                 trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                  // Xem trước nội dung phiên bản
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.preview_outlined, size: 18),
+                    tooltip: _pick('Xem trước nội dung', 'Preview content'),
+                    onPressed: () => _showVersionPreview(context, ver),
+                  ),
+                  // So sánh với phiên bản sau (diff)
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.difference_outlined, size: 18),
+                    tooltip: _pick(
+                        'So sánh với phiên bản sau', 'Compare with next version'),
+                    onPressed: () => _showVersionDiff(context, docId, ver),
+                  ),
                   if (!hidden)
                     IconButton(
+                      visualDensity: VisualDensity.compact,
                       icon: const Icon(Icons.picture_as_pdf,
                           size: 18, color: Color(0xFFB91C1C)),
                       tooltip: _pick('Tải PDF phiên bản này',
@@ -2568,6 +2554,7 @@ p, li, span, div {
                     ),
                   if (canManageVersions && !hidden)
                     IconButton(
+                      visualDensity: VisualDensity.compact,
                       icon: const Icon(Icons.restore, size: 18),
                       tooltip: _pick(
                           'Khôi phục phiên bản này', 'Restore this version'),
@@ -2575,12 +2562,13 @@ p, li, span, div {
                     ),
                   if (canManageVersions)
                     IconButton(
+                      visualDensity: VisualDensity.compact,
                       icon: Icon(
                           hidden
                               ? Icons.visibility_outlined
                               : Icons.visibility_off_outlined,
                           size: 18),
-                      tooltip: hidden ? 'Hiện' : 'Ẩn',
+                      tooltip: hidden ? _pick('Hiện', 'Show') : _pick('Ẩn', 'Hide'),
                       onPressed: () => _toggleVersionHide(docId, ver.id),
                     ),
                 ]),
@@ -2592,11 +2580,335 @@ p, li, span, div {
     );
   }
 
-  // Mục đích: Phương thức `_restoreVersion` triển khai phần việc `restore Version` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // ── XEM TRƯỚC NỘI DUNG PHIÊN BẢN ────────────────────────────────────────────
+  // Xem trước nội dung 1 phiên bản văn bản (giống màn chi tiết mẫu).
+  void _showVersionPreview(BuildContext context, DocumentVersion ver) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 780, maxHeight: 680),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 14, 12, 14),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                  border:
+                      Border(bottom: BorderSide(color: Colors.blue.shade100)),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.history_edu_outlined,
+                      size: 20, color: Color(0xFF1565C0)),
+                  const SizedBox(width: 8),
+                  Text(
+                    _pick('Xem trước — Phiên bản ${ver.versionNumber}',
+                        'Preview — Version ${ver.versionNumber}'),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(ctx),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ]),
+              ),
+              // Page-style content
+              Expanded(
+                child: Container(
+                  color: const Color(0xFFE8EAED),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32, vertical: 24),
+                    child: Center(
+                      child: Container(
+                        width: double.infinity,
+                        constraints: const BoxConstraints(maxWidth: 700),
+                        padding: const EdgeInsets.all(32),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.12),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ver.content.isNotEmpty
+                            ? SelectableText(
+                                ver.content,
+                                style: const TextStyle(
+                                    fontFamily: 'Times New Roman',
+                                    fontSize: 14,
+                                    height: 1.6),
+                              )
+                            : Text(
+                                _pick('(Không có nội dung)', '(No content)'),
+                                style: TextStyle(
+                                    color: Colors.grey.shade500,
+                                    fontStyle: FontStyle.italic),
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
+  // ── SO SÁNH DIFF ────────────────────────────────────────────────────────────
+  // So sánh khác biệt giữa phiên bản này và phiên bản kế sau (diff).
+  Future<void> _showVersionDiff(
+      BuildContext context, int docId, DocumentVersion ver) async {
+    try {
+      final resp = await ApiClient()
+          .dio
+          .get('documents/$docId/versions/${ver.id}/diff/');
+      final diffLines = List<String>.from(resp.data['diff_lines'] ?? []);
+      final oldVer = resp.data['old_version'] ?? ver.versionNumber;
+
+      if (!context.mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 860, maxHeight: 660),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 12, 14),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF24292F),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      topRight: Radius.circular(12),
+                    ),
+                  ),
+                  child: Row(children: [
+                    const Icon(Icons.difference_outlined,
+                        size: 18, color: Colors.white70),
+                    const SizedBox(width: 8),
+                    Text(
+                        _pick('So sánh — v$oldVer → phiên bản sau',
+                            'Compare — v$oldVer → next version'),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Colors.white,
+                            fontFamily: 'monospace')),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close,
+                          color: Colors.white70, size: 18),
+                      onPressed: () => Navigator.pop(ctx),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ]),
+                ),
+                // Legend bar
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  color: const Color(0xFFF6F8FA),
+                  child: Row(children: [
+                    _diffLegend(const Color(0xFFE6FFEC),
+                        const Color(0xFF1A7F37), _pick('+ Thêm mới', '+ Added')),
+                    const SizedBox(width: 20),
+                    _diffLegend(const Color(0xFFFFEBE9),
+                        const Color(0xFFCF222E), _pick('− Xóa bỏ', '− Removed')),
+                    const SizedBox(width: 20),
+                    _diffLegend(Colors.white, Colors.grey.shade500,
+                        _pick('  Không đổi', '  Unchanged')),
+                  ]),
+                ),
+                const Divider(height: 1),
+                // Diff body
+                if (diffLines.isEmpty)
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                          _pick('Không có thay đổi nào giữa hai phiên bản.',
+                              'There are no changes between the two versions.'),
+                          style: const TextStyle(color: Colors.grey)),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: Container(
+                      color: const Color(0xFFF6F8FA),
+                      child: SingleChildScrollView(
+                        child: Container(
+                          margin: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: const Color(0xFFD0D7DE)),
+                            borderRadius: BorderRadius.circular(6),
+                            color: Colors.white,
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: diffLines
+                                  .map((line) => _buildDiffLine(line))
+                                  .toList(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('${_pick('Lỗi tải diff', 'Diff load error')}: $e'),
+              backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  // Render một dòng diff theo phong cách GitHub.
+  Widget _buildDiffLine(String line) {
+    if (line.startsWith('---') || line.startsWith('+++')) {
+      return Container(
+        width: double.infinity,
+        color: const Color(0xFFF6F8FA),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+        child: Text(line,
+            style: const TextStyle(
+                fontSize: 12,
+                fontFamily: 'monospace',
+                color: Color(0xFF57606A),
+                fontStyle: FontStyle.italic)),
+      );
+    }
+    if (line.startsWith('@@')) {
+      return Container(
+        width: double.infinity,
+        color: const Color(0xFFDDF4FF),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+        child: Text(line,
+            style: const TextStyle(
+                fontSize: 12,
+                fontFamily: 'monospace',
+                color: Color(0xFF0969DA))),
+      );
+    }
+    if (line.startsWith('+')) {
+      return _ghDiffRow(
+        gutterBg: const Color(0xFFCCFFC1),
+        gutterFg: const Color(0xFF1A7F37),
+        rowBg: const Color(0xFFE6FFEC),
+        prefix: '+',
+        content: line.substring(1),
+      );
+    }
+    if (line.startsWith('-')) {
+      return _ghDiffRow(
+        gutterBg: const Color(0xFFFFBEBC),
+        gutterFg: const Color(0xFFCF222E),
+        rowBg: const Color(0xFFFFEBE9),
+        prefix: '-',
+        content: line.substring(1),
+      );
+    }
+    final content = line.startsWith(' ') ? line.substring(1) : line;
+    return _ghDiffRow(
+      gutterBg: Colors.white,
+      gutterFg: const Color(0xFF57606A),
+      rowBg: Colors.white,
+      prefix: ' ',
+      content: content,
+    );
+  }
+
+  // Dựng 1 hàng diff kiểu GitHub (gutter +/- + nội dung).
+  Widget _ghDiffRow({
+    required Color gutterBg,
+    required Color gutterFg,
+    required Color rowBg,
+    required String prefix,
+    required String content,
+  }) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            width: 32,
+            color: gutterBg,
+            alignment: Alignment.topCenter,
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Text(
+              prefix,
+              style: TextStyle(
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.bold,
+                  color: gutterFg),
+            ),
+          ),
+          Container(width: 1, color: gutterBg.withOpacity(0.6)),
+          Expanded(
+            child: Container(
+              color: rowBg,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+              child: SelectableText(
+                content,
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontFamily: 'monospace',
+                    color: Color(0xFF1F2328),
+                    height: 1.6),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Dựng chú thích màu cho khung diff (thêm/xóa/không đổi).
+  Widget _diffLegend(Color bg, Color fg, String label) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Container(
+        width: 14,
+        height: 14,
+        decoration: BoxDecoration(
+          color: bg,
+          border: Border.all(color: fg.withOpacity(0.4)),
+        ),
+      ),
+      const SizedBox(width: 4),
+      Text(label, style: TextStyle(fontSize: 11.5, color: fg)),
+    ]);
+  }
+
+  // Khôi phục văn bản về 1 phiên bản cũ.
   Future<void> _restoreVersion(int docId, int verId) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -2637,11 +2949,7 @@ p, li, span, div {
     }
   }
 
-  // Mục đích: Phương thức `_toggleVersionHide` triển khai phần việc `toggle Version Hide` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Ẩn/hiện 1 phiên bản trong danh sách version.
   Future<void> _toggleVersionHide(int docId, int verId) async {
     try {
       // Gọi API hoặc tác vụ bất đồng bộ rồi chờ kết quả trước khi cập nhật giao diện.
@@ -2659,11 +2967,7 @@ p, li, span, div {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Khung màn chi tiết (AppBar + tabs/nội dung) bao quanh _buildBody.
   Widget build(BuildContext context) {
     // Lắng nghe provider để widget tự động dựng lại khi dữ liệu hoặc trạng thái thay đổi.
 
@@ -2703,6 +3007,14 @@ p, li, span, div {
                   context.go(returnTo ?? '/documents?group=private'),
             ),
             title: Text(doc.title, overflow: TextOverflow.ellipsis),
+            bottom: TabBar(
+              controller: _tabController,
+              isScrollable: MediaQuery.sizeOf(context).width < 760,
+              tabs: [
+                Tab(text: _pick('Nội dung', 'Content')),
+                Tab(text: _pick('Lịch sử phiên bản', 'Version history')),
+              ],
+            ),
             actions: [
               IconButton(
                 icon: Icon(
@@ -2830,26 +3142,36 @@ p, li, span, div {
           ),
           body: _actionLoading
               ? const Center(child: CircularProgressIndicator())
-              : _buildBody(
-                  context,
-                  doc,
-                  isDraft,
-                  isArchived,
-                  isOwner,
-                  canManageVersions,
-                  returnTo: returnTo,
-                  returnLabel: returnLabel,
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildBody(
+                      context,
+                      doc,
+                      isDraft,
+                      isArchived,
+                      isOwner,
+                      canManageVersions,
+                      returnTo: returnTo,
+                      returnLabel: returnLabel,
+                    ),
+                    // Tab Lịch sử phiên bản: danh sách đầy đủ + xem trước/so sánh/khôi phục/ẩn.
+                    _buildVersionsTab(
+                      context,
+                      doc.id as int,
+                      canManageVersions,
+                      blockedReason: doc.manualEditActive == true
+                          ? doc.manualEditLockMessage as String?
+                          : null,
+                    ),
+                  ],
                 ),
         );
       },
     );
   }
 
-  // Mục đích: Phương thức `_buildBody` triển khai phần việc `build Body` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Thân màn: thông tin + xem trước PDF + tóm tắt + phiên bản + các nút thao tác/ký nhanh.
   Widget _buildBody(
     BuildContext context,
     doc,
@@ -2915,11 +3237,7 @@ p, li, span, div {
     );
   }
 
-  // Mục đích: Phương thức `_buildReturnBanner` triển khai phần việc `build Return Banner` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Banner 'quay lại nơi đã đến từ' (deep-link returnTo).
   Widget _buildReturnBanner(
       BuildContext context, String returnTo, String returnLabel) {
     return Container(
@@ -2943,11 +3261,7 @@ p, li, span, div {
     );
   }
 
-  // Mục đích: Phương thức `_buildLeftColumn` triển khai phần việc `build Left Column` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Khối gợi ý ký nhanh qua trợ lý (chọn người nhận + thực thi).
   Widget _buildAssistantQuickSignSection(BuildContext context, doc) {
     final plan = _assistantPlanForDocument(doc);
     if (plan == null) {
@@ -3142,11 +3456,7 @@ p, li, span, div {
     );
   }
 
-  // Mục đích: Phương thức `_buildContentArea` triển khai phần việc `build Content Area` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Thanh skeleton khi đang tải tóm tắt.
   Widget _buildSummarySkeletonBar(double widthFactor) {
     return FractionallySizedBox(
       widthFactor: widthFactor,
@@ -3160,6 +3470,7 @@ p, li, span, div {
     );
   }
 
+  // Thẻ trạng thái đang tạo tóm tắt.
   Widget _buildSummaryLoadingCard() {
     return Container(
       width: double.infinity,
@@ -3230,6 +3541,7 @@ p, li, span, div {
     );
   }
 
+  // Khối hiển thị bản tóm tắt văn bản (kèm nút tạo/tải).
   Widget _buildDocumentSummarySection(doc, {required bool isCompact}) {
     final currentRevision = _previewRevisionToken(doc);
     final hasSummary =
@@ -3558,6 +3870,7 @@ p, li, span, div {
     );
   }
 
+  // Khu vực nội dung: khung đọc HTML / xem trước PDF của văn bản.
   Widget _buildContentArea(doc) {
     final hasFile = doc.hasFile as bool;
     final hasContent =
@@ -3844,10 +4157,7 @@ p, li, span, div {
     );
   }
 
-  // Mục đích: Phương thức `_buildRightColumn` triển khai phần việc `build Right Column` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng cột phải màn chi tiết: thông tin/metadata + tab phiên bản (nếu có quyền quản lý version).
 
   Widget _buildRightColumn(BuildContext context, doc, bool canManageVersions) {
     return Column(
@@ -3859,82 +4169,82 @@ p, li, span, div {
           accentColor: const Color(0xFF1D4ED8),
           initiallyExpanded: true,
           child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 4),
-                _InfoRow(_pick('Tiêu đề', 'Title'), doc.title),
-                if (doc.docNumber != null && doc.docNumber!.isNotEmpty)
-                  _InfoRow(
-                      _pick('Số hiệu VB', 'Document number'), doc.docNumber!),
-                _InfoRow(_pick('Trạng thái', 'Status'),
-                    _strings.ui(doc.statusLabel)),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              _InfoRow(_pick('Mã hệ thống', 'System code'), doc.recordCode),
+              _InfoRow(_pick('Tiêu đề', 'Title'), doc.title),
+              if (doc.docNumber != null && doc.docNumber!.isNotEmpty)
                 _InfoRow(
-                    _pick('Quyền xem', 'Visibility'),
-                    doc.visibility == 'public'
-                        ? _pick('Tất cả mọi người', 'Everyone')
-                        : doc.visibility == 'group'
-                            ? _pick('Trong nhóm', 'In group')
-                            : _pick('Chỉ mình tôi', 'Only me')),
-                _InfoRow(_pick('Chia sẻ', 'Sharing'),
-                    _shareStatusLabel(doc.shareStatus)),
-                if (doc.templateTitle != null)
-                  _InfoRow(_pick('Tạo từ mẫu', 'Created from template'),
-                      doc.templateTitle!),
-                _InfoRow(_pick('Người tạo', 'Created by'), doc.ownerName),
-                _InfoRow(
-                    _pick('Phiên bản', 'Version'), 'v${doc.versionNumber}'),
-                _InfoRow(
-                    _pick('Ngày tạo', 'Created'),
-                    doc.createdAt.length >= 10
-                        ? doc.createdAt.substring(0, 10)
-                        : doc.createdAt),
-                _InfoRow(
-                    _pick('Ngày cập nhật', 'Updated'),
-                    doc.updatedAt.length >= 10
-                        ? doc.updatedAt.substring(0, 10)
-                        : doc.updatedAt),
-                if (doc.notes != null && doc.notes!.isNotEmpty)
-                  _InfoRow(_pick('Ghi chú', 'Notes'), doc.notes!),
-                if (doc.promptTitle != null && doc.promptTitle!.isNotEmpty)
-                  _InfoRow(_pick('Prompt đã áp dụng', 'Applied prompt'),
-                      doc.promptTitle!),
-                if (doc.appliedUserRules != null &&
-                    doc.appliedUserRules!.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      border: Border.all(color: Colors.blue.shade200),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(children: [
-                          const Icon(Icons.tune, size: 14, color: Colors.blue),
-                          const SizedBox(width: 4),
-                          Text(
-                            _pick('Yêu cầu bổ sung đã áp dụng',
-                                'Applied user rules'),
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                                color: Colors.blue),
-                          ),
-                        ]),
-                        const SizedBox(height: 4),
-                        SelectableText(
-                          doc.appliedUserRules!,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ],
-                    ),
+                    _pick('Số hiệu VB', 'Document number'), doc.docNumber!),
+              _InfoRow(
+                  _pick('Trạng thái', 'Status'), _strings.ui(doc.statusLabel)),
+              _InfoRow(
+                  _pick('Quyền xem', 'Visibility'),
+                  doc.visibility == 'public'
+                      ? _pick('Tất cả mọi người', 'Everyone')
+                      : doc.visibility == 'group'
+                          ? _pick('Trong nhóm', 'In group')
+                          : _pick('Chỉ mình tôi', 'Only me')),
+              _InfoRow(_pick('Chia sẻ', 'Sharing'),
+                  _shareStatusLabel(doc.shareStatus)),
+              if (doc.templateTitle != null)
+                _InfoRow(_pick('Tạo từ mẫu', 'Created from template'),
+                    doc.templateTitle!),
+              _InfoRow(_pick('Người tạo', 'Created by'), doc.ownerName),
+              _InfoRow(_pick('Phiên bản', 'Version'), 'v${doc.versionNumber}'),
+              _InfoRow(
+                  _pick('Ngày tạo', 'Created'),
+                  doc.createdAt.length >= 10
+                      ? doc.createdAt.substring(0, 10)
+                      : doc.createdAt),
+              _InfoRow(
+                  _pick('Ngày cập nhật', 'Updated'),
+                  doc.updatedAt.length >= 10
+                      ? doc.updatedAt.substring(0, 10)
+                      : doc.updatedAt),
+              if (doc.notes != null && doc.notes!.isNotEmpty)
+                _InfoRow(_pick('Ghi chú', 'Notes'), doc.notes!),
+              if (doc.promptTitle != null && doc.promptTitle!.isNotEmpty)
+                _InfoRow(_pick('Prompt đã áp dụng', 'Applied prompt'),
+                    doc.promptTitle!),
+              if (doc.appliedUserRules != null &&
+                  doc.appliedUserRules!.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    border: Border.all(color: Colors.blue.shade200),
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                ],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        const Icon(Icons.tune, size: 14, color: Colors.blue),
+                        const SizedBox(width: 4),
+                        Text(
+                          _pick('Yêu cầu bổ sung đã áp dụng',
+                              'Applied user rules'),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: Colors.blue),
+                        ),
+                      ]),
+                      const SizedBox(height: 4),
+                      SelectableText(
+                        doc.appliedUserRules!,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
               ],
-            ),
+            ],
+          ),
         ),
         const SizedBox(height: 16),
         _CollapsibleSection(
@@ -4030,45 +4340,12 @@ p, li, span, div {
           documentId: doc.id as int,
           onDocumentChanged: _refreshAfterWordAiCompletion,
         ),
-        const SizedBox(height: 16),
-        Card(
-          clipBehavior: Clip.antiAlias,
-          child: ExpansionTile(
-            leading: const Icon(Icons.history, size: 20),
-            title: Text(
-              _pick('Lịch sử phiên bản', 'Version history'),
-              style: Theme.of(context)
-                  .textTheme
-                  .titleSmall
-                  ?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text(
-                _pick('${doc.versionCount} phiên bản',
-                    '${doc.versionCount} versions'),
-                style: const TextStyle(fontSize: 11)),
-            children: [
-              SizedBox(
-                height: 300,
-                child: _buildVersionsTab(
-                  context,
-                  doc.id as int,
-                  canManageVersions,
-                  blockedReason: doc.manualEditActive == true
-                      ? doc.manualEditLockMessage as String?
-                      : null,
-                ),
-              ),
-            ],
-          ),
-        ),
+        // Lịch sử phiên bản đã được tách hẳn sang tab riêng (giống màn chi tiết mẫu).
       ],
     );
   }
 
-  // Mục đích: Phương thức `_shareStatusLabel` triển khai phần việc `share Status Label` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nhãn trạng thái chia sẻ/phê duyệt của văn bản.
 
   String _shareStatusLabel(String status) {
     return switch (status) {
@@ -4081,10 +4358,7 @@ p, li, span, div {
   }
 }
 
-// Mục đích: Lớp `_InfoRow` triển khai phần việc `Info Row` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget dòng thông tin (nhãn + giá trị) dùng trong panel chi tiết.
 
 class _InfoRow extends StatelessWidget {
   final String label;
@@ -4092,10 +4366,7 @@ class _InfoRow extends StatelessWidget {
   const _InfoRow(this.label, this.value);
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng 1 dòng thông tin: nhãn bên trái, giá trị bên phải.
 
   Widget build(BuildContext context) {
     return Padding(
@@ -4119,10 +4390,7 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_SignerDraftRow` triển khai phần việc `Signer Draft Row` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Mô hình 1 dòng nhập người ký (controller họ tên/email) trong dialog khởi tạo ký.
 
 class _SignerDraftRow {
   int? userId;
@@ -4132,6 +4400,7 @@ class _SignerDraftRow {
   final TextEditingController stepCtrl;
   final TextEditingController groupCtrl;
 
+  // Dòng nhập 1 người ký trong khối soạn nhiệm vụ ký.
   _SignerDraftRow({
     String signerLabel = '',
     String role = '',
@@ -4142,10 +4411,7 @@ class _SignerDraftRow {
         stepCtrl = TextEditingController(text: step),
         groupCtrl = TextEditingController(text: groupContext);
 
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Giải phóng các controller của dòng người ký.
 
   void dispose() {
     signerCtrl.dispose();
@@ -4155,33 +4421,25 @@ class _SignerDraftRow {
   }
 }
 
-// Mục đích: Lớp `_ForwardRecipientRow` triển khai phần việc `Forward Recipient Row` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Mô hình 1 dòng nhập người nhận forward (controller).
 
 class _ForwardRecipientRow {
   int? userId;
   final TextEditingController recipientCtrl;
 
+  // Dòng nhập 1 người nhận forward.
   _ForwardRecipientRow({
     String recipientLabel = '',
   }) : recipientCtrl = TextEditingController(text: recipientLabel);
 
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Giải phóng các controller của dòng người nhận forward.
 
   void dispose() {
     recipientCtrl.dispose();
   }
 }
 
-// Mục đích: Lớp `_MetaChip` triển khai phần việc `Meta Chip` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget chip hiển thị 1 mẩu metadata (icon + nhãn) của văn bản.
 
 class _MetaChip extends StatelessWidget {
   final IconData icon;
@@ -4191,10 +4449,7 @@ class _MetaChip extends StatelessWidget {
       {required this.icon, required this.label, required this.color});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chip metadata (icon + nhãn).
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -4206,20 +4461,14 @@ class _MetaChip extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_StatusBadge` triển khai phần việc `Status Badge` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget badge trạng thái văn bản (nháp/hoàn tất/lưu trữ...).
 
 class _StatusBadge extends StatelessWidget {
   final String status;
   const _StatusBadge({required this.status});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng badge trạng thái với màu theo trạng thái.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -4242,20 +4491,14 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_VisibilityBadge` triển khai phần việc `Visibility Badge` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget badge phạm vi hiển thị (riêng tư/nhóm/công khai).
 
 class _VisibilityBadge extends StatelessWidget {
   final String visibility;
   const _VisibilityBadge({required this.visibility});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng badge phạm vi hiển thị.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -4284,20 +4527,14 @@ class _VisibilityBadge extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_ShareStatusBadge` triển khai phần việc `Share Status Badge` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget badge trạng thái chia sẻ/phê duyệt.
 
 class _ShareStatusBadge extends StatelessWidget {
   final String shareStatus;
   const _ShareStatusBadge({required this.shareStatus});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng badge trạng thái chia sẻ.
 
   Widget build(BuildContext context) {
     if (shareStatus == 'active') return const SizedBox.shrink();
@@ -4332,10 +4569,7 @@ class _ShareStatusBadge extends StatelessWidget {
 
 // ─── Share dialog helper widgets ────────────────────────────────────────────
 
-// Mục đích: Lớp `_ShareOption` triển khai phần việc `Share Option` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget 1 lựa chọn chia sẻ (icon + mô tả) trong sheet chia sẻ.
 
 class _ShareOption extends StatelessWidget {
   final IconData icon;
@@ -4355,10 +4589,7 @@ class _ShareOption extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng 1 lựa chọn chia sẻ.
 
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -4414,10 +4645,7 @@ class _ShareOption extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_ApprovalNote` triển khai phần việc `Approval Note` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget hiển thị ghi chú phê duyệt/từ chối.
 
 class _ApprovalNote extends StatelessWidget {
   final IconData icon;
@@ -4435,10 +4663,7 @@ class _ApprovalNote extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/document_detail_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng khối ghi chú phê duyệt.
 
   Widget build(BuildContext context) {
     return Container(
@@ -4518,8 +4743,8 @@ class _CollapsibleSectionState extends State<_CollapsibleSection>
                       color: widget.accentColor.withOpacity(0.13),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(widget.icon,
-                        size: 16, color: widget.accentColor),
+                    child:
+                        Icon(widget.icon, size: 16, color: widget.accentColor),
                   ),
                   const SizedBox(width: 10),
                   Expanded(

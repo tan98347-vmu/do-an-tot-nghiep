@@ -1,6 +1,0 @@
-version: "2"
-tunnels:
-  public-web:
-    proto: http
-    addr: 127.0.0.1:8888
-    inspect: true

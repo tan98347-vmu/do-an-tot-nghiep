@@ -1,8 +1,9 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH HỒ SƠ CÁ NHÂN ===
+// Xem/sửa thông tin cá nhân (_buildViewMode / _buildEditView): họ tên, chức danh, CCCD, ngày sinh, SĐT, địa chỉ, sơ yếu lý lịch.
+// - Bí danh (_buildAliasCard, đặt bí danh chính _setPrimaryAlias); chứng thư ký số (_buildKeysCard).
+// - _prefillFromBio: trích thông tin cá nhân từ sơ yếu lý lịch ('auth/me/prefill-from-bio/'). Lưu qua PATCH 'auth/me/' (authProvider).
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/profile/profile_screen.dart.
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,10 +12,7 @@ import '../../l10n/app_strings.dart';
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
 
-// Mục đích: Widget `ProfileScreen` triển khai phần việc `Profile Screen` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn HỒ SƠ CÁ NHÂN — ConsumerStatefulWidget.
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -23,10 +21,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-// Mục đích: Widget `_ProfileScreenState` triển khai phần việc `Profile Screen State` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn hồ sơ: xem/sửa thông tin cá nhân, bí danh, ngày sinh.
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _ctrls = <String, TextEditingController>{};
@@ -52,10 +47,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   ];
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở màn: đổ thông tin user vào form.
 
   void initState() {
     super.initState();
@@ -82,10 +74,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _ensureAliasPrimaryHint();
   }
 
-  // Mục đích: Phương thức `_fillFromUser` triển khai phần việc `fill From User` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đổ dữ liệu user hiện tại vào các controller form.
 
   void _fillFromUser() {
     // Đọc provider theo nhu cầu hành động mà không buộc widget đăng ký rebuild liên tục.
@@ -120,10 +109,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng màn: chế độ xem / chế độ sửa hồ sơ.
 
   Widget build(BuildContext context) {
     // Lắng nghe provider để widget tự động dựng lại khi dữ liệu hoặc trạng thái thay đổi.
@@ -147,10 +133,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   // ── CHẾ ĐỘ XEM ─────────────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_buildViewMode` triển khai phần việc `build View Mode` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Chế độ xem: các thẻ thông tin/giới thiệu/bí danh.
 
   Widget _buildViewMode(BuildContext context, dynamic user) {
     final profile = user.profile;
@@ -358,10 +341,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_buildInfoCard` triển khai phần việc `build Info Card` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Thẻ thông tin cơ bản (tên, email, phòng ban...).
 
   Widget _buildInfoCard(BuildContext context, dynamic user) {
     final profile = user.profile;
@@ -410,10 +390,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_buildBioCard` triển khai phần việc `build Bio Card` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Thẻ giới thiệu bản thân (bio).
 
   Widget _buildBioCard(BuildContext context, dynamic user) {
     final bio = user.profile?.soYeuLyLich ?? '';
@@ -485,10 +462,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_buildKeysCard` triển khai phần việc `build Keys Card` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Thẻ bí danh (tên gọi khác dùng khi điền văn bản).
 
   Widget _buildAliasCard(BuildContext context, dynamic user) {
     final aliases =
@@ -690,10 +664,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   // ── CHẾ ĐỘ CHỈNH SỬA ───────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_buildEditView` triển khai phần việc `build Edit View` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Chế độ sửa: form chỉnh sửa hồ sơ.
 
   Widget _buildEditView(BuildContext context, dynamic user) {
     final strings = AppStrings.of(context);
@@ -804,10 +775,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_buildMainEditFields` triển khai phần việc `build Main Edit Fields` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khối các trường chính khi sửa (tên, email, sđt...).
 
   Widget _buildMainEditFields(BuildContext context, dynamic user) {
     final strings = AppStrings.of(context);
@@ -928,10 +896,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_buildDatePicker` triển khai phần việc `build Date Picker` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Ô chọn ngày sinh.
 
   Widget _buildDatePicker(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -991,10 +956,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_buildProfileEditFields` triển khai phần việc `build Profile Edit Fields` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khối trường hồ sơ mở rộng khi sửa.
 
   Widget _buildProfileEditFields() {
     final strings = AppStrings.of(context);
@@ -1048,10 +1010,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   // ── AUTO-FILL TỪ SƠ YẾU LÝ LỊCH ────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_prefillFromBio` triển khai phần việc `prefill From Bio` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đặt 1 bí danh làm bí danh chính.
 
   void _setPrimaryAlias(int index) {
     for (var i = 0; i < _aliases.length; i += 1) {
@@ -1299,10 +1258,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   // ── HELPER WIDGETS ──────────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_cardTitle` triển khai phần việc `card Title` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng tiêu đề 1 thẻ (icon + tiêu đề).
 
   Widget _cardTitle(BuildContext context, IconData icon, String title) {
     final strings = AppStrings.of(context);
@@ -1315,10 +1271,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     ]);
   }
 
-  // Mục đích: Phương thức `_infoRow` triển khai phần việc `info Row` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng 1 dòng thông tin (icon + nhãn + giá trị).
 
   Widget _infoRow(IconData icon, String label, String value) {
     final strings = AppStrings.of(context);
@@ -1344,10 +1297,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_editField` triển khai phần việc `edit Field` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng 1 ô nhập khi sửa hồ sơ.
 
   Widget _editField(String key, String label, IconData icon) {
     final strings = AppStrings.of(context);
@@ -1364,10 +1314,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_formatDate` triển khai phần việc `format Date` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Định dạng ngày để hiển thị.
 
   String _formatDate(String s) {
     try {
@@ -1379,10 +1326,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   // ── ACTIONS ─────────────────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_formatDateTime` triển khai phần việc `format Date Time` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Định dạng thời điểm để hiển thị.
 
   String _formatDateTime(String s) {
     if (s.trim().isEmpty) return '—';
@@ -1550,10 +1494,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return null;
   }
 
-  // Mục đích: Phương thức `_save` triển khai phần việc `save` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đổi lỗi lưu hồ sơ thành thông điệp dễ đọc.
 
   String _profileErrorMessage(Object error) {
     final strings = AppStrings.of(context);
@@ -1677,10 +1618,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Rời màn: dọn các controller.
 
   void dispose() {
     for (final c in _ctrls.values) {
@@ -1697,10 +1635,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
 // ── BADGE VAI TRÒ ────────────────────────────────────────────────────────────
 
-// Mục đích: Lớp `_RoleBadge` triển khai phần việc `Role Badge` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Mô hình nháp 1 bí danh đang nhập (controller).
 
 class _ProfileAliasDraft {
   final TextEditingController controller;
@@ -1722,10 +1657,7 @@ class _RoleBadge extends StatelessWidget {
   const _RoleBadge({required this.isStaff, required this.isSuperuser});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/profile/profile_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng badge vai trò (staff/superuser).
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);

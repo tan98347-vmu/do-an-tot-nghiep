@@ -1,9 +1,54 @@
 """
-Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
-Vai tro backend: File `ai_engine/rag_engine.py` giu hoac ho tro luong backend cho chat, RAG, OCR, prefill ho so, sinh van ban, luu session va quan ly tri thuc AI.
-Vai tro cua no trong frontend: Cac man `/chat`, `/rag`, `/ai-doc`, `/guest` va cac dialog AI phu tro phu thuoc vao ket qua ma file nay sinh ra.
-Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `api/urls.py`, `ai_engine.models`, `ai_engine.rag_engine`, `ai_engine.rag_index`, `ai_engine.doc_creator`, `accounts.models`.
-Tac dung: Bao dam prompt, ket qua AI, session hoi thoai, du lieu trich xuat va chi muc RAG phuc vu dung ngu canh cua nguoi dung hien tai.
+  rag_index.py
+  = Người xây và bảo trì thư viện vector
+
+  rag_search.py
+  = Người tìm đúng sách và đúng đoạn trong thư viện
+
+  rag_engine.py
+  = Người đưa các đoạn đó cho LLM và yêu cầu LLM trả lời
+
+
+
+rag_engine.py là gì?
+
+  ai_engine/rag_engine.py:1 là cổng trung tâm kết nối các chức năng AI với LLM, embedding và hệ thống RAG.
+
+  Bản chất:
+
+  > Các file khác không tự tạo ChatOllama, OllamaEmbeddings hay tự xây prompt RAG. Chúng gọi các hàm dùng chung trong rag_engine.py.
+
+  ## Vai trò trong hệ thống
+
+  ChatAI / Trợ lý AI / RAG / AI Document
+                      ↓
+                rag_engine.py
+                      ↓
+         Ollama LLM + Embedding + PGVector
+
+  Nó phục vụ nhiều giao diện:
+
+  - /chat/text, /chat/voice: cung cấp LLM và RAG cho Assistant.
+  - /rag: hỏi đáp mẫu hoặc văn bản.
+  - /ai-doc: gọi LLM, trích PDF và điền dữ liệu.
+  - Tóm tắt văn bản, Word AI và một số chức năng AI khác.
+
+   rag_engine.py có ba trọng trách chính:
+
+  1. Cung cấp LLM và embedding dùng chung cho toàn hệ thống.
+  2. Trích xuất dữ liệu đầu vào, đặc biệt là PDF.
+  3. Điều phối hỏi đáp RAG bằng cách lấy tài liệu liên quan, xây prompt, gọi LLM và trả citations.
+
+   Vì vậy, bản chất chính xác:
+
+  rag_engine.py
+  ├── LLM provider dùng chung
+  ├── Embedding provider
+  ├── PDF/OCR helper
+  ├── KnowledgeBase vector store cũ
+  └── RAG answer orchestration
+
+  Có thể nói tên phù hợp hơn về mặt kiến trúc sẽ là ai_runtime.py, llm_service.py hoặc tách thành:
 """
 
 import re
@@ -37,6 +82,8 @@ _OLLAMA_TIMEOUT_SECONDS = max(
 import logging as _logging
 _pdf_logger = _logging.getLogger('ai_engine')
 
+# def _ollama_client_kwargs để tạo dict cấu hình client cho Ollama (chủ yếu là timeout), dùng chung cho embeddings và LLM.
+# vd: -> {'timeout': 600} truyền cho ChatOllama/OllamaEmbeddings.
 def _ollama_client_kwargs():
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -47,6 +94,8 @@ def _ollama_client_kwargs():
     """
     return {'timeout': _OLLAMA_TIMEOUT_SECONDS}
 
+# def _record_ai_usage để ghi một dòng AIUsageLog (user, model, trạng thái success/error) cho mỗi lần gọi AI; nuốt lỗi để việc log không ảnh hưởng luồng chính.
+# vd: gọi LLM lỗi -> ghi AIUsageLog(status='error') để theo dõi.
 def _record_ai_usage(user=None, model=None, status='success'):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -67,6 +116,8 @@ def _record_ai_usage(user=None, model=None, status='success'):
     except Exception:
         pass
 
+# def _truncate_llm_debug_text để rút gọn văn bản về 1 dòng và tối đa `limit` ký tự cho log debug LLM.
+# vd: prompt 5000 ký tự -> log chỉ 180 ký tự đầu + '...'.
 def _truncate_llm_debug_text(value, *, limit=180):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -81,14 +132,10 @@ def _truncate_llm_debug_text(value, *, limit=180):
         return text
     return f'{text[:limit]}...'
 
+# def _summarize_llm_payload để tóm tắt danh sách message gửi LLM (số message, tổng ký tự, preview vài cái đầu) phục vụ log.
+# vd: nếu payload là một list có 3 message (SystemMessage, HumanMessage, AIMessage) với content lần lượt là "You are a helpful assistant.", "What is the capital of France?", "The capital of France is Paris.", thì kết quả của hàm sẽ là {'message_count': 3, 'total_chars': 79, 'preview': 'SystemMessage:You are a helpful assistant. || HumanMessage:What is the capital of France? || AIMessage:The capital of France is Paris.'}, giúp log có cái nhìn nhanh về nội dung và kích thước của payload gửi đến LLM mà không cần in ra toàn bộ nội dung có thể rất dài.
 def _summarize_llm_payload(payload):
-    """
-    Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
-    Vai tro backend: Ham `_summarize_llm_payload` la helper noi bo trong file `ai_engine/rag_engine.py`, chiu trach nhiem thuc hien phan xu ly chuyen trach cua symbol hien tai trong mot luong backend nhieu buoc.
-    Vai tro cua no trong frontend: Frontend hiem khi goi truc tiep ham kieu nay; endpoint, command hoac signal se goi no khi can thuc hien phan xu ly chuyen trach cua symbol hien tai roi moi phan anh ket qua len man hinh.
-    Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `api/urls.py`, `ai_engine.models`, `ai_engine.rag_engine`, `ai_engine.rag_index`, `ai_engine.doc_creator`, `accounts.models`. Thuong duoc cac ham public nhu `get_embeddings`, `get_llm`, `get_collection_name` goi lai.
-    Tac dung: Don buoc thuc hien phan xu ly chuyen trach cua symbol hien tai xuong service hoac engine de view khong phai tu trien khai lai logic ky thuat.
-    """
+
     messages = payload if isinstance(payload, (list, tuple)) else [payload]
     total_chars = 0
     previews = []
@@ -116,6 +163,8 @@ _llm_client_cache: 'OrderedDict[tuple, ChatOllama]' = OrderedDict()
 _llm_cache_lock = threading.Lock()
 
 
+# def _llm_cache_key để tạo khóa cache cho client LLM theo (model, base_url, temperature, timeout).
+# vd: -> ('kimi-k2.6:cloud','http://...:11434',0.0,600).
 def _llm_cache_key(model, base_url, temperature, timeout):
     return (
         str(model or ''),
@@ -125,6 +174,8 @@ def _llm_cache_key(model, base_url, temperature, timeout):
     )
 
 
+# def _get_cached_chat_ollama để tái sử dụng client ChatOllama theo khóa cache (giữ connection pool, tránh handshake TLS mỗi lượt); tạo mới nếu chưa có và giới hạn kích thước cache kiểu LRU.
+# vd: 2 lượt chat cùng model/temperature -> dùng lại 1 client, không bắt tay TLS lần 2.
 def _get_cached_chat_ollama(model, base_url, temperature, timeout):
     key = _llm_cache_key(model, base_url, temperature, timeout)
     with _llm_cache_lock:
@@ -155,12 +206,16 @@ def _get_cached_chat_ollama(model, base_url, temperature, timeout):
         return llm
 
 
+# def flush_llm_cache để xóa toàn bộ client LLM đã cache (hữu ích sau khi đổi cấu hình hoặc hot reload).
+# vd: sau khi đổi DEFAULT_AI_MODEL -> gọi flush để lần sau tạo client mới.
 def flush_llm_cache():
     """Drop cached LLM clients (useful after config change / hot reload)."""
     with _llm_cache_lock:
         _llm_client_cache.clear()
 
 
+# def _looks_like_cloud_model để nhận biết model có phải bản cloud không (tên kết thúc '-cloud' hoặc chứa ':cloud').
+# vd: 'kimi-k2.6:cloud' -> True; 'llama3' -> False.
 def _looks_like_cloud_model(model_name):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -174,6 +229,8 @@ def _looks_like_cloud_model(model_name):
         return False
     return lowered.endswith('-cloud') or ':cloud' in lowered
 
+# class _TrackedChatOllama là lớp bọc quanh ChatOllama để ghi log + AIUsageLog mỗi lần invoke và gắn streaming_callback theo từng lần gọi; các thuộc tính khác ủy quyền cho LLM gốc.
+# vd: bọc ChatOllama để mỗi .invoke() đều log thời gian và ghi AIUsageLog.
 class _TrackedChatOllama:
     
 
@@ -184,6 +241,8 @@ class _TrackedChatOllama:
     Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `api/urls.py`, `ai_engine.models`, `ai_engine.rag_engine`, `ai_engine.rag_index`, `ai_engine.doc_creator`, `accounts.models`. Nam trong pham vi module hien tai.
     Tac dung: To chuc logic lien quan toi `_TrackedChatOllama` thanh mot don vi ro rang de nhung ham khac goi lai de hon.
     """
+    # def __init__ để lưu LLM gốc cùng user, tên model và streaming_callback dùng cho lần gọi.
+    # vd: _TrackedChatOllama(llm, user=u, model='kimi...', streaming_callback=cb).
     def __init__(self, llm, user=None, model=None, streaming_callback=None):
         """Wrapper logging + record usage. streaming_callback ban per-call qua config."""
         self._llm = llm
@@ -193,14 +252,10 @@ class _TrackedChatOllama:
 
     
 
+    # def invoke để gọi LLM gốc: gắn streaming handler nếu có callback, đo thời gian, ghi log + AIUsageLog (success/error) rồi trả response (hoặc ném lại lỗi).
+    # vd: invoke(messages) -> response; thành công ghi success, lỗi ghi error rồi ném lại.
     def invoke(self, *args, **kwargs):
-        """
-        Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
-        Vai tro backend: Ham `invoke` la ham nghiep vu chinh trong file `ai_engine/rag_engine.py` trong lop `_TrackedChatOllama`, chiu trach nhiem thuc hien phan xu ly chuyen trach cua symbol hien tai trong mot luong backend nhieu buoc.
-        Vai tro cua no trong frontend: Frontend hiem khi goi truc tiep ham kieu nay; endpoint, command hoac signal se goi no khi can thuc hien phan xu ly chuyen trach cua symbol hien tai roi moi phan anh ket qua len man hinh.
-        Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `api/urls.py`, `ai_engine.models`, `ai_engine.rag_engine`, `ai_engine.rag_index`, `ai_engine.doc_creator`, `accounts.models`. Phoi hop truc tiep voi cac method nhu `__init__`, `__getattr__` trong cung lop.
-        Tac dung: Don buoc thuc hien phan xu ly chuyen trach cua symbol hien tai xuong service hoac engine de view khong phai tu trien khai lai logic ky thuat.
-        """
+ 
         invocation_id = hex(_time.time_ns())[-8:]
         started_at = _time.perf_counter()
         payload = args[0] if args else None
@@ -256,16 +311,14 @@ class _TrackedChatOllama:
 
     
 
+    # def __getattr__ để ủy quyền mọi thuộc tính/phương thức không định nghĩa ở wrapper xuống LLM gốc.
+    # vd: wrapper.bind_tools(...) -> tự gọi sang llm gốc.bind_tools(...).
     def __getattr__(self, name):
-        """
-        Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
-        Vai tro backend: Ham `__getattr__` la helper noi bo trong file `ai_engine/rag_engine.py` trong lop `_TrackedChatOllama`, chiu trach nhiem thuc hien phan xu ly chuyen trach cua symbol hien tai trong mot luong backend nhieu buoc.
-        Vai tro cua no trong frontend: Frontend hiem khi goi truc tiep ham kieu nay; endpoint, command hoac signal se goi no khi can thuc hien phan xu ly chuyen trach cua symbol hien tai roi moi phan anh ket qua len man hinh.
-        Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `api/urls.py`, `ai_engine.models`, `ai_engine.rag_engine`, `ai_engine.rag_index`, `ai_engine.doc_creator`, `accounts.models`. Phoi hop truc tiep voi cac method nhu `__init__`, `invoke` trong cung lop.
-        Tac dung: Don buoc thuc hien phan xu ly chuyen trach cua symbol hien tai xuong service hoac engine de view khong phai tu trien khai lai logic ky thuat.
-        """
+
         return getattr(self._llm, name)
 
+# def get_embeddings để tạo OllamaEmbeddings theo model embedding của cấu hình AI (theo user/công ty).
+# vd: get_embeddings(user) -> OllamaEmbeddings(model='mxbai-embed-large').
 def get_embeddings(user=None):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -285,6 +338,8 @@ def get_embeddings(user=None):
         sync_client_kwargs=_ollama_client_kwargs(),
     )
 
+# def get_llm để lấy LLM dùng chung: chọn model/temperature theo cấu hình (cho phép override), hạ về model mặc định nếu model cloud bị cấm, lấy client từ cache rồi bọc _TrackedChatOllama (kèm streaming_callback).
+# vd: get_llm(user, temperature_override=0) -> client LLM đã cache, bọc tracking.
 def get_llm(user=None, model_override=None, temperature_override=None, allow_cloud_model=True,
             streaming_callback=None):
     """
@@ -294,7 +349,7 @@ def get_llm(user=None, model_override=None, temperature_override=None, allow_clo
     Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `api/urls.py`, `ai_engine.models`, `ai_engine.rag_engine`, `ai_engine.rag_index`, `ai_engine.doc_creator`, `accounts.models`. Dung cung cap voi cac ham `_ollama_client_kwargs`, `_record_ai_usage`, `_truncate_llm_debug_text` trong module nay.
     Tac dung: Don buoc thuc hien phan xu ly chuyen trach cua symbol hien tai xuong service hoac engine de view khong phai tu trien khai lai logic ky thuat.
     """
-    from accounts.tenancy import resolve_ai_config
+    from accounts.tenancy import build_effective_ai_context, resolve_ai_config
 
     cfg = resolve_ai_config(user=user)
     model = model_override or cfg.ai_model
@@ -328,6 +383,8 @@ def get_llm(user=None, model_override=None, temperature_override=None, allow_clo
         streaming_callback=streaming_callback,
     )
 
+# def get_collection_name để sinh tên collection vector theo công ty + user (hoặc shared), phục vụ cô lập tri thức theo công ty/người dùng.
+# vd: nếu user có id=5 thuộc company id=2, thì get_collection_name(user) sẽ trả về 'company_2_user_5_kb'; nếu shared=True và company id=2, sẽ trả về 'company_2_shared_kb'; nếu không có user và shared=False, sẽ trả về 'shared_kb'. Cách đặt tên này giúp phân tách dữ liệu vector theo công ty và người dùng một cách rõ ràng trong PGVector.
 def get_collection_name(user=None, shared=False):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -346,6 +403,8 @@ def get_collection_name(user=None, shared=False):
         return f'{company_prefix}user_{user.id}_kb' if company_prefix else f'user_{user.id}_kb'
     return 'shared_kb'
 
+# def get_vectorstore để tạo PGVector trỏ vào đúng collection (theo user/shared) với hàm embedding tương ứng.
+# vd: nếu user có id=5 thuộc company id=2 và shared=False, get_vectorstore(user) sẽ tạo PGVector với collection_name='company_2_user_5_kb' và embedding_function là OllamaEmbeddings theo cấu hình của user đó; nếu shared=True và company id=2, sẽ tạo PGVector với collection_name='company_2_shared_kb'; nếu không có user và shared=False, sẽ tạo PGVector với collection_name='shared_kb'. Điều này đảm bảo rằng dữ liệu vector được lưu trữ và truy vấn đúng theo phạm vi người dùng hoặc chia sẻ trong hệ thống RAG.
 def get_vectorstore(user=None, shared=False):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -361,6 +420,8 @@ def get_vectorstore(user=None, shared=False):
         embedding_function=get_embeddings(user),
     )
 
+# def _emit_task_progress để gọi callback báo tiến độ (phần trăm, bước, chi tiết) nếu có; nuốt lỗi để không làm hỏng tác vụ.
+# vd: _emit_task_progress(cb, 40, 'OCR', 'trang 2/5') -> đẩy 40% cho UI.
 def _emit_task_progress(callback, percent, stage, detail=''):
     if callback is None:
         return
@@ -370,12 +431,16 @@ def _emit_task_progress(callback, percent, stage, detail=''):
         pass
 
 
+# def _run_cancel_check để gọi callback kiểm tra hủy (nếu có), cho phép dừng giữa chừng các tác vụ dài như OCR/extract.
+# vd: người dùng bấm Dừng -> callback ném lỗi để thoát vòng OCR giữa chừng.
 def _run_cancel_check(callback):
     if callback is None:
         return
     callback()
 
 
+# def _ocr_pdf để OCR file PDF scan bằng Tesseract (render từng trang qua PyMuPDF rồi nhận dạng vie+eng), có báo tiến độ và kiểm tra hủy; trả text ghép các trang.
+# vd: PDF scan 3 trang -> render 300DPI rồi Tesseract vie+eng, ghép text 3 trang.
 def _ocr_pdf(pdf_file, *, on_progress=None, cancel_check=None) -> str:
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -424,6 +489,8 @@ def _ocr_pdf(pdf_file, *, on_progress=None, cancel_check=None) -> str:
     document.close()
     return '\n'.join(pages)
 
+# def extract_pdf_text để trích text PDF: ưu tiên pdfplumber (PDF có sẵn text), nếu rỗng thì fallback OCR (_ocr_pdf); trả chuỗi rỗng nếu cả hai đều không ra.
+# vd: PDF có text -> pdfplumber; PDF scan -> tự chuyển sang OCR.
 def extract_pdf_text(pdf_file, *, on_progress=None, cancel_check=None) -> str:
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -477,6 +544,8 @@ def extract_pdf_text(pdf_file, *, on_progress=None, cancel_check=None) -> str:
         _pdf_logger.error('[extract_pdf_text] OCR error: %s', exc)
         return ''
 
+# def add_to_knowledge_base để chia nhỏ nội dung thành chunk rồi nạp vào vector store của user (và cả shared nếu is_shared) phục vụ tra cứu RAG.
+# vd: dán 1 quy chế 5000 ký tự -> chia ~7 chunk và nạp vào KB của user.
 def add_to_knowledge_base(content, user, is_shared=False, metadata=None):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -508,6 +577,8 @@ def add_to_knowledge_base(content, user, is_shared=False, metadata=None):
             metadatas=[item['metadata'] for item in docs_with_meta],
         )
 
+# def ask_ai để hỏi đáp dựa trên tri thức người dùng: truy hồi (similarity search) các đoạn liên quan rồi ghép ngữ cảnh + prompt và gọi LLM trả lời.
+# vd: 'quy dinh nghi phep the nao?' -> tìm đoạn liên quan trong KB rồi để LLM trả lời.
 def ask_ai(
     question,
     user,
@@ -526,7 +597,7 @@ def ask_ai(
     Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `api/urls.py`, `ai_engine.models`, `ai_engine.rag_engine`, `ai_engine.rag_index`, `ai_engine.doc_creator`, `accounts.models`. Dung cung cap voi cac ham `_ollama_client_kwargs`, `_record_ai_usage`, `_truncate_llm_debug_text` trong module nay.
     Tac dung: Don buoc thuc hien phan xu ly chuyen trach cua symbol hien tai xuong service hoac engine de view khong phai tu trien khai lai logic ky thuat.
     """
-    from accounts.tenancy import resolve_ai_config
+    from accounts.tenancy import build_effective_ai_context, resolve_ai_config
 
     cfg = resolve_ai_config(user=user)
     k = int(max_results_override if max_results_override is not None else cfg.ai_max_results)
@@ -573,6 +644,8 @@ def ask_ai(
     ])
     return response.content, system_content
 
+# def index_template để đánh chỉ mục/đồng bộ một mẫu văn bản vào vector index (gọi sync_template_index).
+# vd: vừa duyệt 1 mẫu -> index_template(mau) để RAG tìm được nó.
 def index_template(template):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -583,6 +656,8 @@ def index_template(template):
     """
     return sync_template_index(template)
 
+# def index_document để đánh chỉ mục/đồng bộ một tài liệu vào vector index (gọi sync_document_index).
+# vd: vừa tạo 1 văn bản -> index_document(vb) để hỏi đáp được.
 def index_document(document):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -593,6 +668,8 @@ def index_document(document):
     """
     return sync_document_index(document)
 
+# def _internet_search_debug để in log debug cho luồng gợi ý tra cứu trên Thư Viện Pháp Luật.
+# vd: in '[TVPL_SEARCH] build url ...' khi gợi ý tra cứu.
 def _internet_search_debug(message):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -603,6 +680,8 @@ def _internet_search_debug(message):
     """
     print(f'[TVPL_SEARCH] {message}', flush=True)
 
+# def _default_internet_search_keyword để chuẩn hóa câu hỏi thành từ khóa tìm kiếm (gộp khoảng trắng, bỏ ký tự thừa, cắt còn 180 ký tự).
+# vd: '  Hợp đồng thuê nhà??? ' -> 'Hợp đồng thuê nhà'.
 def _default_internet_search_keyword(question):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -615,6 +694,8 @@ def _default_internet_search_keyword(question):
     keyword = keyword.strip(' \t\r\n"\'`.,;:!?-')
     return keyword[:180]
 
+# def _extract_internet_search_keyword để rút từ khóa tìm kiếm ngắn gọn (tối đa 8 từ) từ câu hỏi.
+# vd: câu dài 20 từ -> giữ 8 từ đầu làm từ khóa.
 def _extract_internet_search_keyword(
     question,
     user=None,
@@ -634,6 +715,8 @@ def _extract_internet_search_keyword(
     words = keyword.split()
     return ' '.join(words[:8])
 
+# def _internet_search_url để dựng URL tra cứu biểu mẫu/hợp đồng trên thuvienphapluat.vn theo từ khóa.
+# vd: -> 'https://thuvienphapluat.vn/bieumau?type=0&q=Hop+dong+thue+nha'.
 def _internet_search_url(question, source_type='bieumau'):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -651,6 +734,8 @@ def _internet_search_url(question, source_type='bieumau'):
         query=urllib.parse.urlencode({'type': '0', 'q': cleaned_question}),
     )
 
+# def _internet_search_source_label để trả nhãn nguồn hiển thị (BIEU MAU / HOP DONG) cho gợi ý internet.
+# vd: 'hopdong' -> 'THU VIEN PHAP LUAT | HOP DONG'.
 def _internet_search_source_label(source_type):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -663,6 +748,8 @@ def _internet_search_source_label(source_type):
         return 'THU VIEN PHAP LUAT | HOP DONG'
     return 'THU VIEN PHAP LUAT | BIEU MAU'
 
+# def _build_internet_suggestion để tạo một gợi ý internet gồm context + citation (tiêu đề, URL, loại nguồn) trỏ tới thuvienphapluat.vn.
+# vd: -> {'context':'[...] cau hoi','citation':{title,url,type:'internet'}}.
 def _build_internet_suggestion(question, source_type='bieumau'):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -690,6 +777,8 @@ def _build_internet_suggestion(question, source_type='bieumau'):
         },
     }
 
+# def _internet_search_suggestions để tạo danh sách gợi ý tra cứu internet (Thư Viện Pháp Luật) cho câu hỏi, tối đa `limit` mục.
+# vd: limit=5 -> tối đa 5 link gợi ý từ thuvienphapluat.vn.
 def _internet_search_suggestions(question, limit=5, engine='thuvienphapluat'):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -718,6 +807,8 @@ def _internet_search_suggestions(question, limit=5, engine='thuvienphapluat'):
     )
     return suggestions
 
+# def rag_query là điểm vào RAG cho hỏi đáp mẫu văn bản/tài liệu: truy hồi đoạn liên quan theo mode (template/document), ghép ngữ cảnh + gợi ý internet rồi gọi LLM, trả về (câu trả lời, danh sách citations).
+# vd: mode='template', 'mau don xin nghi' -> (câu trả lời, [citation mẫu liên quan]).
 def rag_query(
     question,
     user,

@@ -9,6 +9,8 @@ Tac dung: Bao dam prompt, ket qua AI, session hoi thoai, du lieu trich xuat va c
 from rest_framework import serializers
 from ai_engine.models import ChatAudioAttachment, ChatSession, ChatMessage, KnowledgeBase
 
+# class ChatAudioAttachmentSerializer là serializer định nghĩa dữ liệu vào/ra (ChatAudioAttachment).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class ChatAudioAttachmentSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -24,6 +26,8 @@ class ChatAudioAttachmentSerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -48,6 +52,8 @@ class ChatAudioAttachmentSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_download_url để lấy download url (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_download_url(self, obj):
         """
         Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -61,6 +67,8 @@ class ChatAudioAttachmentSerializer(serializers.ModelSerializer):
             return ''
         return request.build_absolute_uri(f'/api/assistant/audio/{obj.pk}/download/')
 
+# class ChatMessageSerializer là serializer định nghĩa dữ liệu vào/ra (ChatMessage).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class ChatMessageSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -73,6 +81,8 @@ class ChatMessageSerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -84,6 +94,8 @@ class ChatMessageSerializer(serializers.ModelSerializer):
         model = ChatMessage
         fields = ('id', 'role', 'content', 'citations', 'payload', 'audio_attachments', 'created_at')
 
+# class ChatSessionSerializer là serializer định nghĩa dữ liệu vào/ra (ChatSession).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class ChatSessionSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -97,6 +109,8 @@ class ChatSessionSerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -110,6 +124,8 @@ class ChatSessionSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_message_count để lấy message count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_message_count(self, obj):
         """
         Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -122,6 +138,8 @@ class ChatSessionSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_audio_count để lấy audio count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_audio_count(self, obj):
         """
         Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -132,6 +150,8 @@ class ChatSessionSerializer(serializers.ModelSerializer):
         """
         return obj.audio_attachments.count()
 
+# class KnowledgeBaseSerializer là serializer định nghĩa dữ liệu vào/ra (KnowledgeBase).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class KnowledgeBaseSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -144,6 +164,8 @@ class KnowledgeBaseSerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -157,6 +179,8 @@ class KnowledgeBaseSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_owner_name để lấy owner name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_owner_name(self, obj):
         """
         Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.

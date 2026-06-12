@@ -19,6 +19,8 @@ from signing.models import (
     VERIFY_STATUS_INTERNAL_APPROVAL,
 )
 
+# def _user_full_name để user full name (trong serializer).
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _user_full_name(user):
     """
     Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -29,6 +31,8 @@ def _user_full_name(user):
     """
     return user.get_full_name() or user.username
 
+# class SigningCandidateSerializer là serializer định nghĩa dữ liệu vào/ra (SigningCandidate).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class SigningCandidateSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -45,6 +49,8 @@ class SigningCandidateSerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -58,6 +64,8 @@ class SigningCandidateSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_full_name để lấy full name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_full_name(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -70,6 +78,8 @@ class SigningCandidateSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_title để lấy title (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_title(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -85,6 +95,8 @@ class SigningCandidateSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_groups để lấy groups (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_groups(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -105,6 +117,8 @@ class SigningCandidateSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_managed_departments để lấy managed departments (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_managed_departments(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -117,6 +131,8 @@ class SigningCandidateSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_departments để lấy departments (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_departments(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -135,6 +151,8 @@ class SigningCandidateSerializer(serializers.ModelSerializer):
             for membership in memberships
         ]
 
+# class SigningProposalSignerInputSerializer là serializer định nghĩa dữ liệu vào/ra (SigningProposalSignerInput).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class SigningProposalSignerInputSerializer(serializers.Serializer):
     """
     Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -149,6 +167,8 @@ class SigningProposalSignerInputSerializer(serializers.Serializer):
     required = serializers.BooleanField(required=False, default=True)
     group_context = serializers.CharField(max_length=200, required=False, allow_blank=True, default='')
 
+# class SigningProposalCreateSerializer là serializer định nghĩa dữ liệu vào/ra (SigningProposalCreate).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class SigningProposalCreateSerializer(serializers.Serializer):
     """
     Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -160,6 +180,8 @@ class SigningProposalCreateSerializer(serializers.Serializer):
     proposal_note = serializers.CharField(required=False, allow_blank=True, default='')
     signers = SigningProposalSignerInputSerializer(many=True)
 
+# class ProposalSignerSerializer là serializer định nghĩa dữ liệu vào/ra (ProposalSigner).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class ProposalSignerSerializer(serializers.Serializer):
     """
     Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -180,6 +202,8 @@ class ProposalSignerSerializer(serializers.Serializer):
 
     
 
+    # def get_signer_name để lấy signer name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_signer_name(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -190,6 +214,8 @@ class ProposalSignerSerializer(serializers.Serializer):
         """
         return _user_full_name(obj.signer_user)
 
+# class SigningProposalSerializer là serializer định nghĩa dữ liệu vào/ra (SigningProposal).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class SigningProposalSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -209,6 +235,8 @@ class SigningProposalSerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -240,6 +268,8 @@ class SigningProposalSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_document_owner_name để lấy document owner name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_document_owner_name(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -252,6 +282,8 @@ class SigningProposalSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_proposed_by_name để lấy proposed by name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_proposed_by_name(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -264,6 +296,8 @@ class SigningProposalSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_hr_reviewed_by_name để lấy hr reviewed by name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_hr_reviewed_by_name(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -278,6 +312,8 @@ class SigningProposalSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_packet_id để lấy packet id (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_packet_id(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -291,6 +327,8 @@ class SigningProposalSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_current_user_task_id để lấy current user task id (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_current_user_task_id(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -306,6 +344,8 @@ class SigningProposalSerializer(serializers.ModelSerializer):
         task = packet.tasks.filter(signer_user=request.user).order_by('step_no', 'sort_order', 'id').first()
         return task.pk if task else None
 
+# class SigningTaskSerializer là serializer định nghĩa dữ liệu vào/ra (SigningTask).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class SigningTaskSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -324,6 +364,8 @@ class SigningTaskSerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -358,6 +400,8 @@ class SigningTaskSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_signer_name để lấy signer name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_signer_name(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -370,6 +414,8 @@ class SigningTaskSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_available_now để lấy available now (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_available_now(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -380,6 +426,8 @@ class SigningTaskSerializer(serializers.ModelSerializer):
         """
         return obj.status == 'available' and obj.packet.status == 'active'
 
+# class PdfSignatureRecordSerializer là serializer định nghĩa dữ liệu vào/ra (PdfSignatureRecord).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class PdfSignatureRecordSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -397,6 +445,8 @@ class PdfSignatureRecordSerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -427,6 +477,8 @@ class PdfSignatureRecordSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_signer_name để lấy signer name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_signer_name(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -437,6 +489,8 @@ class PdfSignatureRecordSerializer(serializers.ModelSerializer):
         """
         return _user_full_name(obj.signer_user)
 
+# class SignedPdfDocumentSerializer là serializer định nghĩa dữ liệu vào/ra (SignedPdfDocument).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class SignedPdfDocumentSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -461,6 +515,8 @@ class SignedPdfDocumentSerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -493,6 +549,8 @@ class SignedPdfDocumentSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_owner_name để lấy owner name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_owner_name(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -507,6 +565,8 @@ class SignedPdfDocumentSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_participant_names để lấy participant names (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_participant_names(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -524,6 +584,8 @@ class SignedPdfDocumentSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_participant_count để lấy participant count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_participant_count(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -536,6 +598,8 @@ class SignedPdfDocumentSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_mailbox_thread_count để lấy mailbox thread count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_mailbox_thread_count(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -548,6 +612,8 @@ class SignedPdfDocumentSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_mailbox_last_status để lấy mailbox last status (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_mailbox_last_status(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -561,6 +627,8 @@ class SignedPdfDocumentSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_mailbox_last_summary để lấy mailbox last summary (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_mailbox_last_summary(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -574,6 +642,8 @@ class SignedPdfDocumentSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_mailbox_latest_thread_id để lấy mailbox latest thread id (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_mailbox_latest_thread_id(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -587,6 +657,8 @@ class SignedPdfDocumentSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_signing_events để lấy signing events (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_signing_events(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -625,6 +697,8 @@ class SignedPdfDocumentSerializer(serializers.ModelSerializer):
             })
         return events
 
+# class DepartmentDelegationSerializer là serializer định nghĩa dữ liệu vào/ra (DepartmentDelegation).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class DepartmentDelegationSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -638,6 +712,8 @@ class DepartmentDelegationSerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -660,6 +736,8 @@ class DepartmentDelegationSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_delegate_user_name để lấy delegate user name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_delegate_user_name(self, obj):
         """
         Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
@@ -670,6 +748,8 @@ class DepartmentDelegationSerializer(serializers.ModelSerializer):
         """
         return _user_full_name(obj.delegate_user)
 
+# class DepartmentDelegationCreateSerializer là serializer định nghĩa dữ liệu vào/ra (DepartmentDelegationCreate).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class DepartmentDelegationCreateSerializer(serializers.Serializer):
     """
     Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.

@@ -17,6 +17,8 @@ from document_templates.models import (
 from document_templates.status_rules import _auto_status
 
 
+# def _template_permission_for_user để template permission for user (trong serializer).
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _template_permission_for_user(user, template) -> str | None:
     if not user or not user.is_authenticated:
         return None
@@ -34,6 +36,8 @@ def _template_permission_for_user(user, template) -> str | None:
     peer_level = get_peer_permission_level(user, template)
     return max_peer_permission_level(base_level, peer_level) or base_level
 
+# class TemplateCategorySerializer là serializer định nghĩa dữ liệu vào/ra (TemplateCategory).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class TemplateCategorySerializer(serializers.ModelSerializer):
     
 
@@ -44,6 +48,8 @@ class TemplateCategorySerializer(serializers.ModelSerializer):
     Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `api/urls.py`, `accounts.permissions`, `document_templates.models`, `document_templates.utils`, `document_templates.versioning`, `accounts.models`. Nam trong pham vi module hien tai.
     Tac dung: Giam viec lap rule chuyen doi du lieu giua request, response va model lien quan toi `TemplateCategorySerializer`.
     """
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -55,6 +61,8 @@ class TemplateCategorySerializer(serializers.ModelSerializer):
         model = TemplateCategory
         fields = ('id', 'name', 'description')
 
+# class TemplateListSerializer là serializer định nghĩa dữ liệu vào/ra (TemplateList).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class TemplateListSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -84,9 +92,13 @@ class TemplateListSerializer(serializers.ModelSerializer):
     peer_audience_count = serializers.SerializerMethodField()
     is_peer_shared_to_me = serializers.SerializerMethodField()
 
+    # def get_peer_audience_count để lấy peer audience count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_peer_audience_count(self, obj):
         return obj.audience_members.count() if hasattr(obj, 'audience_members') else 0
 
+    # def get_is_peer_shared_to_me để lấy is peer shared to me (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_is_peer_shared_to_me(self, obj):
         request = self.context.get('request') if hasattr(self, 'context') else None
         u = getattr(request, 'user', None) if request else None
@@ -94,15 +106,19 @@ class TemplateListSerializer(serializers.ModelSerializer):
             return False
         return obj.audience_members.filter(user=u).exists()
 
+    # def get_my_permission để lấy my permission (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_my_permission(self, obj):
         request = self.context.get('request') if hasattr(self, 'context') else None
         user = getattr(request, 'user', None) if request else None
         return _template_permission_for_user(user, obj)
 
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         model = DocumentTemplate
-        fields = ('id', 'title', 'description', 'status', 'visibility', 'version',
+        fields = ('id', 'record_code', 'title', 'description', 'status', 'visibility', 'version',
                   'owner_id', 'owner_name', 'group_id', 'variable_count',
                   'category_name', 'is_favorite', 'can_use', 'can_edit', 'can_delete', 'my_permission',
                   'is_limited_group_share', 'audience_count', 'tags',
@@ -114,6 +130,8 @@ class TemplateListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_owner_name để lấy owner name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_owner_name(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -126,6 +144,8 @@ class TemplateListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_variable_count để lấy variable count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_variable_count(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -138,6 +158,8 @@ class TemplateListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_category_name để lấy category name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_category_name(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -150,6 +172,8 @@ class TemplateListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_group_id để lấy group id (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_group_id(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -162,6 +186,8 @@ class TemplateListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_is_favorite để lấy is favorite (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_is_favorite(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -177,6 +203,8 @@ class TemplateListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_can_use để lấy can use (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_can_use(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -192,6 +220,8 @@ class TemplateListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_can_edit để lấy can edit (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_can_edit(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -207,6 +237,8 @@ class TemplateListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_can_delete để lấy can delete (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_can_delete(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -222,6 +254,8 @@ class TemplateListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_is_limited_group_share để lấy is limited group share (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_is_limited_group_share(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -234,6 +268,8 @@ class TemplateListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_audience_count để lấy audience count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_audience_count(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -246,6 +282,8 @@ class TemplateListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_has_docx_source để lấy has docx source (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_has_docx_source(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -258,6 +296,8 @@ class TemplateListSerializer(serializers.ModelSerializer):
 
     
 
+    # def _latest_review_log để latest review log (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def _latest_review_log(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -270,6 +310,8 @@ class TemplateListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_approved_by_name để lấy approved by name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_approved_by_name(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -284,6 +326,8 @@ class TemplateListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_last_review_action để lấy last review action (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_last_review_action(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -297,6 +341,8 @@ class TemplateListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_last_review_at để lấy last review at (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_last_review_at(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -310,6 +356,8 @@ class TemplateListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_last_review_actor_name để lấy last review actor name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_last_review_actor_name(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -323,6 +371,8 @@ class TemplateListSerializer(serializers.ModelSerializer):
             return None
         return latest.actor.get_full_name() or latest.actor.username
 
+# class TemplateDetailSerializer là serializer định nghĩa dữ liệu vào/ra (TemplateDetail).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class TemplateDetailSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -354,9 +404,13 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
     peer_audience_count = serializers.SerializerMethodField()
     is_peer_shared_to_me = serializers.SerializerMethodField()
 
+    # def get_peer_audience_count để lấy peer audience count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_peer_audience_count(self, obj):
         return obj.audience_members.count() if hasattr(obj, 'audience_members') else 0
 
+    # def get_is_peer_shared_to_me để lấy is peer shared to me (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_is_peer_shared_to_me(self, obj):
         request = self.context.get('request') if hasattr(self, 'context') else None
         u = getattr(request, 'user', None) if request else None
@@ -364,12 +418,16 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
             return False
         return obj.audience_members.filter(user=u).exists()
 
+    # def get_my_permission để lấy my permission (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_my_permission(self, obj):
         request = self.context.get('request') if hasattr(self, 'context') else None
         user = getattr(request, 'user', None) if request else None
         return _template_permission_for_user(user, obj)
 
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -379,7 +437,7 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
         Tac dung: To chuc logic lien quan toi `Meta` thanh mot don vi ro rang de nhung ham khac goi lai de hon.
         """
         model = DocumentTemplate
-        fields = ('id', 'title', 'description', 'content', 'source_type', 'status',
+        fields = ('id', 'record_code', 'title', 'description', 'content', 'source_type', 'status',
                   'visibility', 'version', 'owner', 'owner_name', 'variables',
                   'category', 'category_name', 'department', 'department_name',
                   'notes', 'tags', 'effective_date', 'end_date', 'approved_by', 'approved_by_name', 'approved_at',
@@ -390,10 +448,12 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
                   'peer_share_status', 'peer_share_approver_note',
                   'peer_audience_count', 'is_peer_shared_to_me',
                   'created_at', 'updated_at')
-        read_only_fields = ('id', 'owner', 'status', 'version', 'approved_by', 'approved_at', 'created_at', 'updated_at')
+        read_only_fields = ('id', 'record_code', 'owner', 'status', 'version', 'approved_by', 'approved_at', 'created_at', 'updated_at')
 
     
 
+    # def get_owner_name để lấy owner name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_owner_name(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -406,6 +466,8 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_variables để lấy variables (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_variables(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -418,6 +480,8 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_category_name để lấy category name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_category_name(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -430,6 +494,8 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_department_name để lấy department name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_department_name(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -442,6 +508,8 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_is_favorite để lấy is favorite (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_is_favorite(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -457,6 +525,8 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_can_use để lấy can use (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_can_use(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -472,6 +542,8 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_can_edit để lấy can edit (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_can_edit(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -487,6 +559,8 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_can_delete để lấy can delete (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_can_delete(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -502,6 +576,8 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_is_limited_group_share để lấy is limited group share (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_is_limited_group_share(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -514,6 +590,8 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_audience_count để lấy audience count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_audience_count(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -526,6 +604,8 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_audience_user_ids để lấy audience user ids (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_audience_user_ids(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -538,6 +618,8 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_audience_users để lấy audience users (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_audience_users(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -557,6 +639,8 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_has_docx_source để lấy has docx source (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_has_docx_source(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -569,6 +653,8 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def _latest_review_log để latest review log (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def _latest_review_log(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -581,6 +667,8 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_approved_by_name để lấy approved by name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_approved_by_name(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -595,6 +683,8 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_last_review_action để lấy last review action (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_last_review_action(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -608,6 +698,8 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_last_review_at để lấy last review at (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_last_review_at(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -621,6 +713,8 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_last_review_actor_name để lấy last review actor name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_last_review_actor_name(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -634,6 +728,8 @@ class TemplateDetailSerializer(serializers.ModelSerializer):
             return None
         return latest.actor.get_full_name() or latest.actor.username
 
+# class TemplateWriteSerializer là serializer định nghĩa dữ liệu vào/ra (TemplateWrite).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class TemplateWriteSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -657,6 +753,8 @@ class TemplateWriteSerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -672,6 +770,8 @@ class TemplateWriteSerializer(serializers.ModelSerializer):
 
     
 
+    # def to_internal_value để to internal value (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def to_internal_value(self, data):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -689,6 +789,8 @@ class TemplateWriteSerializer(serializers.ModelSerializer):
 
         
 
+        # def _set_field_value để thiết lập field value (trong serializer).
+        # vd: nhận đầu vào -> trả kết quả đã xử lý.
         def _set_field_value(target, field_name, value):
             """
             Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -704,6 +806,8 @@ class TemplateWriteSerializer(serializers.ModelSerializer):
 
         
 
+        # def _coerce_list_payload để coerce list payload (trong serializer).
+        # vd: nhận đầu vào -> trả kết quả đã xử lý.
         def _coerce_list_payload(raw_value):
             """
             Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -812,6 +916,8 @@ class TemplateWriteSerializer(serializers.ModelSerializer):
 
     
 
+    # def _normalize_tags để chuẩn hóa tags (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def _normalize_tags(self, raw_tags):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -835,6 +941,8 @@ class TemplateWriteSerializer(serializers.ModelSerializer):
 
     
 
+    # def _apply_auto_approval_metadata để áp dụng auto approval metadata (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def _apply_auto_approval_metadata(self, template, actor):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -857,6 +965,8 @@ class TemplateWriteSerializer(serializers.ModelSerializer):
 
     
 
+    # def validate để kiểm tra hợp lệ (trong serializer).
+    # vd: dữ liệu sai -> báo lỗi/False; hợp lệ -> True hoặc giá trị đã chuẩn hóa.
     def validate(self, attrs):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -908,11 +1018,18 @@ class TemplateWriteSerializer(serializers.ModelSerializer):
         visibility = attrs.get('visibility', getattr(self.instance, 'visibility', DocumentTemplate.VISIBILITY_PRIVATE))
         group = attrs.get('group', getattr(self.instance, 'group', None))
         audience_user_ids = attrs.get('audience_user_ids', serializers.empty)
-        if visibility == DocumentTemplate.VISIBILITY_GROUP and not group:
-            raise serializers.ValidationError({'group': 'Vui lòng chọn nhóm/phòng ban khi chia sẻ theo phòng ban.'})
+        # Phase 3 sharing: viec nham nhom/dong nghiep da chuyen sang ShareGrant. Truong
+        # `visibility` chi con la cache duoc dong bo tu ShareGrant (sharing.signals) va FK
+        # legacy `group` thuong KHONG duoc set khi chia se qua ShareGrant. Vi vay khong con
+        # bat buoc FK `group` khi visibility='group' nua - neu bat buoc se chan nham ca chu
+        # so huu/nguoi co quyen khi luu hoac mo trinh sua thu cong cho template da chia se nhom.
         if visibility != DocumentTemplate.VISIBILITY_GROUP:
             attrs['group'] = None
             attrs['audience_user_ids'] = []
+            return attrs
+        # visibility == group. Neu khong co FK `group` (nhom duoc quan ly qua ShareGrant)
+        # thi bo qua validate audience legacy (audience cung do ShareGrant quan ly).
+        if not group:
             return attrs
         if audience_user_ids is serializers.empty:
             return attrs
@@ -935,6 +1052,8 @@ class TemplateWriteSerializer(serializers.ModelSerializer):
 
     
 
+    # def _sync_template_audience để đồng bộ template audience (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def _sync_template_audience(self, template, audience_user_ids):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -956,6 +1075,8 @@ class TemplateWriteSerializer(serializers.ModelSerializer):
 
     
 
+    # def create để tạo mới (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def create(self, validated_data):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -995,10 +1116,16 @@ class TemplateWriteSerializer(serializers.ModelSerializer):
         if visibility == DocumentTemplate.VISIBILITY_GROUP and audience_user_ids:
             self._sync_template_audience(template, audience_user_ids)
         template.save()
+        # Neu da co grant chia se ACTIVE (vd owner-leader tu chia se) thi giu status
+        # = approved thay vi de _auto_status (group, user, group_FK=None) ket pending.
+        from sharing.signals import _sync_approval_status_cache
+        _sync_approval_status_cache(template)
         return template
 
     
 
+    # def update để cập nhật (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def update(self, instance, validated_data):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1050,8 +1177,15 @@ class TemplateWriteSerializer(serializers.ModelSerializer):
             instance.audience_members.all().delete()
         elif audience_user_ids is not serializers.empty:
             self._sync_template_audience(instance, audience_user_ids)
+        # SUA NOI DUNG khong duoc reset trang thai duyet cua mau da chia se: neu con
+        # grant chia se ACTIVE thi PROMOTE status -> approved (khong dap len truong hop
+        # vua doi visibility sang group ma chua co grant active -> van pending_leader).
+        from sharing.signals import _sync_approval_status_cache
+        _sync_approval_status_cache(instance)
         return instance
 
+# class TemplateVersionSerializer là serializer định nghĩa dữ liệu vào/ra (TemplateVersion).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class TemplateVersionSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1064,6 +1198,8 @@ class TemplateVersionSerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1077,6 +1213,8 @@ class TemplateVersionSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_created_by_name để lấy created by name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_created_by_name(self, obj):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -1085,4 +1223,6 @@ class TemplateVersionSerializer(serializers.ModelSerializer):
         Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `api/urls.py`, `accounts.permissions`, `document_templates.models`, `document_templates.utils`, `document_templates.versioning`, `accounts.models`. Nam trong lop `TemplateVersionSerializer` va phuc vu luong xu ly cua lop nay.
         Tac dung: Giu cho qua trinh thuc hien phan xu ly chuyen trach cua symbol hien tai dien ra ngay tai serializer thay vi dan trai sang view hoac client.
         """
-        return obj.created_by.username if obj.created_by else None
+        if obj.created_by:
+            return obj.created_by.get_full_name() or obj.created_by.username
+        return None

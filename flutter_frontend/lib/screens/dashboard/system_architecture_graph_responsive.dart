@@ -1,16 +1,12 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/dashboard/system_architecture_graph_responsive.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === BIỂU ĐỒ KIẾN TRÚC HỆ THỐNG (dashboard) ===
+// Vẽ sơ đồ các tầng (Flutter / Django / nginx / Ollama...) bằng CustomPainter (_SysPainter, _SysNodeCard) — minh họa kiến trúc, không gọi API.
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/dashboard/system_architecture_graph_responsive.dart.
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
 
-// Mục đích: Lớp `SystemArchitectureGraphResponsive` triển khai phần việc `System Architecture Graph Responsive` trong flutter_frontend/lib/screens/dashboard/system_architecture_graph_responsive.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget SƠ ĐỒ KIẾN TRÚC HỆ THỐNG (StatefulWidget).
 
 class SystemArchitectureGraphResponsive extends StatefulWidget {
   final String currentModel;
@@ -25,10 +21,7 @@ class SystemArchitectureGraphResponsive extends StatefulWidget {
       _SystemArchitectureGraphResponsiveState();
 }
 
-// Mục đích: Lớp `_SystemArchitectureGraphResponsiveState` triển khai phần việc `System Architecture Graph Responsive State` trong flutter_frontend/lib/screens/dashboard/system_architecture_graph_responsive.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State sơ đồ kiến trúc: bố trí node thành phần + vẽ liên kết.
 
 class _SystemArchitectureGraphResponsiveState
     extends State<SystemArchitectureGraphResponsive> {
@@ -136,10 +129,7 @@ class _SystemArchitectureGraphResponsiveState
       ];
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/dashboard/system_architecture_graph_responsive.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Rời màn: dọn tài nguyên.
 
   void dispose() {
     _controller.dispose();
@@ -147,10 +137,7 @@ class _SystemArchitectureGraphResponsiveState
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/system_architecture_graph_responsive.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng sơ đồ kiến trúc: node thành phần + cạnh liên kết + chú thích.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -288,10 +275,7 @@ class _SystemArchitectureGraphResponsiveState
   }
 }
 
-// Mục đích: Lớp `_GraphNode` triển khai phần việc `Graph Node` trong flutter_frontend/lib/screens/dashboard/system_architecture_graph_responsive.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Mô hình 1 node thành phần trong sơ đồ kiến trúc.
 
 class _GraphNode {
   final String id;
@@ -304,10 +288,7 @@ class _GraphNode {
       this.id, this.title, this.subtitle, this.position, this.color);
 }
 
-// Mục đích: Lớp `_GraphEdge` triển khai phần việc `Graph Edge` trong flutter_frontend/lib/screens/dashboard/system_architecture_graph_responsive.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Mô hình 1 cạnh liên kết giữa hai thành phần.
 
 class _GraphEdge {
   final String from;
@@ -316,10 +297,7 @@ class _GraphEdge {
   const _GraphEdge(this.from, this.to);
 }
 
-// Mục đích: Lớp `_SysNodeCard` triển khai phần việc `Sys Node Card` trong flutter_frontend/lib/screens/dashboard/system_architecture_graph_responsive.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Thẻ 1 node thành phần hệ thống.
 
 class _SysNodeCard extends StatelessWidget {
   final _GraphNode node;
@@ -335,10 +313,7 @@ class _SysNodeCard extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/system_architecture_graph_responsive.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng thẻ node thành phần.
 
   Widget build(BuildContext context) {
     return InkWell(
@@ -377,10 +352,7 @@ class _SysNodeCard extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_SysPainter` triển khai phần việc `Sys Painter` trong flutter_frontend/lib/screens/dashboard/system_architecture_graph_responsive.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Bộ vẽ các cạnh liên kết của sơ đồ kiến trúc (CustomPainter).
 
 class _SysPainter extends CustomPainter {
   final List<_GraphNode> nodes;
@@ -394,10 +366,7 @@ class _SysPainter extends CustomPainter {
   });
 
   @override
-  // Mục đích: Phương thức `paint` triển khai phần việc `paint` trong flutter_frontend/lib/screens/dashboard/system_architecture_graph_responsive.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Vẽ toàn bộ cạnh liên kết.
 
   void paint(Canvas canvas, Size size) {
     final map = {for (final node in nodes) node.id: node};
@@ -421,19 +390,13 @@ class _SysPainter extends CustomPainter {
   }
 
   @override
-  // Mục đích: Phương thức `shouldRepaint` triển khai phần việc `should Repaint` trong flutter_frontend/lib/screens/dashboard/system_architecture_graph_responsive.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Có cần vẽ lại sơ đồ không.
 
   bool shouldRepaint(covariant _SysPainter oldDelegate) =>
       oldDelegate.selectedNodeId != selectedNodeId;
 }
 
-// Mục đích: Lớp `_SysLegend` triển khai phần việc `Sys Legend` trong flutter_frontend/lib/screens/dashboard/system_architecture_graph_responsive.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Chú thích sơ đồ kiến trúc.
 
 class _SysLegend extends StatelessWidget {
   final String label;
@@ -442,10 +405,7 @@ class _SysLegend extends StatelessWidget {
   const _SysLegend(this.label, this.color);
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/dashboard/system_architecture_graph_responsive.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chú thích.
 
   Widget build(BuildContext context) {
     return Container(

@@ -34,6 +34,7 @@ class TemplateAudienceUser {
 
 class DocumentTemplate {
   final int id;
+  final String? _recordCode;
   final String title;
   final String description;
   final String? content;
@@ -70,6 +71,7 @@ class DocumentTemplate {
 
   const DocumentTemplate({
     required this.id,
+    String? recordCode,
     required this.title,
     required this.description,
     this.content,
@@ -103,11 +105,12 @@ class DocumentTemplate {
     this.lastReviewAction,
     this.lastReviewAt,
     this.lastReviewActorName,
-  });
+  }) : _recordCode = recordCode;
 
   factory DocumentTemplate.fromJson(Map<String, dynamic> json) =>
       DocumentTemplate(
         id: json['id'],
+        recordCode: json['record_code'],
         title: json['title'],
         description: json['description'] ?? '',
         content: json['content'],
@@ -145,6 +148,12 @@ class DocumentTemplate {
         lastReviewAt: json['last_review_at'],
         lastReviewActorName: json['last_review_actor_name'],
       );
+
+  String get recordCode {
+    final value = _recordCode?.trim() ?? '';
+    if (value.isNotEmpty) return value;
+    return 'MVB-${id.toString().padLeft(6, '0')}';
+  }
 
   String get visibilityLabel => switch (visibility) {
         'public' => 'Công khai',

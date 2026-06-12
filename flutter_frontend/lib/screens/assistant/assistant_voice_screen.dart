@@ -1,9 +1,9 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
-// ignore_for_file: avoid_web_libraries_in_flutter, uri_does_not_exist
+// === MÀN HÌNH TRỢ LÝ GIỌNG NÓI (VoiceAI) ===
+// Thu âm -> nhận dạng giọng nói -> gửi cho trợ lý:
+// - _initVoice/_bindVoiceEvents: cầu nối Web Speech qua _callBridge; _submitTranscript -> 'assistant/turn-async/' (hoặc 'turn/').
+// - Theo dõi tiến độ (aiTaskProgressProvider), hủy tác vụ (_cancelCurrentVoiceTask 'ai-tasks/<id>/cancel/'). Vòng tròn ghi âm động (_VoiceCircle/_VoiceRingPainter). Link sang /chat.
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
 import 'dart:async';
 import 'dart:html' as html;
 import 'dart:js_util' as js_util;
@@ -29,10 +29,7 @@ import '../../widgets/ai/chat_history_manager_dialog.dart';
 import '../../widgets/ai/prefill_toggle_row.dart';
 import '../../widgets/tasks/task_done_popup.dart';
 
-// Mục đích: Widget `AssistantVoiceScreen` triển khai phần việc `Assistant Voice Screen` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn CHATAI GIỌNG NÓI (VoiceAI) — ConsumerStatefulWidget.
 
 class AssistantVoiceScreen extends ConsumerStatefulWidget {
   final int? conversationId;
@@ -46,10 +43,7 @@ class AssistantVoiceScreen extends ConsumerStatefulWidget {
   ConsumerState<AssistantVoiceScreen> createState() => _AssistantVoiceScreenState();
 }
 
-// Mục đích: Widget `_AssistantVoiceScreenState` triển khai phần việc `Assistant Voice Screen State` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn voice: thu âm, nhận diện giọng nói, phát lại, tác vụ trợ lý, điều hướng.
 
 class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
   static const _featureKey = ConversationBootstrapStore.assistantVoiceFeature;
@@ -88,10 +82,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
   final List<ChatAttachmentItem> _pendingAttachments = [];
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở màn: khởi tạo voice + nạp phiên.
 
   void initState() {
     super.initState();
@@ -99,10 +90,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     _initVoice();
   }
 
-  // Mục đích: Phương thức `_voiceDebug` triển khai phần việc `voice Debug` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Ghi log debug cho luồng voice.
 
   void _voiceDebug(String message) {
     final line = '[assistant_voice_ui] $message';
@@ -121,10 +109,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_initVoice` triển khai phần việc `init Voice` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Khởi tạo cầu nối voice (bridge JS) + kiểm hỗ trợ.
 
   Future<void> _initVoice() async {
     final supported = _isVoiceSupported();
@@ -139,10 +124,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     await _loadSessions(preferredSessionId: widget.conversationId);
   }
 
-  // Mục đích: Phương thức `_loadSessions` triển khai phần việc `load Sessions` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nạp danh sách phiên voice.
 
   Future<void> _loadSessions({int? preferredSessionId}) async {
     try {
@@ -192,10 +174,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_bindVoiceEvents` triển khai phần việc `bind Voice Events` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đăng ký các sự kiện từ bridge voice (nghe/nói/kết quả).
 
   void _bindVoiceEvents() {
     _statusSub =
@@ -298,10 +277,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     return js_util.getProperty(html.window, 'aiAssistantVoice');
   }
 
-  // Mục đích: Phương thức `_isVoiceSupported` triển khai phần việc `is Voice Supported` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Trình duyệt có hỗ trợ voice không.
 
   bool _isVoiceSupported() {
     final bridge = _bridge;
@@ -320,10 +296,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_loadMessages` triển khai phần việc `load Messages` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nạp tin nhắn của 1 phiên voice.
 
   Future<void> _loadMessages(int sessionId) async {
     try {
@@ -351,10 +324,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_openHistoryManager` triển khai phần việc `open History Manager` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở quản lý lịch sử phiên voice.
 
   Future<void> _openHistoryManager() async {
     final strings = AppStrings.of(context);
@@ -379,10 +349,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_submitTranscript` triển khai phần việc `submit Transcript` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Xử lý kết quả 1 lượt trợ lý: nói trả lời + điều hướng theo ý định.
 
   Future<void> _applyAssistantTurnResult(Map<String, dynamic> result) async {
     final rawSession = result['session'];
@@ -695,10 +662,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_readableError` triển khai phần việc `readable Error` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đổi lỗi thành thông điệp dễ đọc.
 
   String _readableError(Object error) {
     final strings = AppStrings.of(context);
@@ -714,10 +678,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     return strings.pick('Đã xảy ra lỗi: $error', 'An error occurred: $error');
   }
 
-  // Mục đích: Phương thức `_callBridge` triển khai phần việc `call Bridge` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Gọi 1 phương thức của bridge voice (JS).
 
   void _callBridge(String method, [List<dynamic> args = const []]) {
     final bridge = _bridge;
@@ -729,20 +690,14 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     js_util.callMethod(bridge, method, args);
   }
 
-  // Mục đích: Phương thức `_cancelNavigationFallback` triển khai phần việc `cancel Navigation Fallback` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Hủy điều hướng dự phòng đang chờ.
 
   void _cancelNavigationFallback() {
     _navigationFallbackTimer?.cancel();
     _navigationFallbackTimer = null;
   }
 
-  // Mục đích: Phương thức `_scheduleNavigationFallback` triển khai phần việc `schedule Navigation Fallback` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Hẹn điều hướng dự phòng (nếu lệnh nói không tự điều hướng).
 
   void _scheduleNavigationFallback(String route, String speakText) {
     _cancelNavigationFallback();
@@ -765,10 +720,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_withVoiceReturn` triển khai phần việc `with Voice Return` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Gắn tham số 'quay lại voice' vào route.
 
   String _withVoiceReturn(String route) {
     final strings = AppStrings.of(context);
@@ -780,20 +732,14 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     return uri.replace(queryParameters: params).toString();
   }
 
-  // Mục đích: Phương thức `_speak` triển khai phần việc `speak` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Phát giọng nói đọc 1 đoạn text (TTS).
 
   void _speak(String text) {
     _voiceDebug('speak request | text_len=${text.length}');
     _callBridge('speak', [text]);
   }
 
-  // Mục đích: Phương thức `_newVoiceSession` triển khai phần việc `new Voice Session` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tạo phiên voice mới.
 
   void _newVoiceSession() {
     _pendingNavigationRoute = null;
@@ -816,10 +762,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     ConversationBootstrapStore.rememberSession(_featureKey, null);
   }
 
-  // Mục đích: Phương thức `_startAudioCapture` triển khai phần việc `start Audio Capture` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Bắt đầu thu âm từ micro.
 
   Future<void> _startAudioCapture() async {
     if (_mediaRecorder != null) return;
@@ -865,10 +808,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_stopAudioCapture` triển khai phần việc `stop Audio Capture` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dừng thu âm.
 
   Future<void> _stopAudioCapture() async {
     final recorder = _mediaRecorder;
@@ -887,10 +827,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     _mediaRecorder = null;
   }
 
-  // Mục đích: Phương thức `_disposeAudioStreamTracks` triển khai phần việc `dispose Audio Stream Tracks` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Giải phóng các track âm thanh đang thu.
 
   void _disposeAudioStreamTracks() {
     final stream = _mediaStream;
@@ -905,10 +842,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     _mediaStream = null;
   }
 
-  // Mục đích: Phương thức `_disposeAudioCapture` triển khai phần việc `dispose Audio Capture` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Giải phóng tài nguyên thu âm.
 
   void _disposeAudioCapture() {
     try {
@@ -926,10 +860,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     _recordingStartedAt = null;
   }
 
-  // Mục đích: Phương thức `_toggleAttachmentPlayback` triển khai phần việc `toggle Attachment Playback` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Phát/dừng nghe lại 1 file audio đính kèm.
 
   Future<void> _toggleAttachmentPlayback(ChatAudioAttachment item) async {
     try {
@@ -967,10 +898,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_downloadAttachment` triển khai phần việc `download Attachment` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tải file audio đính kèm về máy.
 
   Future<void> _downloadAttachment(ChatAudioAttachment item) async {
     try {
@@ -999,10 +927,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_blobToBytes` triển khai phần việc `blob To Bytes` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đọc blob audio thành bytes.
 
   Future<Uint8List> _blobToBytes(html.Blob blob) {
     final completer = Completer<Uint8List>();
@@ -1352,10 +1277,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_toggleListening` triển khai phần việc `toggle Listening` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút micro: bật/tắt lắng nghe giọng nói.
 
   Future<void> _toggleListening() async {
     if (_status == 'processing' || _status == 'speaking') return;
@@ -1371,10 +1293,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng màn voice: khu hội thoại + nút micro + trạng thái nghe/nói; báo nếu trình duyệt không hỗ trợ.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -1874,10 +1793,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Rời màn: dừng voice, giải phóng micro/audio.
 
   void dispose() {
     _cancelNavigationFallback();
@@ -1894,10 +1810,7 @@ class _AssistantVoiceScreenState extends ConsumerState<AssistantVoiceScreen> {
   }
 }
 
-// Mục đích: Lớp `_VoiceUnsupported` triển khai phần việc `Voice Unsupported` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget thông báo trình duyệt không hỗ trợ voice.
 
 class _VoiceUnsupported extends StatelessWidget {
   final VoidCallback onOpenTextMode;
@@ -1905,10 +1818,7 @@ class _VoiceUnsupported extends StatelessWidget {
   const _VoiceUnsupported({required this.onOpenTextMode});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/assistant/assistant_voice_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng thông báo không hỗ trợ voice.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);

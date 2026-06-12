@@ -1,26 +1,19 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/templates/template_creation_hub_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH CHỌN CÁCH TẠO MẪU ===
+// Các thẻ (_CreateOptionCard) dẫn tới: tạo nhanh (/templates/create?mode=quick) hoặc upload hàng loạt (/templates/bulk-upload).
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/templates/template_creation_hub_screen.dart.
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../l10n/app_strings.dart';
 
-// Mục đích: Widget `TemplateCreationHubScreen` triển khai phần việc `Template Creation Hub Screen` trong flutter_frontend/lib/screens/templates/template_creation_hub_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn CHỌN CÁCH TẠO MẪU.
 
 class TemplateCreationHubScreen extends StatelessWidget {
   const TemplateCreationHubScreen({super.key});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/templates/template_creation_hub_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng các thẻ chọn cách tạo mẫu (tạo nhanh / upload hàng loạt).
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -80,10 +73,7 @@ class TemplateCreationHubScreen extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_CreateOptionCard` triển khai phần việc `Create Option Card` trong flutter_frontend/lib/screens/templates/template_creation_hub_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Thẻ 1 lựa chọn tạo mẫu (icon + tiêu đề + mô tả).
 
 class _CreateOptionCard extends StatelessWidget {
   final String title;
@@ -105,10 +95,7 @@ class _CreateOptionCard extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/templates/template_creation_hub_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng thẻ lựa chọn; bấm điều hướng tới route tương ứng.
 
   Widget build(BuildContext context) {
     return SizedBox(

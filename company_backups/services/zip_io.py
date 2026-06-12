@@ -20,6 +20,8 @@ from company_backups.services.components import (
 )
 
 
+# def _ascii_slug đổi chuỗi (vd tên công ty có dấu) thành slug ASCII an toàn để đặt tên file.
+# vd: 'Công ty A' -> 'Cong_ty_A'.
 def _ascii_slug(value: str) -> str:
     if not value:
         return ''
@@ -29,6 +31,8 @@ def _ascii_slug(value: str) -> str:
     return cleaned or 'company'
 
 
+# def generate_backup_filename sinh tên file zip backup gồm slug tên + mã công ty + timestamp.
+# vd: -> 'Cong_ty_A_VNNET_20260611_093000.zip'.
 def generate_backup_filename(company, when: Optional[datetime] = None) -> str:
     when = when or timezone.localtime()
     ts = when.strftime('%Y%m%d_%H%M%S')
@@ -37,11 +41,15 @@ def generate_backup_filename(company, when: Optional[datetime] = None) -> str:
     return f'{name_slug}_{code_slug}_{ts}.zip'
 
 
+# def company_backup_root trả thư mục gốc chứa backup (MEDIA_ROOT/company_backups).
+# vd: -> <MEDIA_ROOT>/company_backups.
 def company_backup_root() -> Path:
     media_root = Path(getattr(settings, 'MEDIA_ROOT', '') or '.')
     return media_root / 'company_backups'
 
 
+# def company_backup_dir trả (và tạo nếu chưa có) thư mục backup riêng của 1 công ty theo slug.
+# vd: -> <MEDIA_ROOT>/company_backups/<slug-cong-ty>/.
 def company_backup_dir(company) -> Path:
     from accounts.storage_paths import company_storage_slug
     base = company_backup_root() / company_storage_slug(company)
@@ -49,6 +57,8 @@ def company_backup_dir(company) -> Path:
     return base
 
 
+# def _collect_file_paths thu thập đường dẫn các file media (FileField) của một queryset để copy vào zip.
+# vd: queryset Document -> tập đường dẫn output_file của các văn bản.
 def _collect_file_paths(queryset) -> set[str]:
     paths: set[str] = set()
     model = queryset.model
@@ -64,6 +74,8 @@ def _collect_file_paths(queryset) -> set[str]:
     return paths
 
 
+# def _serialize_qs_to_json serialize queryset thành JSON (Django serializers) và đếm số bản ghi; trả (bytes, count).
+# vd: 10 bản ghi -> (json bytes, 10).
 def _serialize_qs_to_json(queryset) -> Tuple[bytes, int]:
     buf = io.StringIO()
     serializers.serialize('json', queryset.iterator(chunk_size=200), stream=buf)
@@ -75,6 +87,8 @@ def _serialize_qs_to_json(queryset) -> Tuple[bytes, int]:
     return raw.encode('utf-8'), count
 
 
+# def build_company_zip dựng file ZIP backup của công ty gồm data/<model>.json + media/<...> + manifest.json, lọc đúng phạm vi công ty; báo tiến độ theo 3 phase (xuất data 5–70%, copy media 70–95%, manifest 95–100%). Trả (size_bytes, manifest).
+# vd: components=['documents'] -> zip chứa data/documents__Document.json + file đính kèm + manifest.
 def build_company_zip(
     *,
     company,
@@ -94,6 +108,8 @@ def build_company_zip(
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # def _emit gọi callback báo tiến độ (kẹp 0–100), nuốt lỗi để không làm hỏng quá trình build zip.
+    # vd: _emit(70, 'Xuat du lieu', '...') -> cập nhật progress 70%.
     def _emit(percent: int, stage: str, detail: str = ''):
         if on_progress is None:
             return

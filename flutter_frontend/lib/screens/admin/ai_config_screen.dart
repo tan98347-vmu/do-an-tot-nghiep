@@ -1,17 +1,14 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/admin/ai_config_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH CẤU HÌNH AI (admin) ===
+// Cấu hình AI cho công ty: chọn model chat (_buildChatAiModelCard, danh sách từ 'admin/ollama-models/') và NGỮ CẢNH CÔNG TY (_buildCompanyContextCard, _saveCompanyContext) dùng cho prefill/trợ lý.
+// - _loadConfig(): GET 'admin/ai-config/'; _save()/_saveChatAiModel(): lưu cấu hình.
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/admin/ai_config_screen.dart.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
 import '../../l10n/app_strings.dart';
 
-// Mục đích: Widget `AiConfigScreen` triển khai phần việc `Ai Config Screen` trong flutter_frontend/lib/screens/admin/ai_config_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn CẤU HÌNH AI của công ty (admin) — ConsumerStatefulWidget.
 
 class AiConfigScreen extends ConsumerStatefulWidget {
   const AiConfigScreen({super.key});
@@ -20,10 +17,7 @@ class AiConfigScreen extends ConsumerStatefulWidget {
   ConsumerState<AiConfigScreen> createState() => _AiConfigScreenState();
 }
 
-// Mục đích: Widget `_AiConfigScreenState` triển khai phần việc `Ai Config Screen State` trong flutter_frontend/lib/screens/admin/ai_config_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn cấu hình AI: nạp/sửa cấu hình model, ngữ cảnh công ty, model ChatAI.
 
 class _AiConfigScreenState extends ConsumerState<AiConfigScreen> {
   AppStrings get _strings => AppStrings.of(context);
@@ -61,10 +55,7 @@ class _AiConfigScreenState extends ConsumerState<AiConfigScreen> {
   final _companyContextCtrl = TextEditingController();
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/admin/ai_config_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở màn: nạp toàn bộ cấu hình AI (_loadAll).
 
   void initState() {
     super.initState();
@@ -72,10 +63,7 @@ class _AiConfigScreenState extends ConsumerState<AiConfigScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/admin/ai_config_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Rời màn: dọn các controller.
 
   void dispose() {
     _maxResultsCtrl.dispose();
@@ -84,10 +72,7 @@ class _AiConfigScreenState extends ConsumerState<AiConfigScreen> {
     super.dispose();
   }
 
-  // Mục đích: Phương thức `_loadAll` triển khai phần việc `load All` trong flutter_frontend/lib/screens/admin/ai_config_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nạp song song: cấu hình AI + danh sách model Ollama.
 
   Future<void> _loadAll() async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -99,10 +84,7 @@ class _AiConfigScreenState extends ConsumerState<AiConfigScreen> {
     setState(() => _loading = false);
   }
 
-  // Mục đích: Phương thức `_loadConfig` triển khai phần việc `load Config` trong flutter_frontend/lib/screens/admin/ai_config_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nạp cấu hình AI hiện tại của công ty ('ai-config/').
 
   Future<void> _loadConfig() async {
     try {
@@ -126,10 +108,7 @@ class _AiConfigScreenState extends ConsumerState<AiConfigScreen> {
     } catch (_) {}
   }
 
-  // Mục đích: Phương thức `_loadOllamaModels` triển khai phần việc `load Ollama Models` trong flutter_frontend/lib/screens/admin/ai_config_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nạp danh sách model Ollama khả dụng để chọn.
 
   Future<void> _loadOllamaModels() async {
     try {
@@ -146,10 +125,7 @@ class _AiConfigScreenState extends ConsumerState<AiConfigScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_save` triển khai phần việc `save` trong flutter_frontend/lib/screens/admin/ai_config_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nút Lưu: lưu cấu hình AI (model, search engine...) cho công ty.
 
   Future<void> _save() async {
     final maxR = int.tryParse(_maxResultsCtrl.text.trim()) ?? _maxResults;
@@ -201,10 +177,7 @@ class _AiConfigScreenState extends ConsumerState<AiConfigScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_saveCompanyContext` triển khai phần việc `save Company Context` trong flutter_frontend/lib/screens/admin/ai_config_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Lưu ngữ cảnh công ty (dùng cho điền tự động/ChatAI).
 
   Future<void> _saveCompanyContext() async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -245,10 +218,7 @@ class _AiConfigScreenState extends ConsumerState<AiConfigScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_searchEngineLabel` triển khai phần việc `search Engine Label` trong flutter_frontend/lib/screens/admin/ai_config_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nhãn công cụ tìm kiếm web (cho cấu hình RAG).
 
   String _searchEngineLabel(String value) {
     switch (value) {
@@ -260,10 +230,7 @@ class _AiConfigScreenState extends ConsumerState<AiConfigScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/admin/ai_config_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng màn: chế độ chỉ đọc / form sửa cấu hình AI.
 
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -387,10 +354,7 @@ class _AiConfigScreenState extends ConsumerState<AiConfigScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_buildCompanyContextCard` triển khai phần việc `build Company Context Card` trong flutter_frontend/lib/screens/admin/ai_config_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Lưu riêng model dùng cho ChatAI.
 
   Future<void> _saveChatAiModel() async {
     setState(() => _savingChatAiModel = true);
@@ -726,10 +690,7 @@ class _AiConfigScreenState extends ConsumerState<AiConfigScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_buildReadOnly` triển khai phần việc `build Read Only` trong flutter_frontend/lib/screens/admin/ai_config_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chế độ xem cấu hình (chỉ đọc).
 
   Widget _buildReadOnly() {
     return LayoutBuilder(builder: (context, cs) {
@@ -790,10 +751,7 @@ class _AiConfigScreenState extends ConsumerState<AiConfigScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_cfgTile` triển khai phần việc `cfg Tile` trong flutter_frontend/lib/screens/admin/ai_config_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng 1 dòng cấu hình (icon + nhãn + giá trị) ở chế độ chỉ đọc.
 
   Widget _cfgTile(IconData icon, String label, String value) {
     return Container(
@@ -822,10 +780,7 @@ class _AiConfigScreenState extends ConsumerState<AiConfigScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_buildEditForm` triển khai phần việc `build Edit Form` trong flutter_frontend/lib/screens/admin/ai_config_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng form chỉnh sửa cấu hình AI.
 
   Widget _buildEditForm() {
     final searchEngineField = DropdownButtonFormField<String>(
@@ -1023,10 +978,7 @@ class _AiConfigScreenState extends ConsumerState<AiConfigScreen> {
   }
 
   /// Dropdown nếu Ollama trả về danh sách, fallback TextFormField nếu không có.
-  // Mục đích: Phương thức `_buildModelDropdown` triển khai phần việc `build Model Dropdown` trong flutter_frontend/lib/screens/admin/ai_config_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng dropdown chọn model AI.
 
   Widget _buildModelDropdown({
     required String label,

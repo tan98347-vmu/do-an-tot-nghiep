@@ -2,6 +2,7 @@ import 'assistant_quick_sign.dart';
 
 class Document {
   final int id;
+  final String? _recordCode;
   final String title;
   final String? content;
   final String? docNumber;
@@ -46,6 +47,7 @@ class Document {
 
   const Document({
     required this.id,
+    String? recordCode,
     required this.title,
     this.content,
     this.docNumber,
@@ -87,10 +89,11 @@ class Document {
     this.peerShareStatus = 'none',
     this.peerAudienceCount = 0,
     this.isPeerSharedToMe = false,
-  });
+  }) : _recordCode = recordCode;
 
   factory Document.fromJson(Map<String, dynamic> json) => Document(
         id: json['id'] as int? ?? 0,
+        recordCode: json['record_code'] as String?,
         title: json['title'] as String? ?? '',
         content: json['content'] as String?,
         docNumber: json['doc_number'] as String?,
@@ -140,6 +143,12 @@ class Document {
         peerAudienceCount: (json['peer_audience_count'] ?? 0) as int,
         isPeerSharedToMe: json['is_peer_shared_to_me'] == true,
       );
+
+  String get recordCode {
+    final value = _recordCode?.trim() ?? '';
+    if (value.isNotEmpty) return value;
+    return 'VB-${id.toString().padLeft(6, '0')}';
+  }
 
   String get statusLabel => switch (status) {
         'final' => 'Chính thức',

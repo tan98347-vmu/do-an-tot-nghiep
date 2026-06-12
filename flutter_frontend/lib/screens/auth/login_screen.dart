@@ -1,3 +1,9 @@
+// === MÀN HÌNH ĐĂNG NHẬP ===
+// Cho người dùng đăng nhập theo 2 chế độ (_LoginMode): theo CÔNG TY hoặc theo PLATFORM ADMIN.
+// - Chế độ công ty: gõ tên công ty -> _onCompanyChanged (debounce 280ms) gọi authProvider.fetchCompanySuggestions để gợi ý, chọn 1 công ty rồi nhập định danh (username/email/mã nhân viên) + mật khẩu.
+// - _login(): validate form rồi gọi authProvider xác thực; lỗi -> hiện _error.
+// Có lối vào cổng khách (route /guest). Provider: authProvider.
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';

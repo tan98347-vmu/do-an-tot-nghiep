@@ -12,6 +12,8 @@ from django.core.files.base import ContentFile
 
 from .models import TemplateVersion
 
+# def _template_version_docx_name sinh tên file DOCX cho 1 version mẫu (giữ tên gốc + hậu tố _v<số>, mặc định 'template_<pk>_v<n>.docx').
+# vd: 'mau.docx' version 2 -> 'mau_v2.docx'.
 def _template_version_docx_name(template, version_number):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -27,6 +29,8 @@ def _template_version_docx_name(template, version_number):
         return f'{stem}_v{version_number}{ext}'
     return f'template_{template.pk}_v{version_number}.docx'
 
+# def create_template_version_snapshot tạo bản snapshot (TemplateVersion) lưu nội dung + file DOCX hiện tại của mẫu, phục vụ lịch sử/khôi phục.
+# vd: trước khi sửa mẫu #5 -> tạo TemplateVersion giữ nội dung + docx cũ.
 def create_template_version_snapshot(template, *, created_by=None, change_note=''):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).

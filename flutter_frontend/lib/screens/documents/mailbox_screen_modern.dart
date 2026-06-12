@@ -1,8 +1,8 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/documents/mailbox_screen_modern.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH HÒM THƯ ===
+// Liệt kê các luồng forward/ký liên quan tới mình (_load 'mailbox/'), tìm kiếm (_scheduleSearch), badge trạng thái (_statusLabel/_statusColor), xác minh PDF (_verifyEntry).
+// Mở chi tiết (/mailbox/<id>) hoặc văn bản gốc (/documents/<id>).
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/documents/mailbox_screen_modern.dart.
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -17,25 +17,21 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/common/collapsible_filter_panel.dart';
 import '../../widgets/common/list_filter_extras.dart';
 
-// Mục đích: Widget `MailboxScreen` triển khai phần việc `Mailbox Screen` trong flutter_frontend/lib/screens/documents/mailbox_screen_modern.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn HÒM THƯ (luồng forward/ký) — ConsumerStatefulWidget.
 
 class MailboxScreen extends ConsumerStatefulWidget {
+  // Widget màn HÒM THƯ (danh sách luồng forward/ký liên quan tới mình).
   const MailboxScreen({super.key});
 
   @override
   ConsumerState<MailboxScreen> createState() => _MailboxScreenState();
 }
 
-// Mục đích: Widget `_MailboxScreenState` triển khai phần việc `Mailbox Screen State` trong flutter_frontend/lib/screens/documents/mailbox_screen_modern.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn hòm thư: tải luồng, tìm kiếm, lọc theo trạng thái.
 
 class _MailboxScreenState extends ConsumerState<MailboxScreen> {
   AppStrings get _strings => AppStrings.of(context);
+  // Chọn chuỗi hiển thị theo ngôn ngữ VI/EN (i18n).
   String _pick(String vi, String en) => _strings.pick(vi, en);
 
   final _searchController = TextEditingController();
@@ -69,32 +65,21 @@ class _MailboxScreenState extends ConsumerState<MailboxScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/documents/mailbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Mở màn: nạp danh sách luồng hòm thư (_load 'mailbox/').
   void initState() {
     super.initState();
     _load();
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/documents/mailbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Rời màn: dọn controller tìm kiếm/timer.
   void dispose() {
     _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
-  // Mục đích: Phương thức `_load` triển khai phần việc `load` trong flutter_frontend/lib/screens/documents/mailbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tải danh sách luồng hòm thư từ server ('mailbox/').
 
   Future<void> _load() async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -148,11 +133,7 @@ class _MailboxScreenState extends ConsumerState<MailboxScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_scheduleSearch` triển khai phần việc `schedule Search` trong flutter_frontend/lib/screens/documents/mailbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Debounce ô tìm kiếm rồi lọc lại danh sách luồng.
   void _scheduleSearch(String value) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 280), () {
@@ -164,6 +145,7 @@ class _MailboxScreenState extends ConsumerState<MailboxScreen> {
     });
   }
 
+  // Tìm lượt (entry) trong luồng dành cho user hiện tại (để biết cần xem/ký/forward).
   MailboxEntryItem? _entryForCurrentUser(MailboxThreadItem thread) {
     // Đọc provider theo nhu cầu hành động mà không buộc widget đăng ký rebuild liên tục.
 
@@ -180,11 +162,7 @@ class _MailboxScreenState extends ConsumerState<MailboxScreen> {
     return mine.first;
   }
 
-  // Mục đích: Phương thức `_statusLabel` triển khai phần việc `status Label` trong flutter_frontend/lib/screens/documents/mailbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Đổi mã trạng thái luồng thành nhãn hiển thị.
   String _statusLabel(String status) {
     switch (status) {
       case 'forward':
@@ -200,6 +178,7 @@ class _MailboxScreenState extends ConsumerState<MailboxScreen> {
     }
   }
 
+  // Màu badge theo trạng thái luồng.
   Color _statusColor(String status) {
     switch (status) {
       case 'forward':
@@ -215,11 +194,7 @@ class _MailboxScreenState extends ConsumerState<MailboxScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_formatDate` triển khai phần việc `format Date` trong flutter_frontend/lib/screens/documents/mailbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Định dạng ngày để hiển thị.
   String _formatDate(String value) {
     if (value.trim().isEmpty) return _pick('Chua co thoi gian', 'No timestamp');
     try {
@@ -234,11 +209,7 @@ class _MailboxScreenState extends ConsumerState<MailboxScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_verifyEntry` triển khai phần việc `verify Entry` trong flutter_frontend/lib/screens/documents/mailbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Xác minh PDF đã ký của 1 entry ('entries/<id>/verify/').
   Future<void> _verifyEntry(MailboxEntryItem entry) async {
     try {
       // Gọi API hoặc tác vụ bất đồng bộ rồi chờ kết quả trước khi cập nhật giao diện.
@@ -296,11 +267,7 @@ class _MailboxScreenState extends ConsumerState<MailboxScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/mailbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Dựng danh sách luồng hòm thư + ô tìm kiếm; mở chi tiết (/mailbox/<id>) hoặc văn bản gốc.
   Widget build(BuildContext context) {
     final forwardCount =
         _threads.where((item) => item.status == 'forward').length;
@@ -309,10 +276,7 @@ class _MailboxScreenState extends ConsumerState<MailboxScreen> {
     final rejectedCount =
         _threads.where((item) => item.status == 'rejected').length;
 
-    // Mục đích: Phương thức `filterChip` triển khai phần việc `filter Chip` trong flutter_frontend/lib/screens/documents/mailbox_screen_modern.dart.
-    // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-    // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-    // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+    // Dựng chip lọc luồng theo trạng thái (kèm số đếm).
 
     Widget filterChip(String label, String value, int count) {
       final active = _statusFilter == value;
@@ -700,10 +664,7 @@ class _MailboxScreenState extends ConsumerState<MailboxScreen> {
   }
 }
 
-// Mục đích: Lớp `_MetricChip` triển khai phần việc `Metric Chip` trong flutter_frontend/lib/screens/documents/mailbox_screen_modern.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget chip thống kê (nhãn + số).
 
 class _MetricChip extends StatelessWidget {
   final String label;
@@ -715,10 +676,7 @@ class _MetricChip extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/mailbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chip thống kê.
 
   Widget build(BuildContext context) {
     return Container(
@@ -751,10 +709,7 @@ class _MetricChip extends StatelessWidget {
   }
 }
 
-// Mục đích: Lớp `_MetaLine` triển khai phần việc `Meta Line` trong flutter_frontend/lib/screens/documents/mailbox_screen_modern.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget dòng metadata (icon + text) trong thẻ luồng.
 
 class _MetaLine extends StatelessWidget {
   final IconData icon;
@@ -766,10 +721,7 @@ class _MetaLine extends StatelessWidget {
   });
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/documents/mailbox_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng dòng metadata.
 
   Widget build(BuildContext context) {
     return Row(

@@ -31,10 +31,20 @@ from word_ai.services.worker_payload_service import build_worker_job_context
 advance_mcp_agent = advance_word_tool_loop
 
 
+# Là gì: `_worker_from_key` là helper nội bộ của module `word_ai_workers.py`, phục vụ nhóm worker xử lý các bước chỉnh sửa Word bằng AI.
+# Chức năng backend: Hàm xử lý phần việc `worker from key` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ luồng nền phục vụ trình chỉnh sửa văn bản.
+# Mối liên hệ: Hàm phối hợp với `WordWorker.objects.filter.first`, `WordWorker.objects.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _worker_from_key(worker_key):
     return WordWorker.objects.filter(worker_key=worker_key).first()
 
 
+# Là gì: `_coerce_form_json` là helper nội bộ của module `word_ai_workers.py`, phục vụ nhóm worker xử lý các bước chỉnh sửa Word bằng AI.
+# Chức năng backend: Hàm xử lý phần việc `coerce form json` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ luồng nền phục vụ trình chỉnh sửa văn bản.
+# Mối liên hệ: Hàm phối hợp với `str.strip`, `json.loads` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _coerce_form_json(raw_value, *, default):
     if isinstance(default, list) and isinstance(raw_value, list):
         return raw_value
@@ -54,6 +64,11 @@ def _coerce_form_json(raw_value, *, default):
     return default
 
 
+# Là gì: `word_ai_worker_claim` là endpoint REST của nhóm worker xử lý các bước chỉnh sửa Word bằng AI; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `word ai worker claim` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được luồng nền phục vụ trình chỉnh sửa văn bản sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `worker_token_is_valid`, `worker_auth_error`, `WordWorkerClaimSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -70,12 +85,22 @@ def word_ai_worker_claim(request):
     return Response(payload)
 
 
+# Là gì: `_serialize_worker_job` là helper nội bộ của module `word_ai_workers.py`, phục vụ nhóm worker xử lý các bước chỉnh sửa Word bằng AI.
+# Chức năng backend: Hàm chuyển đối tượng nội bộ thành dữ liệu có thể trả cho client; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ luồng nền phục vụ trình chỉnh sửa văn bản.
+# Mối liên hệ: Hàm phối hợp với `WordEditJobDetailSerializer`, `build_worker_job_context` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _serialize_worker_job(job):
     data = WordEditJobDetailSerializer(job).data
     data['worker_context'] = build_worker_job_context(job)
     return data
 
 
+# Là gì: `word_ai_worker_heartbeat` là endpoint REST của nhóm worker xử lý các bước chỉnh sửa Word bằng AI; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `word ai worker heartbeat` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được luồng nền phục vụ trình chỉnh sửa văn bản sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `worker_token_is_valid`, `worker_auth_error`, `WordWorkerHeartbeatSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -110,6 +135,11 @@ def word_ai_worker_heartbeat(request):
     return Response({'ok': True, 'worker': WordWorkerSerializer(worker).data})
 
 
+# Là gì: `word_ai_job_complete` là endpoint REST của nhóm worker xử lý các bước chỉnh sửa Word bằng AI; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `word ai job complete` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được luồng nền phục vụ trình chỉnh sửa văn bản sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `worker_token_is_valid`, `worker_auth_error`, `WordEditJobCompleteSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -156,6 +186,11 @@ def word_ai_job_complete(request, pk):
     return Response(payload)
 
 
+# Là gì: `word_ai_job_fail` là endpoint REST của nhóm worker xử lý các bước chỉnh sửa Word bằng AI; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `word ai job fail` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được luồng nền phục vụ trình chỉnh sửa văn bản sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `worker_token_is_valid`, `worker_auth_error`, `WordEditJobFailSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -181,6 +216,11 @@ def word_ai_job_fail(request, pk):
     return Response(WordEditJobDetailSerializer(job).data, status=status.HTTP_200_OK)
 
 
+# Là gì: `word_ai_job_event` là endpoint REST của nhóm worker xử lý các bước chỉnh sửa Word bằng AI; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `word ai job event` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được luồng nền phục vụ trình chỉnh sửa văn bản sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `worker_token_is_valid`, `worker_auth_error`, `WordEditJobWorkerEventSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -219,6 +259,11 @@ def word_ai_job_event(request, pk):
     return Response(WordEditJobDetailSerializer(job).data)
 
 
+# Là gì: `_handle_word_ai_job_tool_loop_advance` là helper nội bộ của module `word_ai_workers.py`, phục vụ nhóm worker xử lý các bước chỉnh sửa Word bằng AI.
+# Chức năng backend: Hàm xử lý phần việc `handle word ai job tool loop advance` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ luồng nền phục vụ trình chỉnh sửa văn bản.
+# Mối liên hệ: Hàm phối hợp với `worker_token_is_valid`, `worker_auth_error`, `WordEditJobMcpAdvanceSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 def _handle_word_ai_job_tool_loop_advance(request, pk):
     if not worker_token_is_valid(request):
         return worker_auth_error()
@@ -239,6 +284,11 @@ def _handle_word_ai_job_tool_loop_advance(request, pk):
     return Response(decision)
 
 
+# Là gì: `word_ai_job_tool_loop_advance` là endpoint REST của nhóm worker xử lý các bước chỉnh sửa Word bằng AI; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `word ai job tool loop advance` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được luồng nền phục vụ trình chỉnh sửa văn bản sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_handle_word_ai_job_tool_loop_advance` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -246,6 +296,11 @@ def word_ai_job_tool_loop_advance(request, pk):
     return _handle_word_ai_job_tool_loop_advance(request, pk)
 
 
+# Là gì: `word_ai_job_mcp_advance` là endpoint REST của nhóm worker xử lý các bước chỉnh sửa Word bằng AI; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `word ai job mcp advance` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được luồng nền phục vụ trình chỉnh sửa văn bản sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_handle_word_ai_job_tool_loop_advance` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])

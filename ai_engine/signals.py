@@ -1,9 +1,11 @@
 """
-Thuoc chuc nang nao: Signal hau xu ly cho tai nguyen AI, hien tai tap trung vao file audio cua tro ly.
-Vai tro backend: File nay dang ky receiver de khi ban ghi `ChatAudioAttachment` bi xoa thi tep audio tuong ung trong storage cung duoc xoa theo, tranh ro rac file.
-Vai tro cua no trong frontend: Khi nguoi dung xoa ban ghi audio tren giao dien tro ly giong noi, frontend thay ket qua day du vi ca metadata lan tep vat ly deu bien mat.
-Moi lien he voi nhung ham / source khac: Duoc import boi `ai_engine.apps.AiEngineConfig.ready`; nghe su kien `post_delete` cho `ChatAudioAttachment` trong `ai_engine.models`.
-Tac dung: Dong bo trang thai database va file storage cho tinh nang audio AI.
+ ai_engine/signals.py:1 chuyên dọn file audio vật lý khi bản ghi ChatAudioAttachment bị xóa khỏi database.
+
+  Nó thuộc chức năng:
+
+  - Giọng nói AI tại /chat/voice.
+  - Thư viện audio tại /chat/audio.
+  - File ghi âm được đính kèm vào phiên trợ lý.
 """
 
 from django.db.models.signals import post_delete
@@ -11,6 +13,8 @@ from django.dispatch import receiver
 
 from .models import ChatAudioAttachment
 
+# def _delete_chat_audio_file là receiver chạy sau khi xóa bản ghi ChatAudioAttachment (post_delete); nó tìm và xóa luôn tệp audio vật lý trong storage để tránh file mồ côi khi metadata đã bị xóa.
+# vd: xóa ChatAudioAttachment #12 (audio_file=chat_audio/abc.webm) -> receiver xóa luôn file abc.webm trong storage.
 @receiver(post_delete, sender=ChatAudioAttachment)
 def _delete_chat_audio_file(sender, instance, **kwargs):
     """

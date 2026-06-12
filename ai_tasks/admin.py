@@ -3,6 +3,8 @@ from django.contrib import admin
 from .models import AITaskProgress
 
 
+# class AITaskProgressAdmin là trang admin theo dõi AITaskProgress (mọi field readonly): hiện loại/tiêu đề/trạng thái/% và lọc theo loại/trạng thái/user.
+# vd: admin lọc task_type='extract_pdf', status='failed' để soi tác vụ lỗi.
 @admin.register(AITaskProgress)
 class AITaskProgressAdmin(admin.ModelAdmin):
     list_display = (

@@ -28,6 +28,8 @@ from signing.services import (
     latest_safe_signed_pdf,
 )
 
+# class MailboxFlowError là kiểu ngoại lệ riêng để phân nhánh xử lý lỗi rõ ràng.
+# vd: raise lớp này khi gặp lỗi đặc thù để nơi gọi bắt riêng.
 class MailboxFlowError(Exception):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -38,6 +40,8 @@ class MailboxFlowError(Exception):
     """
     pass
 
+# def _file_sha256 để file sha256 (service nghiệp vụ).
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _file_sha256(path):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -54,6 +58,8 @@ def _file_sha256(path):
             digest.update(chunk)
     return digest.hexdigest()
 
+# def _current_docx_sha256 để current docx sha256 (service nghiệp vụ).
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _current_docx_sha256(document):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -66,6 +72,8 @@ def _current_docx_sha256(document):
         raise MailboxFlowError('Van ban khong co file DOCX de tao luong hòm thu.')
     return _file_sha256(document.output_file.path)
 
+# def _display_name để display name (service nghiệp vụ).
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _display_name(user):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -76,6 +84,8 @@ def _display_name(user):
     """
     return user.get_full_name() or user.username
 
+# def _latest_forwardable_signed_pdf để latest forwardable signed pdf (service nghiệp vụ).
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _latest_forwardable_signed_pdf(document, actor=None):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -86,6 +96,8 @@ def _latest_forwardable_signed_pdf(document, actor=None):
     """
     return latest_safe_signed_pdf(document, signer=actor)
 
+# def _ensure_actor_can_forward_document để đảm bảo actor can forward document (service nghiệp vụ).
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _ensure_actor_can_forward_document(document, actor=None):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -105,6 +117,8 @@ def _ensure_actor_can_forward_document(document, actor=None):
         )
     return signed_doc, report
 
+# def _update_thread_status để cập nhật thread status (service nghiệp vụ).
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _update_thread_status(thread, *, actor, status_code, reason, summary):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -130,6 +144,8 @@ def _update_thread_status(thread, *, actor, status_code, reason, summary):
     )
     return thread
 
+# def forward_document để forward document (service nghiệp vụ).
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 @transaction.atomic
 def forward_document(
     document,
@@ -239,6 +255,8 @@ def forward_document(
     return thread
 
 
+# def _ensure_mailbox_view_grants để đảm bảo mailbox view grants (service nghiệp vụ).
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _ensure_mailbox_view_grants(document, recipients, actor):
     """Tao ShareGrant scope=colleagues, permission=view, status=active cho recipient mailbox forward.
 
@@ -287,6 +305,8 @@ def _ensure_mailbox_view_grants(document, recipients, actor):
                 document.pk, recipient.pk,
             )
 
+# def complete_mailbox_entry để complete mailbox entry (service nghiệp vụ).
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 @transaction.atomic
 def complete_mailbox_entry(entry, actor, reason):
     """
@@ -315,6 +335,8 @@ def complete_mailbox_entry(entry, actor, reason):
     )
     return entry
 
+# def reject_mailbox_entry để từ chối mailbox entry (service nghiệp vụ).
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 @transaction.atomic
 def reject_mailbox_entry(entry, actor, reason):
     """
@@ -343,6 +365,8 @@ def reject_mailbox_entry(entry, actor, reason):
     )
     return entry
 
+# def ensure_mailbox_entry_signing_task để đảm bảo mailbox entry signing task (service nghiệp vụ).
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def ensure_mailbox_entry_signing_task(entry, actor):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -361,6 +385,8 @@ def ensure_mailbox_entry_signing_task(entry, actor):
         proposal_note=f'Khoi tao tac vu ky tu mailbox entry {entry.id}.',
     )
 
+# def mailbox_integrity_report để mailbox integrity report (service nghiệp vụ).
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def mailbox_integrity_report(entry):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -382,6 +408,8 @@ def mailbox_integrity_report(entry):
         'document_title': entry.thread.document.title,
     }
 
+# def mailbox_thread_integrity_report để mailbox thread integrity report (service nghiệp vụ).
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def mailbox_thread_integrity_report(thread):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.

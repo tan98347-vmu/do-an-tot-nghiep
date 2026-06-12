@@ -1,5 +1,48 @@
 from __future__ import annotations
+'''
+ai_engine/assistant_engine.py:1 là bộ điều phối nghiệp vụ của AI Assistant.
 
+  Nó không chỉ hỏi LLM để lấy một đoạn văn trả lời. Nó cho phép LLM lựa chọn và gọi các công cụ backend để thực hiện nhiều bước như:
+
+  - Tạo văn bản.
+  - Hỏi đáp về mẫu.
+  - Hỏi đáp về văn bản.
+  - Tìm người nhận.
+  - Xử lý trường hợp trùng người.
+  - Chuẩn bị kế hoạch gửi/ký nhanh.
+
+  api/views/assistant.py: nhận request và lưu dữ liệu.
+  - ai_tasks: chạy nền, streaming và báo tiến độ.
+  - assistant_engine.py: suy luận và điều phối các công cụ.
+  - rag_engine.py: cung cấp LLM và RAG.
+  - doc_creator.py: thực sự tạo văn bản.
+  - signing: chuẩn bị quy trình gửi/ký.
+
+  ## Ví dụ thực tế
+
+  Người dùng nói:
+
+  Tạo đơn xin nghỉ ngày 20/6 rồi gửi cho Nguyễn Văn An
+
+  Assistant có thể thực hiện:
+
+  generate_document_with_ai
+      ↓
+  Tạo Document và lưu current_document
+      ↓
+  resolve_recipient
+      ↓
+  Có nhiều Nguyễn Văn An?
+      ├─ Có → yêu cầu người dùng chọn
+      └─ Không → lưu resolved_recipient
+
+assistant_engine.py phục vụ hai màn người dùng tương tác trực tiếp: Trợ lý AI dạng chat tại /chat/text và Giọng nói AI tại /chat/voice. Nó không phải engine của màn “Sinh văn bản từ mẫu” hay màn “Hỏi đáp
+  > văn bản” độc lập.
+
+qssistant_engine.py là nơi đăng ký các khả năng mà LLM được phép sử dụng và điều phối việc gọi chúng. Nghiệp vụ chuyên sâu được chuyển xuống các service tương ứng.
+
+
+'''
 import json
 import time
 from copy import deepcopy
@@ -37,6 +80,8 @@ ASSISTANT_DOCUMENT_RULES = (
 )
 
 
+# class AssistantTurnResult là kết quả của một lượt trợ lý: nội dung trả lời, citations, payload, action (lệnh cho frontend), tên tool đã dùng và assistant_state mới.
+# vd: trả về content='Toi da tao van ban', action={status:'document_created', route:'/documents/5'}.
 @dataclass
 class AssistantTurnResult:
     content: str
@@ -47,10 +92,14 @@ class AssistantTurnResult:
     assistant_state: dict | None = None
 
 
+# def _assistant_debug để in log debug luồng tool của trợ lý ra stdout (kèm tiền tố [assistant_tool_flow]).
+# vd: _assistant_debug('start turn') -> in '[assistant_tool_flow] start turn'.
 def _assistant_debug(message: str) -> None:
     print(f'[assistant_tool_flow] {message}', flush=True)
 
 
+# def _assistant_debug_block để in một khối debug dài có nhãn, tự cắt bớt nếu vượt max_len để log không quá dài.
+# vd: in cả prompt dài, tự cắt nếu vượt max_len để log gọn.
 def _assistant_debug_block(label: str, value, *, max_len: int = 8000) -> None:
     text = str(value or '')
     if len(text) > max_len:
@@ -60,6 +109,8 @@ def _assistant_debug_block(label: str, value, *, max_len: int = 8000) -> None:
     print(f'[assistant_tool_flow] {label} END | chars={len(str(value or ""))}', flush=True)
 
 
+# def _assistant_json để chuyển một giá trị thành chuỗi JSON đẹp (indent, giữ unicode); nếu lỗi thì trả str() thường.
+# vd: _assistant_json({'a':1}) -> chuỗi JSON 2 cấp indent, giữ tiếng Việt có dấu.
 def _assistant_json(value) -> str:
     try:
         return json.dumps(value, ensure_ascii=False, indent=2, default=str)
@@ -67,6 +118,8 @@ def _assistant_json(value) -> str:
         return str(value)
 
 
+# def _empty_state để chuẩn hóa assistant_state đầu vào thành dict (deepcopy) và đảm bảo luôn có schema_version mặc định.
+# vd: state=None -> trả {'schema_version':1}.
 def _empty_state(state) -> dict:
     if not isinstance(state, dict):
         state = {}
@@ -75,10 +128,14 @@ def _empty_state(state) -> dict:
     return cloned
 
 
+# def _user_company để lấy công ty ngữ cảnh của lượt chat: ưu tiên company của session, nếu không có thì lấy theo user.
+# vd: session không gắn công ty -> lấy theo công ty của user.
 def _user_company(session, user):
     return getattr(session, 'company', None) or get_user_company(user)
 
 
+# def _document_snapshot để rút gọn một Document thành dict {id, title, route} lưu vào state cho các lượt sau dùng lại.
+# vd: Document(pk=5,title='Don xin nghi') -> {'id':5,'title':'Don xin nghi','route':'/documents/5'}.
 def _document_snapshot(document) -> dict:
     return {
         'id': getattr(document, 'pk', None),
@@ -87,6 +144,8 @@ def _document_snapshot(document) -> dict:
     }
 
 
+# def _state_summary để trích các trường quan trọng của state (văn bản hiện tại, người nhận đang chờ/đã resolve, quick_sign_plan) để nhúng vào system prompt.
+# vd: rút current_document + resolved_recipient để nhúng vào system prompt cho lượt sau.
 def _state_summary(state: dict) -> dict:
     return {
         'schema_version': state.get('schema_version', 1),
@@ -97,6 +156,8 @@ def _state_summary(state: dict) -> dict:
     }
 
 
+# def _assistant_system_prompt để dựng system prompt cho trợ lý: mô tả vai trò, danh sách tool được phép, quy tắc resolve người nhận và quick-sign, kèm tóm tắt state; điều chỉnh theo chế độ text/voice.
+# vd: mode='voice' -> thêm nhắc 'giữ câu làm rõ ngắn gọn, dễ đọc bằng giọng nói'.
 def _assistant_system_prompt(*, mode: str, state: dict) -> str:
     mode_hint = (
         'Voice mode is active. Keep clarification short, explicit, and speech-friendly.'
@@ -124,10 +185,14 @@ def _assistant_system_prompt(*, mode: str, state: dict) -> str:
     )
 
 
+# def _sync_system_prompt để cập nhật lại message hệ thống (phần tử đầu của messages) theo state mới nhất giữa các bước gọi tool.
+# vd: sau khi resolve người nhận, cập nhật lại system prompt để LLM thấy state mới.
 def _sync_system_prompt(messages: list, *, mode: str, state: dict) -> None:
     messages[0] = SystemMessage(content=_assistant_system_prompt(mode=mode, state=state))
 
 
+# def _history_to_messages để chuyển lịch sử hội thoại (tối đa 8 lượt gần nhất) thành danh sách HumanMessage/AIMessage cho LLM.
+# vd: [{'role':'user','content':'a'},{'role':'assistant','content':'b'}] -> [HumanMessage('a'), AIMessage('b')].
 def _history_to_messages(history):
     messages = []
     for turn in (history or [])[-8:]:
@@ -142,6 +207,8 @@ def _history_to_messages(history):
     return messages
 
 
+# def _coerce_text_content để ép nội dung LLM trả về (có thể là chuỗi, list các khối, hoặc None) thành một chuỗi text thuần.
+# vd: [{'text':'xin'},{'text':'chao'}] -> 'xin\nchao'.
 def _coerce_text_content(value) -> str:
     if isinstance(value, str):
         return value
@@ -160,6 +227,8 @@ def _coerce_text_content(value) -> str:
     return str(value)
 
 
+# def _assistant_action để dựng object 'assistant_action' gửi xuống frontend: trạng thái, route, document_id, plan_token, thông tin resolve người nhận, lý do chặn, lời thoại và gợi ý UI.
+# vd: status='clarification_required' + recipient_resolution -> frontend hiện hộp chọn người nhận.
 def _assistant_action(
     *,
     status: str,
@@ -191,6 +260,8 @@ def _assistant_action(
     }
 
 
+# def _clarification_payload để tạo payload yêu cầu làm rõ người nhận khi có nhiều ứng viên trùng khớp (kèm danh sách candidates và câu hỏi làm rõ).
+# vd: 2 người trùng tên 'Nguyen Van A' -> payload kèm 2 candidates + câu hỏi 'Bạn muốn gửi cho ai?'.
 def _clarification_payload(result: dict) -> dict:
     candidates = result.get('candidates') or []
     return {
@@ -206,6 +277,8 @@ def _clarification_payload(result: dict) -> dict:
     }
 
 
+# def _result_with_state là helper gom các tham số thành AssistantTurnResult kèm assistant_state mới, để mọi nhánh trả kết quả đều thống nhất.
+# vd: gói content + citations + action + state thành 1 AssistantTurnResult trả cho view.
 def _result_with_state(
     *,
     content: str,
@@ -225,6 +298,8 @@ def _result_with_state(
     )
 
 
+# def _document_created_result để tạo kết quả lượt khi vừa sinh văn bản xong: payload document_result + action 'document_created' để frontend mở trang chi tiết.
+# vd: vừa tạo Document #5 -> nút 'Mở' trỏ /documents/5 + lời thoại 'Toi da tao van ban'.
 def _document_created_result(content: str, state: dict) -> AssistantTurnResult:
     document = state.get('current_document') or {}
     route = str(document.get('route') or '')
@@ -252,6 +327,8 @@ def _document_created_result(content: str, state: dict) -> AssistantTurnResult:
     )
 
 
+# def run_assistant_turn là điểm vào chính của trợ lý AI/Voice: nhận câu hỏi + lịch sử + state, dựng system prompt và các tool, để LLM tự gọi tool (sinh văn bản, hỏi mẫu/tài liệu, tìm/giải quyết người nhận, chuẩn bị quick-sign) tối đa vài bước rồi trả AssistantTurnResult.
+# vd: 'tao don xin nghi roi gui cho chi Lan' -> LLM gọi generate_document_with_ai rồi resolve_recipient('Lan').
 def run_assistant_turn(
     question,
     user,
@@ -285,6 +362,8 @@ def run_assistant_turn(
             state=runtime_state,
         )
 
+    # Tool generate_document_with_ai: sinh văn bản từ ý định người dùng (create_document_from_intent) rồi lưu snapshot tài liệu vào state, xóa các trạng thái người nhận/quick-sign cũ.
+    # vd: 'tao hop dong thue nha' -> tạo Document và lưu snapshot vào state.current_document.
     @tool('generate_document_with_ai')
     def generate_document_with_ai(request_text: str) -> str:
         """Create a document from the user's intent and store it in assistant state."""
@@ -306,6 +385,8 @@ def run_assistant_turn(
         runtime['created_document_this_turn'] = True
         return answer
 
+    # Tool ask_template_with_ai: trả lời câu hỏi về mẫu văn bản qua RAG, dừng lượt và đính kèm citations.
+    # vd: 'mau don xin nghi gom nhung muc gi?' -> trả lời kèm citation tới mẫu.
     @tool('ask_template_with_ai')
     def ask_template_with_ai(request_text: str) -> str:
         """Answer a template question through RAG and stop the turn with citations."""
@@ -338,6 +419,8 @@ def run_assistant_turn(
         )
         return answer
 
+    # Tool ask_document_with_ai: trả lời câu hỏi về một tài liệu đã có qua RAG, dừng lượt và đính kèm citations.
+    # vd: 'van ban #5 het han khi nao?' -> trả lời kèm citation tới tài liệu.
     @tool('ask_document_with_ai')
     def ask_document_with_ai(request_text: str) -> str:
         """Answer a document question through RAG and stop the turn with citations."""
@@ -370,6 +453,8 @@ def run_assistant_turn(
         )
         return answer
 
+    # Tool find_recipient_candidates: tìm danh sách ứng viên người nhận theo tên/username/mã NV/bí danh, có gợi ý phòng ban và chức danh.
+    # vd: 'Lan phong ke toan' -> danh sách ứng viên tên Lan thuộc phòng kế toán.
     @tool('find_recipient_candidates')
     def find_recipient_candidates(
         query: str,
@@ -388,6 +473,8 @@ def run_assistant_turn(
         )
         return _assistant_json(candidates)
 
+    # Tool resolve_recipient: xác định một người nhận duy nhất; nếu nhập nhằng nhiều ứng viên thì dừng lượt và hỏi làm rõ, lưu pending_recipient_resolution để lượt sau xử lý tiếp.
+    # vd: chỉ 1 'Tran Thi Lan' -> resolved; nếu 2 người trùng -> hỏi làm rõ.
     @tool('resolve_recipient')
     def resolve_recipient(
         query: str = '',
@@ -449,6 +536,8 @@ def run_assistant_turn(
         )
         return _assistant_json(result)
 
+    # Tool prepare_quick_sign_plan: chuẩn bị kế hoạch ký nhanh (backend) cho văn bản hiện tại + người nhận đã resolve; nếu chưa có văn bản thì dừng và báo lỗi. Không tự ký — người dùng phải xác nhận ở trang chi tiết.
+    # vd: có Document #5 + người nhận đã chọn -> tạo plan_token để bấm 'Ký nhanh' ở trang chi tiết.
     @tool('prepare_quick_sign_plan')
     def prepare_quick_sign_plan(
         recipient_user_id: int = 0,

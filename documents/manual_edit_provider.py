@@ -9,6 +9,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 
+# class ManualEditProviderStatus (dataclass) là trạng thái sẵn sàng của provider sửa thủ công (Collabora): tên provider, is_ready, mã lỗi và chi tiết.
+# vd: Collabora chưa cấu hình -> is_ready=False, code='collabora_public_url_missing'.
 @dataclass(frozen=True)
 class ManualEditProviderStatus:
     provider: str
@@ -17,10 +19,14 @@ class ManualEditProviderStatus:
     detail: str = ''
 
 
+# def manual_edit_provider_name trả tên provider trình soạn (mặc định 'collabora') từ settings.
+# vd: -> 'collabora'.
 def manual_edit_provider_name():
     return str(getattr(settings, 'MANUAL_EDIT_PROVIDER', 'collabora') or 'collabora').strip().lower()
 
 
+# def get_manual_edit_provider_status kiểm tra provider có sẵn sàng không: đúng loại + có COLLABORA_PUBLIC_URL + (nếu cần) healthcheck OK; trả ManualEditProviderStatus.
+# vd: Collabora đang chạy -> is_ready=True.
 def get_manual_edit_provider_status():
     provider = manual_edit_provider_name()
     if provider != 'collabora':
@@ -54,27 +60,39 @@ def get_manual_edit_provider_status():
     )
 
 
+# def manual_edit_provider_is_configured trả True nếu provider đã sẵn sàng để dùng.
+# vd: -> True khi Collabora đã cấu hình + chạy.
 def manual_edit_provider_is_configured():
     return get_manual_edit_provider_status().is_ready
 
 
+# def _collabora_public_url đọc COLLABORA_PUBLIC_URL từ settings (đã trim).
+# vd: -> 'http://127.0.0.1:8888'.
 def _collabora_public_url():
     return str(getattr(settings, 'COLLABORA_PUBLIC_URL', '') or '').strip()
 
 
+# def _collabora_public_hostname trả hostname của COLLABORA_PUBLIC_URL (chữ thường).
+# vd: -> '127.0.0.1'.
 def _collabora_public_hostname():
     return (urlsplit(_collabora_public_url()).hostname or '').strip().lower()
 
 
+# def _is_loopback_collabora_public_url cho biết Collabora có đang trỏ localhost/127.0.0.1 không.
+# vd: host='localhost' -> True.
 def _is_loopback_collabora_public_url():
     return _collabora_public_hostname() in {'127.0.0.1', 'localhost'}
 
 
+# def _is_ngrok_public_url cho biết URL có phải domain ngrok không.
+# vd: '...ngrok-free.app' -> True.
 def _is_ngrok_public_url():
     host = _collabora_public_hostname()
     return host.endswith('.ngrok-free.app') or host.endswith('.ngrok-free.dev')
 
 
+# def _manual_edit_local_proxy_port suy ra cổng proxy nội bộ (từ URL hoặc env, mặc định 8888).
+# vd: -> 8888.
 def _manual_edit_local_proxy_port():
     public_url = _collabora_public_url()
     parsed = urlsplit(public_url)
@@ -91,6 +109,8 @@ def _manual_edit_local_proxy_port():
     return 8888
 
 
+# def _derive_local_windows_wopi_src_base_url khi chạy Windows + Collabora loopback/ngrok -> dùng host.docker.internal:<port> làm base URL WOPI để container Collabora gọi ngược về host.
+# vd: -> 'http://host.docker.internal:8888'.
 def _derive_local_windows_wopi_src_base_url():
     if os.name != 'nt':
         return ''
@@ -102,6 +122,8 @@ def _derive_local_windows_wopi_src_base_url():
     return f'http://host.docker.internal:{_manual_edit_local_proxy_port()}'
 
 
+# def _collabora_healthcheck_url dựng URL healthcheck (/hosting/discovery) của Collabora.
+# vd: -> '<public_url>/hosting/discovery'.
 def _collabora_healthcheck_url():
     public_url = _collabora_public_url().rstrip('/')
     if not public_url:
@@ -109,6 +131,8 @@ def _collabora_healthcheck_url():
     return f'{public_url}/hosting/discovery'
 
 
+# def _should_check_collabora_runtime_health quyết định có cần kiểm tra Collabora còn sống không (mặc định kiểm khi chạy localhost, hoặc theo cờ COLLABORA_REQUIRE_HEALTHCHECK).
+# vd: host localhost -> có kiểm tra health.
 def _should_check_collabora_runtime_health():
     public_url = _collabora_public_url()
     if not public_url:
@@ -122,6 +146,8 @@ def _should_check_collabora_runtime_health():
     return host in {'127.0.0.1', 'localhost'}
 
 
+# def _check_collabora_runtime_health gọi healthcheck Collabora; trả None nếu OK, ngược lại trả chuỗi mô tả lỗi (không kết nối được / HTTP lỗi).
+# vd: Collabora chết -> 'Collabora editor is unreachable: ...'.
 def _check_collabora_runtime_health():
     if not _should_check_collabora_runtime_health():
         return None
@@ -149,6 +175,57 @@ def _check_collabora_runtime_health():
         return f'Collabora editor is unreachable: {exc}'
 
 
+# def manual_edit_postmessage_origin trả origin để Collabora postMessage về frame cha: dùng MANUAL_EDIT_POSTMESSAGE_ORIGIN nếu có, mặc định '*' (request WOPI là server-to-server nên không suy được origin trình duyệt từ đây).
+# vd: chưa cấu hình -> '*'.
+def manual_edit_postmessage_origin(request=None):
+    """Origin ma Collabora dung lam targetOrigin khi postMessage ve frame cha.
+
+    Collabora CHI gui cac message `App_LoadingStatus` / `Action_Save_Resp` ve host
+    khi CheckFileInfo tra ve `PostMessageOrigin`. Thieu/sai field nay thi host
+    (Flutter web) khong bao gio nhan duoc handshake -> bam "Luu & hoan tat" se bao
+    "Trinh sua web chua san sang de nhan lenh luu".
+
+    QUAN TRONG: request WOPI CheckFileInfo den tu SERVER Collabora (server-to-server),
+    KHONG phai trinh duyet. Vi vay KHONG the suy ra origin cua trang nhung iframe tu
+    header cua request nay - lam vay se ra origin noi bo (host.docker.internal /
+    loopback / domain backend) khac voi origin that cua trinh duyet, khien Collabora
+    postMessage sai dich -> handshake that bai.
+
+    Vi vay mac dinh tra `*` (postMessage giao toi MOI parent origin -> luon toi noi).
+    Dieu nay an toan vi host da xac thuc message theo iframe `event.source` chu khong
+    dua vao chuoi origin. Chi pin origin cu the khi admin co tinh dat
+    `MANUAL_EDIT_POSTMESSAGE_ORIGIN` (vd 'https://aiagentvmu.id.vn').
+    """
+    explicit = str(getattr(settings, 'MANUAL_EDIT_POSTMESSAGE_ORIGIN', '') or '').strip()
+    if explicit:
+        return explicit.rstrip('/')
+    return '*'
+
+
+# def browser_origin_from_request lấy origin THẬT của trình duyệt từ request (ưu tiên header Origin, rồi Referer) — dùng khi tạo phiên (request đến từ browser) để Collabora postMessage đúng đích.
+# vd: Origin='https://app.vn' -> 'https://app.vn'.
+def browser_origin_from_request(request):
+    """Lay origin THAT cua trinh duyet tu request (chi dung khi request den TU trinh
+    duyet, vd luc tao phien manual edit). Uu tien header `Origin`, sau do `Referer`.
+
+    Khac voi manual_edit_postmessage_origin(): ham nay dung cho request browser->Django
+    (co Origin/Referer), con CheckFileInfo la Collabora->Django (khong co).
+    """
+    if request is None:
+        return ''
+    origin = (request.META.get('HTTP_ORIGIN', '') or '').strip()
+    if origin and origin.lower() != 'null':
+        return origin.rstrip('/')
+    referer = (request.META.get('HTTP_REFERER', '') or '').strip()
+    if referer:
+        parsed = urlsplit(referer)
+        if parsed.scheme and parsed.netloc:
+            return f'{parsed.scheme}://{parsed.netloc}'
+    return ''
+
+
+# def build_manual_edit_wopi_src dựng WOPISrc (URL endpoint WOPI) cho Collabora gọi vào: ưu tiên MANUAL_EDIT_WOPI_SRC_BASE_URL, rồi host.docker.internal (Windows), rồi forwarded host, cuối cùng URL tuyệt đối từ request.
+# vd: -> 'http://host.docker.internal:8888/api/.../wopi/files/<id>'.
 def build_manual_edit_wopi_src(
     session,
     request,
@@ -169,6 +246,8 @@ def build_manual_edit_wopi_src(
     return request.build_absolute_uri(wopi_path).rstrip('/')
 
 
+# def build_manual_edit_editor_url dựng URL nhúng editor Collabora (cool.html) kèm WOPISrc + access_token + ttl; trả None nếu provider chưa sẵn sàng.
+# vd: -> '<collabora>/browser/dist/cool.html?WOPISrc=...&access_token=...'.
 def build_manual_edit_editor_url(
     session,
     request,

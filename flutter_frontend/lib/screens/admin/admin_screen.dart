@@ -1,8 +1,10 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH QUẢN TRỊ CÔNG TY (company-admin) ===
+// Quản lý người dùng / nhóm / phòng ban / chức danh của công ty qua các tab.
+// - Users: _buildUsersTab + _showUserDialog (tạo/sửa), _confirmDeleteUser; import Excel ('admin/import-users/', tải template).
+// - Groups: 'admin/groups/' + _showMembersDialog (thêm/bớt thành viên _MembersDialog).
+// - Departments: 'admin/departments/'; Positions: 'admin/positions/'. _loadData() nạp toàn bộ.
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/admin/admin_screen.dart.
 // ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
 
 import 'dart:html' as html;
@@ -13,10 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
 import '../../l10n/app_strings.dart';
 
-// Mục đích: Widget `AdminScreen` triển khai phần việc `Admin Screen` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn QUẢN TRỊ (người dùng/nhóm/phòng ban/import) — ConsumerStatefulWidget.
 
 class AdminScreen extends ConsumerStatefulWidget {
   const AdminScreen({super.key});
@@ -25,10 +24,7 @@ class AdminScreen extends ConsumerStatefulWidget {
   ConsumerState<AdminScreen> createState() => _AdminScreenState();
 }
 
-// Mục đích: Widget `_AdminScreenState` triển khai phần việc `Admin Screen State` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn quản trị: tab người dùng/nhóm/phòng ban + import Excel.
 
 class _AdminScreenState extends ConsumerState<AdminScreen>
     with SingleTickerProviderStateMixin {
@@ -57,10 +53,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
   String _pick(String vi, String en) => _strings.pick(vi, en);
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở màn: nạp dữ liệu quản trị (_loadData) + khởi tạo tab.
 
   void initState() {
     super.initState();
@@ -70,20 +63,14 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Rời màn: dọn tab controller + controller form.
 
   void dispose() {
     _tabController.dispose();
     super.dispose();
   }
 
-  // Mục đích: Phương thức `_loadData` triển khai phần việc `load Data` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nạp dữ liệu quản trị (người dùng, nhóm, phòng ban).
 
   Future<void> _loadData() async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -109,10 +96,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng màn: thanh tab + nội dung tab tương ứng.
 
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
@@ -192,10 +176,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
 
   // ── TAB NGƯỜI DÙNG ────────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_buildUsersTab` triển khai phần việc `build Users Tab` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tab Người dùng: danh sách + nút thêm/sửa/xóa.
 
   Widget _buildUsersTab() {
     final filtered = _users.where((u) {
@@ -257,10 +238,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
     );
   }
 
-  // Mục đích: Phương thức `_buildUserTile` triển khai phần việc `build User Tile` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng 1 dòng người dùng (thông tin + nút thao tác).
 
   Widget _buildUserTile(Map u) {
     final fullName = '${u['first_name'] ?? ''} ${u['last_name'] ?? ''}'.trim();
@@ -346,10 +324,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
     );
   }
 
-  // Mục đích: Phương thức `_showUserDialog` triển khai phần việc `show User Dialog` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dialog thêm/sửa người dùng.
 
   Future<void> _showUserDialog({Map? user}) async {
     final isEdit = user != null;
@@ -546,10 +521,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
     );
   }
 
-  // Mục đích: Phương thức `_confirmDeleteUser` triển khai phần việc `confirm Delete User` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Hỏi xác nhận rồi xóa người dùng.
 
   Future<void> _confirmDeleteUser(Map user) async {
     final fullName =
@@ -591,10 +563,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
 
   // ── TAB NHÓM ────────────────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_buildGroupsTab` triển khai phần việc `build Groups Tab` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tab Nhóm: danh sách nhóm + nút thêm/sửa/thành viên.
 
   Widget _buildGroupsTab() {
     final filtered = _groups.where((g) {
@@ -653,10 +622,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
     );
   }
 
-  // Mục đích: Phương thức `_buildGroupTile` triển khai phần việc `build Group Tile` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng 1 dòng nhóm.
 
   Widget _buildGroupTile(Map g) {
     final count = g['member_count'] ?? 0;
@@ -718,10 +684,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
     );
   }
 
-  // Mục đích: Phương thức `_showGroupDialog` triển khai phần việc `show Group Dialog` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dialog thêm/sửa nhóm.
 
   Future<void> _showGroupDialog({Map? group}) async {
     final isEdit = group != null;
@@ -834,10 +797,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
     );
   }
 
-  // Mục đích: Phương thức `_showMembersDialog` triển khai phần việc `show Members Dialog` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dialog quản lý thành viên nhóm.
 
   Future<void> _showMembersDialog(Map group) async {
     await showDialog(
@@ -852,10 +812,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
 
   // ── TAB IMPORT EXCEL ────────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_buildImportTab` triển khai phần việc `build Import Tab` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tab Phòng ban: import từ Excel + danh sách phòng ban.
 
   Widget _buildDepartmentsTab() {
     final filtered = _departments.where((item) {
@@ -1527,10 +1484,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
     );
   }
 
-  // Mục đích: Phương thức `_buildImportResultTable` triển khai phần việc `build Import Result Table` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Bảng kết quả import phòng ban từ Excel.
 
   Widget _buildImportResultTable() {
     return SingleChildScrollView(
@@ -1584,10 +1538,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
     }).length;
   }
 
-  // Mục đích: Phương thức `_pickExcel` triển khai phần việc `pick Excel` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Chọn file Excel danh sách phòng ban/nhân sự.
 
   Future<void> _pickExcel() async {
     final result = await FilePicker.platform.pickFiles(
@@ -1607,10 +1558,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
     }
   }
 
-  // Mục đích: Phương thức `_doImport` triển khai phần việc `do Import` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Thực thi import dữ liệu từ Excel đã chọn.
 
   Future<void> _doImport() async {
     if (_excelFile?.bytes == null) return;
@@ -1674,10 +1622,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
     }
   }
 
-  // Mục đích: Phương thức `_downloadTemplate` triển khai phần việc `download Template` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tải file Excel mẫu để nhập liệu.
 
   Future<void> _downloadTemplate() async {
     try {
@@ -1709,10 +1654,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
-  // Mục đích: Phương thức `_formField` triển khai phần việc `form Field` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng 1 ô nhập trong form (nhãn + controller).
 
   Widget _formField(String label, TextEditingController ctrl,
       {TextInputType? keyboardType}) {
@@ -1727,10 +1669,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
     );
   }
 
-  // Mục đích: Phương thức `_badge` triển khai phần việc `badge` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng badge nhãn nhỏ có màu.
 
   Widget _badge(String label, MaterialColor color) {
     return Container(
@@ -1748,10 +1687,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
     );
   }
 
-  // Mục đích: Phương thức `_confirmDeleteGroupV2` triển khai phần việc `confirm Delete Group V2` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Hỏi xác nhận rồi xóa nhóm.
 
   Future<void> _confirmDeleteGroupV2(Map group) async {
     final otherGroups =
@@ -1891,10 +1827,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen>
 
 // ── Dialog quản lý thành viên nhóm ────────────────────────────────────────────
 
-// Mục đích: Lớp `_MembersDialog` triển khai phần việc `Members Dialog` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Dialog quản lý thành viên nhóm (StatefulWidget).
 
 class _MembersDialog extends StatefulWidget {
   final Map group;
@@ -1911,10 +1844,7 @@ class _MembersDialog extends StatefulWidget {
   State<_MembersDialog> createState() => _MembersDialogState();
 }
 
-// Mục đích: Lớp `_MembersDialogState` triển khai phần việc `Members Dialog State` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State dialog thành viên: nạp/thêm/xóa thành viên, đổi vai trò.
 
 class _MembersDialogState extends State<_MembersDialog> {
   List<dynamic> _members = [];
@@ -1929,10 +1859,7 @@ class _MembersDialogState extends State<_MembersDialog> {
   String _pick(String vi, String en) => _strings.pick(vi, en);
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Mở dialog: nạp danh sách thành viên nhóm.
 
   void initState() {
     super.initState();
@@ -1942,10 +1869,7 @@ class _MembersDialogState extends State<_MembersDialog> {
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đóng dialog: dọn controller.
 
   void dispose() {
     _memberSearchCtrl.dispose();
@@ -1953,10 +1877,7 @@ class _MembersDialogState extends State<_MembersDialog> {
     super.dispose();
   }
 
-  // Mục đích: Phương thức `_loadMembers` triển khai phần việc `load Members` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Nạp danh sách thành viên của nhóm.
 
   Future<void> _loadMembers() async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -1989,10 +1910,7 @@ class _MembersDialogState extends State<_MembersDialog> {
         .toList();
   }
 
-  // Mục đích: Phương thức `_userDisplay` triển khai phần việc `user Display` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Chuỗi hiển thị tên người dùng (tên + email).
 
   String _userDisplay(Map u) {
     final name = '${u['first_name'] ?? ''} ${u['last_name'] ?? ''}'.trim();
@@ -2014,10 +1932,7 @@ class _MembersDialogState extends State<_MembersDialog> {
   List<Map<String, dynamic>> get _searchResults =>
       _searchUsers(_memberSearchCtrl.text).toList();
 
-  // Mục đích: Phương thức `_addMember` triển khai phần việc `add Member` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Thêm 1 thành viên vào nhóm.
 
   Future<void> _addMember() async {
     if (_addUserId == null) return;
@@ -2045,10 +1960,7 @@ class _MembersDialogState extends State<_MembersDialog> {
     }
   }
 
-  // Mục đích: Phương thức `_removeMember` triển khai phần việc `remove Member` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Xóa 1 thành viên khỏi nhóm.
 
   Future<void> _removeMember(int userId) async {
     try {
@@ -2066,10 +1978,7 @@ class _MembersDialogState extends State<_MembersDialog> {
     }
   }
 
-  // Mục đích: Phương thức `_toggleRole` triển khai phần việc `toggle Role` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Đổi vai trò thành viên (trưởng nhóm / thành viên).
 
   Future<void> _toggleRole(int userId, String currentRole) async {
     final newRole = currentRole == 'leader' ? 'member' : 'leader';
@@ -2086,10 +1995,7 @@ class _MembersDialogState extends State<_MembersDialog> {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/admin/admin_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng dialog thành viên: danh sách + thêm + đổi vai trò/xóa.
 
   Widget build(BuildContext context) {
     final nonMembers = _nonMembers;

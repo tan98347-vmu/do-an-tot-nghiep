@@ -10,6 +10,8 @@ from django.contrib.auth.models import User
 from rest_framework import serializers
 from accounts.models import UserGroup, UserGroupMembership, Department, GlobalAIConfig
 
+# class DepartmentSerializer là serializer định nghĩa dữ liệu vào/ra (Department).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class DepartmentSerializer(serializers.ModelSerializer):
     
 
@@ -20,6 +22,8 @@ class DepartmentSerializer(serializers.ModelSerializer):
     Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `my_tennis_club.settings`, `my_tennis_club.urls`, `api/urls.py`, `api/views/dashboard.py`, `api/views/admin_v.py`, `api/views/notifications.py`. Nam trong pham vi module hien tai.
     Tac dung: Giam viec lap rule chuyen doi du lieu giua request, response va model lien quan toi `DepartmentSerializer`.
     """
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -31,6 +35,8 @@ class DepartmentSerializer(serializers.ModelSerializer):
         model = Department
         fields = ('id', 'name', 'code', 'description')
 
+# class UserGroupSerializer là serializer định nghĩa dữ liệu vào/ra (UserGroup).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class UserGroupSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -46,6 +52,8 @@ class UserGroupSerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -63,6 +71,8 @@ class UserGroupSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_member_count để lấy member count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_member_count(self, obj):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -75,6 +85,8 @@ class UserGroupSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_document_count để lấy document count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_document_count(self, obj):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -87,6 +99,8 @@ class UserGroupSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_template_count để lấy template count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_template_count(self, obj):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -99,6 +113,8 @@ class UserGroupSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_pending_template_assignment_count để lấy pending template assignment count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_pending_template_assignment_count(self, obj):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -109,6 +125,8 @@ class UserGroupSerializer(serializers.ModelSerializer):
         """
         return obj.pending_template_assignments.count()
 
+# class UserGroupDetailSerializer là serializer định nghĩa dữ liệu vào/ra (UserGroupDetail).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class UserGroupDetailSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -125,6 +143,8 @@ class UserGroupDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -142,6 +162,8 @@ class UserGroupDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_member_count để lấy member count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_member_count(self, obj):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -154,6 +176,8 @@ class UserGroupDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_members để lấy members (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_members(self, obj):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -174,6 +198,8 @@ class UserGroupDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_document_count để lấy document count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_document_count(self, obj):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -186,6 +212,8 @@ class UserGroupDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_template_count để lấy template count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_template_count(self, obj):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -198,6 +226,8 @@ class UserGroupDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_pending_template_assignment_count để lấy pending template assignment count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_pending_template_assignment_count(self, obj):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -208,6 +238,8 @@ class UserGroupDetailSerializer(serializers.ModelSerializer):
         """
         return obj.pending_template_assignments.count()
 
+# class UserAdminSerializer là serializer định nghĩa dữ liệu vào/ra (UserAdmin).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class UserAdminSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -221,6 +253,8 @@ class UserAdminSerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -235,6 +269,8 @@ class UserAdminSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_chuc_danh để lấy chuc danh (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_chuc_danh(self, obj):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -250,6 +286,8 @@ class UserAdminSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_groups để lấy groups (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_groups(self, obj):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -263,6 +301,8 @@ class UserAdminSerializer(serializers.ModelSerializer):
             for m in obj.group_memberships.select_related('group').all()
         ]
 
+# class GlobalAIConfigSerializer là serializer định nghĩa dữ liệu vào/ra (GlobalAIConfig).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class GlobalAIConfigSerializer(serializers.ModelSerializer):
     
 
@@ -273,6 +313,8 @@ class GlobalAIConfigSerializer(serializers.ModelSerializer):
     Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `my_tennis_club.settings`, `my_tennis_club.urls`, `api/urls.py`, `api/views/dashboard.py`, `api/views/admin_v.py`, `api/views/notifications.py`. Nam trong pham vi module hien tai.
     Tac dung: Giam viec lap rule chuyen doi du lieu giua request, response va model lien quan toi `GlobalAIConfigSerializer`.
     """
+    # def validate_ai_model để kiểm tra hợp lệ ai model (trong serializer).
+    # vd: dữ liệu sai -> báo lỗi/False; hợp lệ -> True hoặc giá trị đã chuẩn hóa.
     def validate_ai_model(self, value):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -288,10 +330,14 @@ class GlobalAIConfigSerializer(serializers.ModelSerializer):
 
     
 
+    # def validate_chat_ai_model để kiểm tra hợp lệ chat ai model (trong serializer).
+    # vd: dữ liệu sai -> báo lỗi/False; hợp lệ -> True hoặc giá trị đã chuẩn hóa.
     def validate_chat_ai_model(self, value):
         value = str(value or '').strip()
         return value
 
+    # def validate_ocr_model để kiểm tra hợp lệ ocr model (trong serializer).
+    # vd: dữ liệu sai -> báo lỗi/False; hợp lệ -> True hoặc giá trị đã chuẩn hóa.
     def validate_ocr_model(self, value):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -305,6 +351,8 @@ class GlobalAIConfigSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('ocr_model khong duoc de trong.')
         return value
 
+    # def validate_image_ocr_model để kiểm tra hợp lệ image ocr model (trong serializer).
+    # vd: dữ liệu sai -> báo lỗi/False; hợp lệ -> True hoặc giá trị đã chuẩn hóa.
     def validate_image_ocr_model(self, value):
         value = str(value or '').strip()
         if not value:
@@ -313,6 +361,8 @@ class GlobalAIConfigSerializer(serializers.ModelSerializer):
 
     
 
+    # def validate_ai_search_engine để kiểm tra hợp lệ ai search engine (trong serializer).
+    # vd: dữ liệu sai -> báo lỗi/False; hợp lệ -> True hoặc giá trị đã chuẩn hóa.
     def validate_ai_search_engine(self, value):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -328,6 +378,8 @@ class GlobalAIConfigSerializer(serializers.ModelSerializer):
 
     
 
+    # def validate_ai_max_results để kiểm tra hợp lệ ai max results (trong serializer).
+    # vd: dữ liệu sai -> báo lỗi/False; hợp lệ -> True hoặc giá trị đã chuẩn hóa.
     def validate_ai_max_results(self, value):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -343,6 +395,8 @@ class GlobalAIConfigSerializer(serializers.ModelSerializer):
 
     
 
+    # def validate_ai_internet_results để kiểm tra hợp lệ ai internet results (trong serializer).
+    # vd: dữ liệu sai -> báo lỗi/False; hợp lệ -> True hoặc giá trị đã chuẩn hóa.
     def validate_ai_internet_results(self, value):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -358,6 +412,8 @@ class GlobalAIConfigSerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.

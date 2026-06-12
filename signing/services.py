@@ -1,9 +1,37 @@
 """
-Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
-Vai tro backend: File `signing/services.py` giu hoac ho tro luong backend cho de xuat ky, packet ky, nhiem vu ky, xac minh PDF, PKI noi bo va quyen uy quyen.
-Vai tro cua no trong frontend: Cac man `/signing/tasks`, `/signed-pdfs`, `/signing/access` va mot phan thao tac o `/mailbox` phu thuoc truc tiep hoac gian tiep vao file nay.
-Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `api/urls.py`, `api/serializers/signing.py`, `signing.models`, `signing.permissions`, `signing.pki`, `signing.services`.
-Tac dung: Giu cho quy trinh ky nhieu buoc, trang thai chu ky va kiem tra toan ven PDF nhat quan giua nguoi de xuat, nguoi ky va man tra cuu.
+Sau khi ký, service không lưu ngay mà gọi:
+
+  verify_report = validate_pdf_signatures(signed_working_copy)
+
+  Tại signing/services.py:1117.
+
+  Chỉ khi chữ ký vừa tạo có trạng thái safe và fingerprint certificate đúng với credential của user thì mới:
+
+  - Thay working_pdf.
+  - Đánh dấu task là signed.
+  - Tạo PdfSignatureRecord.
+  - Mở bước ký tiếp theo.
+
+
+  - services.py: điều phối toàn bộ nghiệp vụ ký và kiểm tra.
+  - pki.py: thực hiện kỹ thuật mật mã, gồm cả tạo chữ ký bằng private key và xác minh bằng public key.
+
+  ## services.py
+
+  signing/services.py quyết định:
+
+  - User có quyền ký không.
+  - Mật khẩu xác nhận có đúng không.
+  - Task đã đến lượt ký chưa.
+  - Lấy credential nào của user.
+  - Gọi pki.py để ký.
+  - Gọi pki.py để kiểm tra chữ ký vừa tạo.
+  - Cập nhật trạng thái SigningTask.
+  - Chuyển sang người ký tiếp theo.
+  - Hoàn tất packet.
+  - Tạo SignedPdfDocument.
+  - Lưu kết quả kiểm tra vào database.
+
 """
 
 import logging

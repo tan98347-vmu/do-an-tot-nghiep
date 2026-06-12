@@ -1,15 +1,285 @@
 """
-Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
-Vai tro backend: File `documents/models.py` giu hoac ho tro luong backend cho danh sach van ban, chi tiet van ban, version, chia se, luu tru, preview PDF, hom thu va xoa mem.
-Vai tro cua no trong frontend: Cac man `/documents`, `/mailbox`, `/trash` va badge phe duyet doc ket qua do file nay cung cap hoac gian tiep lam thay doi.
-Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `api/urls.py`, `api/serializers/documents.py`, `documents.models`, `documents.mailbox_services`, `documents.pdf_preview`, `accounts.permissions`.
-Tac dung: Bao dam vong doi van ban tu luc tao, chia se, xu ly hom thu toi luc phuc hoi hoac xoa vinh vien khong bi lech trang thai.
+ ## Luồng kèm các hàm
+
+  1. User mở màn “Chỉnh sửa mẫu”
+     Flutter: _loadSession()
+         ↓
+  2. Gọi API tạo/lấy phiên chỉnh sửa
+     Flutter: ensureSession(templateId)
+         ↓
+  3. Django tiếp nhận request
+     View: template_manual_edit_session_create()
+         ↓
+  4. Kiểm tra quyền và tạo session
+     Service: create_template_manual_edit_session()
+         ↓
+  5. Đảm bảo mẫu có file DOCX
+     Service: _ensure_template_docx_source()
+         ↓
+  6. Tạo working copy từ DOCX gốc
+     Service: _read_file_field_bytes()
+              _save_field_bytes()
+         ↓
+  7. Tạo URL mở Collabora
+     Serializer: get_editor_url()
+     Provider: build_manual_edit_editor_url()
+               build_manual_edit_wopi_src()
+         ↓
+  8. Flutter mở Collabora trong iframe
+     Widget: ManualEditIFrame.build()
+         ↓
+  9. Collabora hỏi thông tin file
+     View: template_manual_edit_wopi_file()
+         ↓
+  10. Collabora tải working copy
+      View: template_manual_edit_wopi_contents() [GET]
+         ↓
+  11. User chỉnh sửa trong Collabora
+         ↓
+  12. Collabora khóa file
+      View: _handle_wopi_lock_override()
+         ↓
+  13. Collabora autosave DOCX về Django
+      View: template_manual_edit_wopi_contents() [PUT]
+         ↓
+  14. Django ghi DOCX mới vào working copy
+      Service: update_template_manual_edit_working_copy()
+               _save_field_bytes()
+         ↓
+  15. User bấm “Lưu & hoàn tất”
+      Flutter: _finishSession()
+         ↓
+  16. Flutter yêu cầu Collabora lưu lần cuối
+      Flutter: _flushEditorChanges()
+               requestManualEditIFrameSave()
+               _ManualEditFrameBridge.save()
+               _requestSave()
+         ↓
+  17. Collabora gửi Action_Save_Resp
+      Flutter: _ManualEditFrameBridge.handleMessage()
+         ↓
+  18. Flutter chờ working copy đã cập nhật
+      Flutter: _waitForWorkingCopySync()
+               getSession(sessionId)
+         ↓
+  19. Flutter gọi API hoàn tất
+      Provider: finishSession(sessionId)
+         ↓
+  20. Django tiếp nhận
+      View: template_manual_edit_session_finish()
+         ↓
+  21. Commit working copy thành mẫu chính
+      Service: finish_template_manual_edit_session()
+         ↓
+  22. Lưu phiên bản cũ
+      Versioning: create_template_version_snapshot()
+         ↓
+  23. Tăng version
+      Service: _bump_template_version()
+         ↓
+  24. Cập nhật mẫu hiện hành
+      Service: _save_field_bytes(template, 'docx_file')
+      Model: template.save()
+         ↓
+  25. Xóa working copy và đóng session
+      Service: _delete_session_working_copy()
+
+  ## Giải thích từng nhóm hàm
+
+  ### 1. Mở phiên chỉnh sửa
+
+  _loadSession() tại template_manual_edit_screen.dart được chạy khi màn hình mở:
+
+  final session = await ref
+      .read(templateManualEditApiProvider)
+      .ensureSession(widget.templateId);
+
+  ensureSession() gọi:
+
+  POST /api/templates/<id>/manual-edit/session/
+
+  template_manual_edit_session_create() nhận request, lấy mẫu user được phép truy cập rồi gọi:
+
+  create_template_manual_edit_session(
+      user=request.user,
+      template=template,
+  )
+
+  ## 2. Tạo working copy
+
+  create_template_manual_edit_session() thực hiện:
+
+  _require_manual_edit_provider()
+
+  Kiểm tra Collabora đã cấu hình và hoạt động.
+
+  get_active_template_manual_edit_session(template)
+
+  Kiểm tra mẫu có đang bị người khác chỉnh sửa không.
+
+  can_edit_template(user, template)
+
+  Kiểm tra user có quyền sửa mẫu không.
+
+  _ensure_template_docx_source(template)
+
+  Đảm bảo mẫu có DOCX. Nếu mẫu chỉ có text thì render text thành DOCX.
+
+  _read_file_field_bytes(template.docx_file)
+
+  Đọc toàn bộ DOCX gốc thành bytes.
+
+  _save_field_bytes(
+      session,
+      'working_copy_file',
+      file_bytes=source_bytes,
+  )
+
+  Sao chép bytes sang working copy của session.
+
+  ## 3. Tạo editor URL
+
+  TemplateManualEditSessionSerializer.get_editor_url() gọi:
+
+  build_manual_edit_editor_url()
+
+  Hàm này tiếp tục gọi:
+
+  build_manual_edit_wopi_src()
+
+  Kết quả:
+
+  Collabora URL
+   + WOPISrc của Django
+   + access_token
+   + token TTL
+
+  ## 4. Collabora lấy file
+
+  ManualEditIFrame.build() nhúng URL Collabora:
+
+  html.IFrameElement()..src = editorUrl;
+
+  Collabora gọi template_manual_edit_wopi_file() để lấy:
+
+  - Tên file.
+  - Kích thước.
+  - User.
+  - Quyền ghi.
+  - Phiên bản.
+  - Khả năng lock.
+
+  Sau đó Collabora gọi:
+
+  template_manual_edit_wopi_contents()
+
+  với HTTP GET để Django trả:
+
+  FileResponse(session.working_copy_file.open('rb'))
+
+  ## 5. Collabora lưu working copy
+
+  Collabora gọi cùng endpoint template_manual_edit_wopi_contents() nhưng kèm:
+
+  X-WOPI-Override: PUT
+
+  View kiểm tra khóa bằng:
+
+  _handle_wopi_lock_override()
+
+  Sau đó gọi:
+
+  update_template_manual_edit_working_copy(
+      session=session,
+      file_bytes=request.body,
+  )
+
+  Service dùng _save_field_bytes() để ghi DOCX mới vào working copy và cập nhật:
+
+  session.working_copy_updated_at = timezone.now()
+
+  ## 6. Lưu lần cuối
+
+  Khi user bấm Lưu & hoàn tất, _finishSession() gọi:
+
+  _flushEditorChanges(session)
+
+  Hàm này gọi:
+
+  requestManualEditIFrameSave()
+
+  _ManualEditFrameBridge._requestSave() gửi vào iframe:
+
+  {
+    "MessageId": "Action_Save"
+  }
+
+  Collabora nhận lệnh, gửi DOCX mới về WOPI rồi trả:
+
+  Action_Save_Resp
+
+  handleMessage() nhận kết quả xác nhận.
+
+  _waitForWorkingCopySync() liên tục gọi getSession() để chờ working_copy_updated_at thay đổi.
+
+  ## 7. Commit mẫu
+
+  Sau khi working copy đã đồng bộ, Flutter gọi:
+
+  finishSession(session.id)
+
+  View template_manual_edit_session_finish() gọi:
+
+  finish_template_manual_edit_session()
+
+  Trong đó:
+
+  create_template_version_snapshot(template)
+
+  Lưu DOCX và nội dung cũ vào TemplateVersion.
+
+  template.version = _bump_template_version(template.version)
+
+  Tăng 1.0 → 1.1.
+
+  template.content = _extract_text_from_docx(...)
+
+  Trích text từ DOCX mới.
+
+  _save_field_bytes(template, 'docx_file', file_bytes=file_bytes)
+
+  Thay DOCX hiện hành bằng file đã sửa.
+
+  _delete_session_working_copy(session)
+
+  Xóa file tạm và kết thúc session.
+
+  Tóm tắt lời gọi:
+
+  _loadSession
+  → ensureSession
+  → template_manual_edit_session_create
+  → create_template_manual_edit_session
+  → build_manual_edit_editor_url
+  → ManualEditIFrame
+  → template_manual_edit_wopi_file
+  → template_manual_edit_wopi_contents GET/PUT
+  → update_template_manual_edit_working_copy
+  → _finishSession
+  → requestManualEditIFrameSave
+  → finishSession
+  → template_manual_edit_session_finish
+  → finish_template_manual_edit_session
+  → create_template_version_snapshot
+  → cập nhật DocumentTemplate
+  → xóa working copy
 """
 
 from django.contrib.auth.models import User
 from django.db import models
 
 from accounts.peer_permissions import PeerPermissionLevel
+from accounts.record_codes import DOCUMENT_RECORD_PREFIX, format_record_code
 from accounts.storage_paths import company_media_path
 from document_templates.models import DocumentTemplate, TemplateCategory
 from my_tennis_club.soft_delete import ActiveOnlyManager
@@ -24,6 +294,8 @@ DOC_STATUS_CHOICES = [
 ]
 
 
+# def _document_output_upload xác định đường dẫn lưu file DOCX kết quả của văn bản theo công ty.
+# vd: -> 'companies/<slug>/document_output/<file>.docx'.
 def _document_output_upload(instance, filename):
     return company_media_path(
         company=getattr(instance, 'company', None),
@@ -32,6 +304,8 @@ def _document_output_upload(instance, filename):
     )
 
 
+# def _document_version_output_upload xác định đường dẫn lưu file DOCX của từng version văn bản (theo công ty + document_id).
+# vd: -> 'companies/<slug>/document_versions/document_5/<file>.docx'.
 def _document_version_output_upload(instance, filename):
     company = getattr(getattr(instance, 'document', None), 'company', None)
     return company_media_path(
@@ -41,6 +315,8 @@ def _document_version_output_upload(instance, filename):
         filename=filename,
     )
 
+# class DocumentNumberConfig là cấu hình đánh số văn bản tự động theo phòng ban + năm (tiền tố, định dạng, số cuối).
+# vd: phòng A năm 2026 -> sinh số 'CV-A-2026-001', '...-002'...
 class DocumentNumberConfig(models.Model):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -73,6 +349,8 @@ class DocumentNumberConfig(models.Model):
 
     
 
+    # class Meta: đặt tên hiển thị + ràng buộc/sắp xếp cấu hình đánh số.
+    # vd: mỗi (phòng ban, năm) một cấu hình đánh số.
     class Meta:
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -87,6 +365,8 @@ class DocumentNumberConfig(models.Model):
 
     
 
+    # def __str__ hiển thị cấu hình dạng 'tiền tố - mã phòng - năm'.
+    # vd: -> 'CV - A - 2026'.
     def __str__(self):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -99,6 +379,8 @@ class DocumentNumberConfig(models.Model):
 
     
 
+    # def next_number cấp số văn bản kế tiếp an toàn khi nhiều request song song (select_for_update khóa hàng, tăng last_number) rồi format theo mẫu.
+    # vd: gọi liên tiếp -> '...001', '...002' không trùng kể cả khi chạy đồng thời.
     def next_number(self):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -146,6 +428,8 @@ MAILBOX_STATUS_CHOICES = [
     (MAILBOX_STATUS_REJECTED, 'Da bi tu choi'),
 ]
 
+# class Document là VĂN BẢN — thực thể lõi: nội dung + file DOCX kết quả, nguồn (sinh từ server / upload), mẫu nguồn, phòng ban/danh mục, số văn bản, trạng thái (draft/final/archived), phạm vi + trạng thái chia sẻ, version, hòm thư forward, chia sẻ ngang hàng, soft-delete, snapshot prompt đã áp.
+# vd: 'Sinh văn bản từ mẫu' -> tạo 1 Document (status draft, có output_file .docx).
 class Document(models.Model):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -294,6 +578,8 @@ class Document(models.Model):
 
     
 
+    # class Meta: cấu hình sắp xếp / index / soft-delete cho Document.
+    # vd: danh sách văn bản hiển thị theo thứ tự đã cấu hình.
     class Meta:
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -308,6 +594,8 @@ class Document(models.Model):
 
     
 
+    # def __str__ hiển thị văn bản bằng tiêu đề.
+    # vd: -> 'Đơn xin nghỉ phép'.
     def __str__(self):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -318,6 +606,14 @@ class Document(models.Model):
         """
         return self.title
 
+    # def record_code (property) sinh mã định danh hiển thị của văn bản theo tiền tố + id.
+    # vd: pk=5 -> 'VB-000005'.
+    @property
+    def record_code(self):
+        return format_record_code(DOCUMENT_RECORD_PREFIX, self.pk)
+
+    # def save tự suy ra company nếu chưa có theo template -> department -> category -> group -> owner (đảm bảo văn bản thuộc đúng công ty).
+    # vd: tạo văn bản từ mẫu của công ty A -> company=A.
     def save(self, *args, **kwargs):
         if self.company_id is None:
             if self.template_id and getattr(self.template, 'company_id', None):
@@ -332,6 +628,8 @@ class Document(models.Model):
                 self.company = self.owner.company_membership.company
         super().save(*args, **kwargs)
 
+    # def get_tag_list chuẩn hóa danh sách tags (trim, gộp khoảng trắng, khử trùng không phân biệt hoa/thường). LƯU Ý: bản này bị định nghĩa get_tag_list phía dưới ghi đè.
+    # vd: ['A',' a '] -> ['A'].
     def get_tag_list(self):
         normalized = []
         seen = set()
@@ -348,6 +646,8 @@ class Document(models.Model):
 
     
 
+    # def get_status_badge_class ánh xạ trạng thái -> class màu badge cho UI (draft→secondary, final→success, archived→dark).
+    # vd: status='final' -> 'success'.
     def get_status_badge_class(self):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -364,6 +664,8 @@ class Document(models.Model):
 
     
 
+    # def get_tag_list (bản định nghĩa SAU nên có hiệu lực) hiện trả [] — tags được xử lý/serialize ở serializer thay vì ở model.
+    # vd: -> [] (xem TagsField bên api/serializers/documents.py).
     def get_tag_list(self):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -374,6 +676,8 @@ class Document(models.Model):
         """
         return []
 
+# class DocumentFavorite đánh dấu user ghim (yêu thích) một văn bản để truy cập nhanh.
+# vd: user #3 ghim văn bản #5 -> hiện ở 'Văn bản yêu thích'.
 class DocumentFavorite(models.Model):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -388,6 +692,8 @@ class DocumentFavorite(models.Model):
 
     
 
+    # class Meta: mỗi cặp (user, document) là duy nhất + index.
+    # vd: không ghim trùng một văn bản.
     class Meta:
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -401,6 +707,8 @@ class DocumentFavorite(models.Model):
 
     
 
+    # def __str__ hiển thị quan hệ yêu thích dạng user -> document.
+    # vd: -> '3 ♥ 5'.
     def __str__(self):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -411,6 +719,8 @@ class DocumentFavorite(models.Model):
         """
         return f'{self.user.username} likes {self.document.title}'
 
+# class DocumentVersion lưu snapshot từng phiên bản văn bản (nội dung + file DOCX + biến đã dùng + change_note) qua các lần tạo/cập nhật.
+# vd: tạo lại văn bản từ mẫu -> version_number tăng, lưu 1 DocumentVersion.
 class DocumentVersion(models.Model):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -449,6 +759,8 @@ class DocumentVersion(models.Model):
 
     
 
+    # class Meta: sắp xếp version (theo số/thời gian) gắn với document.
+    # vd: xem lịch sử version của 1 văn bản.
     class Meta:
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -463,6 +775,8 @@ class DocumentVersion(models.Model):
 
     
 
+    # def __str__ hiển thị version dạng văn bản + số version.
+    # vd: -> 'Đơn xin nghỉ v2'.
     def __str__(self):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -473,6 +787,8 @@ class DocumentVersion(models.Model):
         """
         return f'{self.document.title} v{self.version_number}'
 
+# class DocumentMailboxThread là 'luồng hòm thư' của 1 văn bản: theo dõi việc chuyển tiếp (forward) văn bản / PDF đã ký giữa người dùng để xem/ký, kèm trạng thái và mốc phiên bản nguồn.
+# vd: gửi văn bản #5 cho người khác để ký -> tạo 1 thread hòm thư.
 class DocumentMailboxThread(models.Model):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -527,6 +843,8 @@ class DocumentMailboxThread(models.Model):
 
     
 
+    # class Meta: sắp xếp thread mới cập nhật lên đầu.
+    # vd: hòm thư hiển thị luồng mới nhất trước.
     class Meta:
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -539,6 +857,8 @@ class DocumentMailboxThread(models.Model):
         verbose_name_plural = 'Luong hom thu van ban'
         ordering = ['-updated_at', '-created_at']
 
+    # def __str__ hiển thị thread dạng 'MailboxThread #id - tiêu đề văn bản'.
+    # vd: -> 'MailboxThread #3 - Đơn xin nghỉ'.
     def __str__(self):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -549,6 +869,8 @@ class DocumentMailboxThread(models.Model):
         """
         return f'MailboxThread #{self.pk} - {self.document.title}'
 
+    # def save tự gán company theo document -> signed_pdf -> người tạo (đảm bảo thread đúng công ty).
+    # vd: thread của văn bản công ty A -> company=A.
     def save(self, *args, **kwargs):
         if self.company_id is None:
             if self.document_id and getattr(self.document, 'company_id', None):
@@ -559,6 +881,8 @@ class DocumentMailboxThread(models.Model):
                 self.company = self.created_by.company_membership.company
         super().save(*args, **kwargs)
 
+# class DocumentMailboxEntry là một lượt chuyển tiếp trong thread hòm thư: ai gửi -> ai nhận, trạng thái (xem/forward/hoàn thành/từ chối), PDF đã ký kèm, ghi chú; có cấu trúc cha-con (parent_entry) cho forward nhiều cấp.
+# vd: A forward văn bản cho B -> 1 entry forwarded_by=A, forwarded_to=B.
 class DocumentMailboxEntry(models.Model):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -623,6 +947,8 @@ class DocumentMailboxEntry(models.Model):
 
     
 
+    # class Meta: sắp xếp entry mới nhất lên đầu.
+    # vd: xem các lượt forward gần nhất trước.
     class Meta:
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -637,6 +963,8 @@ class DocumentMailboxEntry(models.Model):
 
     
 
+    # def __str__ hiển thị entry dạng 'Entry #id -> người nhận'.
+    # vd: -> 'Entry #7 -> Nguyễn Văn B'.
     def __str__(self):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -647,6 +975,8 @@ class DocumentMailboxEntry(models.Model):
         """
         return f'Entry #{self.pk} -> {self.forwarded_to}'
 
+    # def save tự gán company theo thread -> signed_pdf -> người gửi -> người nhận.
+    # vd: entry trong thread công ty A -> company=A.
     def save(self, *args, **kwargs):
         if self.company_id is None:
             if self.thread_id and getattr(self.thread, 'company_id', None):
@@ -660,6 +990,8 @@ class DocumentMailboxEntry(models.Model):
         super().save(*args, **kwargs)
 
 
+# class DocumentAudienceMember là bản ghi chia sẻ văn bản cho một đồng nghiệp cụ thể (peer share) kèm mức quyền (view/edit...).
+# vd: chia sẻ văn bản #5 cho user #12 quyền VIEW.
 class DocumentAudienceMember(models.Model):
     document = models.ForeignKey(
         Document, related_name='audience_members', on_delete=models.CASCADE,
@@ -678,6 +1010,8 @@ class DocumentAudienceMember(models.Model):
         default=PeerPermissionLevel.VIEW,
     )
 
+    # class Meta: mỗi cặp (document, user) là duy nhất + index để tra cứu nhanh.
+    # vd: không chia sẻ trùng một văn bản cho cùng user.
     class Meta:
         verbose_name = 'Người được chia sẻ văn bản'
         verbose_name_plural = 'Người được chia sẻ văn bản'
@@ -687,6 +1021,8 @@ class DocumentAudienceMember(models.Model):
             models.Index(fields=['user', '-created_at']),
         ]
 
+    # def __str__ hiển thị quan hệ chia sẻ dạng document -> user.
+    # vd: -> '5 -> 12'.
     def __str__(self):
         return f'{self.document_id} -> {self.user_id}'
 

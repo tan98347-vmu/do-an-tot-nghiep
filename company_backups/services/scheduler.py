@@ -10,6 +10,8 @@ _scheduler = None
 _scheduler_lock = Lock()
 
 
+# def _job_run_due_auto_backups là job định kỳ: duyệt các công ty bật auto_enabled; công ty nào đã tới hạn (quá auto_interval_days kể từ lần auto gần nhất) thì tạo backup auto (đủ thành phần), cập nhật mốc thời gian, rồi dọn bớt theo retention.
+# vd: công ty A đặt 30 ngày, lần cuối 31 ngày trước -> tạo 1 backup auto + xóa bản cũ vượt số lượng giữ lại.
 def _job_run_due_auto_backups():
     from company_backups.models import (
         CompanyBackupSettings, KIND_AUTO,
@@ -49,11 +51,15 @@ def _job_run_due_auto_backups():
             )
 
 
+# def run_due_auto_backups_now chạy ngay 1 lượt job auto-backup (dùng cho management command và test).
+# vd: gọi từ lệnh auto_backup_companies hoặc Windows Task Scheduler.
 def run_due_auto_backups_now():
     """Public helper cho management command & test."""
     _job_run_due_auto_backups()
 
 
+# def start_scheduler khởi động APScheduler chạy job auto-backup mỗi 6 giờ (bỏ qua nếu chưa cài apscheduler); idempotent — chỉ tạo 1 scheduler.
+# vd: app ready() -> nền tự kiểm tra & sao lưu công ty tới hạn mỗi 6h.
 def start_scheduler():
     global _scheduler
     with _scheduler_lock:
@@ -81,6 +87,8 @@ def start_scheduler():
         return _scheduler
 
 
+# def stop_scheduler tắt scheduler nếu đang chạy (dùng khi reload/teardown).
+# vd: gọi khi tắt app -> shutdown scheduler.
 def stop_scheduler():
     global _scheduler
     with _scheduler_lock:

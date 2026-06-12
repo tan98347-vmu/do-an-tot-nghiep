@@ -432,7 +432,7 @@ class _GuestNav extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 navGroup(
-                  label: strings.pick('Mẫu văn bản', 'Templates'),
+                  label: strings.pick('Quản lý mẫu văn bản', 'Template management'),
                   icon: Icons.description_outlined,
                   isExpanded: templateActive,
                   groupKey: 'guest-templates',
@@ -456,7 +456,7 @@ class _GuestNav extends StatelessWidget {
                       indent: 12,
                     ),
                     navTile(
-                      label: strings.pick('Riêng của tôi', 'My private templates'),
+                      label: strings.pick('Mẫu của tôi', 'My private templates'),
                       icon: Icons.lock_outline,
                       locked: true,
                       indent: 12,

@@ -22,14 +22,20 @@ from .manual_edit_provider import (
 from .models import SHARE_ACTIVE, SHARE_PENDING_ADMIN, SHARE_PENDING_LEADER, DocumentVersion
 
 
+# def _manual_edit_session_ttl_seconds đọc thời gian sống (TTL) của phiên sửa từ settings (MANUAL_EDIT_SESSION_TTL_SECONDS).
+# vd: -> 3600 (1 giờ).
 def _manual_edit_session_ttl_seconds():
     return max(int(getattr(settings, 'MANUAL_EDIT_SESSION_TTL_SECONDS', 3600) or 3600), 300)
 
 
+# def _next_session_expiry tính thời điểm hết hạn của phiên = hiện tại + TTL.
+# vd: -> now + 3600s.
 def _next_session_expiry():
     return timezone.now() + timezone.timedelta(seconds=_manual_edit_session_ttl_seconds())
 
 
+# def _append_session_event ghi 1 sự kiện vào DocumentManualEditSessionEvent (level/step/message/payload) để truy vết luồng Collabora/WOPI.
+# vd: ghi bước 'wopi_put' kèm payload kích thước file.
 def _append_session_event(session, *, level='info', step='', message='', payload=None):
     return DocumentManualEditSessionEvent.objects.create(
         session=session,
@@ -41,6 +47,8 @@ def _append_session_event(session, *, level='info', step='', message='', payload
     )
 
 
+# def _delete_field_file xóa file vật lý của một FileField trong storage (dùng dọn working copy).
+# vd: xóa working_copy_file của phiên trên đĩa.
 def _delete_field_file(instance, field_name):
     file_field = getattr(instance, field_name, None)
     if not file_field:
@@ -56,6 +64,8 @@ def _delete_field_file(instance, field_name):
         pass
 
 
+# def _save_field_bytes ghi nội dung bytes vào một FileField của instance rồi lưu.
+# vd: lưu nội dung .docx mới vào working_copy_file.
 def _save_field_bytes(instance, field_name, *, filename, file_bytes):
     file_field = getattr(instance, field_name)
     old_name = getattr(file_field, 'name', '')
@@ -64,6 +74,8 @@ def _save_field_bytes(instance, field_name, *, filename, file_bytes):
     file_field.save(filename, ContentFile(file_bytes), save=False)
 
 
+# def _read_file_field_bytes đọc toàn bộ bytes của một FileField; thiếu/không đọc được -> raise lỗi kèm detail.
+# vd: đọc working copy để commit; thiếu file -> báo lỗi rõ ràng.
 def _read_file_field_bytes(file_field, *, detail):
     try:
         with file_field.open('rb') as source_file:
@@ -72,6 +84,8 @@ def _read_file_field_bytes(file_field, *, detail):
         raise ValidationError({'detail': detail}) from exc
 
 
+# def _working_copy_filename sinh tên file bản sao làm việc cho phiên (dựa trên tên nguồn).
+# vd: nguồn 'vanban.docx' -> tên working copy tương ứng.
 def _working_copy_filename(document, session, source_name):
     extension = '.docx'
     raw_name = os.path.basename(str(source_name or '')).strip()
@@ -80,6 +94,8 @@ def _working_copy_filename(document, session, source_name):
     return f'{_ascii_safe_name(document.title)}_manual_{session.id}{extension}'
 
 
+# def expire_stale_manual_edit_sessions đánh dấu hết hạn (EXPIRED) các phiên quá TTL/không còn hoạt động (dọn phiên treo), có thể giới hạn theo 1 văn bản.
+# vd: phiên quá 1 giờ không hoạt động -> EXPIRED.
 def expire_stale_manual_edit_sessions(*, document=None):
     now = timezone.now()
     qs = DocumentManualEditSession.objects.filter(
@@ -103,6 +119,8 @@ def expire_stale_manual_edit_sessions(*, document=None):
     return len(expired_ids)
 
 
+# def get_active_manual_edit_session lấy phiên đang hoạt động của một văn bản (tùy chọn lọc theo cùng user) để tránh mở trùng phiên.
+# vd: văn bản #5 đang có người sửa -> trả phiên đó.
 def get_active_manual_edit_session(document, *, include_same_user=None):
     expire_stale_manual_edit_sessions(document=document)
     qs = (
@@ -121,6 +139,8 @@ def get_active_manual_edit_session(document, *, include_same_user=None):
     return qs.first()
 
 
+# def touch_manual_edit_session cập nhật last_activity_at để giữ phiên sống (gọi từ heartbeat của editor).
+# vd: editor gửi heartbeat -> gia hạn hoạt động phiên.
 def touch_manual_edit_session(session):
     if not session.is_active:
         return session
@@ -131,6 +151,8 @@ def touch_manual_edit_session(session):
     return session
 
 
+# def _delete_session_working_copy xóa bản sao làm việc của phiên (dọn sau khi hoàn tất/hủy).
+# vd: finish/cancel phiên -> xóa working_copy_file.
 def _delete_session_working_copy(session):
     _delete_field_file(session, 'working_copy_file')
     if session.working_copy_file:
@@ -138,12 +160,16 @@ def _delete_session_working_copy(session):
         session.save(update_fields=['working_copy_file', 'updated_at'])
 
 
+# def _require_manual_edit_provider kiểm tra provider trình soạn (Collabora) đã cấu hình & sẵn sàng; chưa thì raise lỗi rõ ràng.
+# vd: Collabora chưa chạy/chưa cấu hình -> báo 'editor chưa sẵn sàng'.
 def _require_manual_edit_provider():
     provider_status = get_manual_edit_provider_status()
     if not provider_status.is_ready:
         raise ValidationError({'detail': provider_status.detail})
 
 
+# def create_manual_edit_session tạo phiên sửa văn bản mới: kiểm provider, chuẩn bị bản sao làm việc (.docx) + access_token + hạn dùng; trả (session, created).
+# vd: bấm 'Sửa bằng trình soạn web' văn bản #5 -> tạo session + working copy để mở Collabora.
 def create_manual_edit_session(*, user, document):
     _require_manual_edit_provider()
     CompanyRuntimeGuard.assert_same_company(
@@ -201,6 +227,8 @@ def create_manual_edit_session(*, user, document):
     return session, True
 
 
+# def get_manual_edit_session_for_user lấy phiên theo id và chỉ cho phép chính chủ phiên (kiểm soát quyền).
+# vd: user khác cố mở phiên của người ta -> báo lỗi không có quyền.
 def get_manual_edit_session_for_user(*, session_id, user):
     queryset = DocumentManualEditSession.objects.select_related('document', 'created_by', 'committed_version')
     company = get_user_company(user)
@@ -227,6 +255,8 @@ def get_manual_edit_session_for_user(*, session_id, user):
     return session
 
 
+# def get_manual_edit_session_for_wopi resolve phiên theo wopi_file_id + access_token cho Collabora (server-to-server WOPI); kiểm token và trạng thái active.
+# vd: Collabora gọi CheckFileInfo -> tìm đúng session theo token.
 def get_manual_edit_session_for_wopi(*, wopi_file_id, access_token, allow_inactive=False, touch_activity=True):
     if not access_token:
         raise ValidationError({'detail': 'Missing access token.'})
@@ -259,6 +289,8 @@ def get_manual_edit_session_for_wopi(*, wopi_file_id, access_token, allow_inacti
     return session
 
 
+# def update_manual_edit_working_copy xử lý WOPI PutFile: ghi bytes .docx mới của editor vào working copy + cập nhật mốc thời gian.
+# vd: người dùng nhấn lưu trong Collabora -> cập nhật working_copy_file.
 def update_manual_edit_working_copy(*, session, file_bytes, filename=''):
     if not session.is_active:
         raise ValidationError({'detail': 'Manual edit session is not active.'})
@@ -290,6 +322,8 @@ def update_manual_edit_working_copy(*, session, file_bytes, filename=''):
     return session
 
 
+# def _next_document_share_status xác định trạng thái chia sẻ (share_status) phù hợp cho văn bản theo người thao tác + phạm vi (active / pending_leader / pending_admin).
+# vd: nhân viên chia sẻ nhóm -> pending_leader.
 def _next_document_share_status(document, user):
     if document.visibility == 'group':
         return SHARE_PENDING_LEADER
@@ -298,6 +332,8 @@ def _next_document_share_status(document, user):
     return document.share_status
 
 
+# def finish_manual_edit_session là 'Lưu & hoàn tất' cho văn bản: đọc working copy, cập nhật content + output_file + version_number, tạo DocumentVersion snapshot, đóng phiên; GIỮ NGUYÊN share_status (không reset trạng thái chia sẻ).
+# vd: thành viên sửa văn bản nhóm xong -> văn bản cập nhật nội dung + version tăng, vẫn share active.
 def finish_manual_edit_session(*, session, user, change_note=''):
     if not user.is_superuser and session.created_by_id != user.id:
         raise PermissionDenied('You do not have permission to finish this manual edit session.')
@@ -372,12 +408,11 @@ def finish_manual_edit_session(*, session, user, change_note=''):
             doc.version_number = new_version_number
             doc.content = extracted_text
             doc.output_file = new_version.output_file
-            next_share_status = _next_document_share_status(doc, user)
-            update_fields = ['version_number', 'content', 'output_file', 'updated_at']
-            if next_share_status != doc.share_status:
-                doc.share_status = next_share_status
-                update_fields.append('share_status')
-            doc.save(update_fields=update_fields)
+            # KHONG tinh lai share_status khi chi SUA NOI DUNG bang trinh sua thu cong.
+            # Sua noi dung khong phai "chia se lai"; truoc day goi
+            # _next_document_share_status(visibility='group') -> SHARE_PENDING_LEADER,
+            # khien tai lieu da duyet bi quay ve "cho truong nhom duyet" (sai nghiep vu).
+            doc.save(update_fields=['version_number', 'content', 'output_file', 'updated_at'])
 
             session.status = DocumentManualEditSession.Status.FINISHED
             session.committed_version = new_version
@@ -418,6 +453,8 @@ def finish_manual_edit_session(*, session, user, change_note=''):
     return new_version
 
 
+# def cancel_manual_edit_session hủy phiên sửa văn bản: xóa working copy, đặt status CANCELLED; văn bản giữ nguyên.
+# vd: bấm Hủy giữa chừng -> phiên CANCELLED, văn bản không bị sửa.
 def cancel_manual_edit_session(*, session, user):
     if not user.is_superuser and session.created_by_id != user.id:
         raise PermissionDenied('You do not have permission to cancel this manual edit session.')

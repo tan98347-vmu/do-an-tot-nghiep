@@ -19,6 +19,11 @@ from ai_engine.doc_creator import is_document_creation_request, create_document_
 from ..serializers.chat import ChatSessionSerializer, ChatMessageSerializer, KnowledgeBaseSerializer
 from ..trash_services import soft_delete_chat_sessions
 
+# Là gì: `chat_ai_model_info` là endpoint REST của nhóm chat AI, hội thoại và phản hồi theo luồng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `chat ai model info` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được giao diện ChatAI sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `resolve_chat_ai_model` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def chat_ai_model_info(request):
@@ -31,6 +36,11 @@ def chat_ai_model_info(request):
     })
 
 
+# Là gì: `_do_chat_task` là helper nội bộ của module `chat.py`, phục vụ nhóm chat AI, hội thoại và phản hồi theo luồng.
+# Chức năng backend: Hàm thực thi phần xử lý nội bộ của luồng hiện tại; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ giao diện ChatAI.
+# Mối liên hệ: Hàm phối hợp với `User.objects.get`, `update_progress`, `check_cancel` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect ghi cơ sở dữ liệu.
 def _do_chat_task(task_id, user_id, session_id, question, prompt_system, prompt_rules, extra_context):
     """Background chat task with detailed stages + token streaming progress."""
     from django.contrib.auth.models import User
@@ -65,6 +75,11 @@ def _do_chat_task(task_id, user_id, session_id, question, prompt_system, prompt_
     token_count = [0]
     expected_max = 500
 
+    # Là gì: `on_token` là hàm cục bộ bên trong `_do_chat_task`, chỉ phục vụ bước xử lý nội bộ của nhóm chat AI, hội thoại và phản hồi theo luồng.
+    # Chức năng backend: Hàm xử lý phần việc `on token` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ giao diện ChatAI.
+    # Mối liên hệ: Hàm phối hợp với `update_progress`, `append_stream_chunk` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def on_token(chunk):
         token_count[0] += 1
         c = token_count[0]
@@ -128,6 +143,11 @@ def _do_chat_task(task_id, user_id, session_id, question, prompt_system, prompt_
     }
 
 
+# Là gì: `chat_message_async` là endpoint REST của nhóm chat AI, hội thoại và phản hồi theo luồng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `chat message async` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được giao diện ChatAI sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `strip`, `request.data.get`, `get_accessible_prompts.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def chat_message_async(request):
@@ -187,6 +207,11 @@ def chat_message_async(request):
     }, status=status.HTTP_202_ACCEPTED)
 
 
+# Là gì: `chat_message` là endpoint REST của nhóm chat AI, hội thoại và phản hồi theo luồng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `chat message` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được giao diện ChatAI sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.data.get.strip`, `request.data.get`, `get_accessible_prompts.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def chat_message(request):
@@ -255,6 +280,11 @@ def chat_message(request):
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+# Là gì: `chat_sessions` là endpoint REST của nhóm chat AI, hội thoại và phản hồi theo luồng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `chat sessions` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được giao diện ChatAI sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.data.get`, `soft_delete_chat_sessions`, `ChatSession.objects.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def chat_sessions(request):
@@ -280,6 +310,11 @@ def chat_sessions(request):
     sessions = ChatSession.objects.filter(user=request.user, company=get_user_company(request.user), session_type=ChatSession.SESSION_CHAT)
     return Response(ChatSessionSerializer(sessions, many=True).data)
 
+# Là gì: `chat_session_messages` là endpoint REST của nhóm chat AI, hội thoại và phản hồi theo luồng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `chat session messages` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được giao diện ChatAI sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `get_user_company`, `session.messages.order_by` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def chat_session_messages(request, session_id):
@@ -294,6 +329,11 @@ def chat_session_messages(request, session_id):
     msgs = session.messages.order_by('created_at')
     return Response(ChatMessageSerializer(msgs, many=True).data)
 
+# Là gì: `rag_query_view` là endpoint REST của nhóm chat AI, hội thoại và phản hồi theo luồng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `rag query view` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được giao diện ChatAI sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.data.get.strip`, `request.data.get`, `get_user_company` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def rag_query_view(request):
@@ -351,6 +391,11 @@ def rag_query_view(request):
         'message_id': assistant_message.id,
     })
 
+# Là gì: `rag_sessions` là endpoint REST của nhóm chat AI, hội thoại và phản hồi theo luồng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `rag sessions` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được giao diện ChatAI sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.data.get`, `strip`, `soft_delete_chat_sessions` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def rag_sessions(request):
@@ -387,6 +432,11 @@ def rag_sessions(request):
     sessions = sessions.order_by('-updated_at', '-created_at')
     return Response(ChatSessionSerializer(sessions, many=True).data)
 
+# Là gì: `rag_session_messages` là endpoint REST của nhóm chat AI, hội thoại và phản hồi theo luồng; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `rag session messages` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được giao diện ChatAI sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `get_user_company`, `session.messages.order_by` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def rag_session_messages(request, session_id):

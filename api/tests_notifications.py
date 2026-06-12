@@ -4,9 +4,11 @@ from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.models import ContentType
 from django.core.files.base import ContentFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from accounts.models import Company, CompanyStatus, CompanyUserMembership
 from ai_tasks.models import AITaskProgress, STATUS_COMPLETED
@@ -19,7 +21,9 @@ from documents.models import (
     DocumentMailboxEntry,
     DocumentMailboxThread,
 )
-from prompts.models import PROMPT_STATUS_PENDING, Prompt
+from prompts.models import Prompt
+from sharing.constants import APPROVAL_PENDING_ADMIN, PERMISSION_VIEW, SCOPE_EVERYONE
+from sharing.models import ShareGrant
 from signing.models import (
     PACKET_ACTIVE,
     PROPOSAL_APPROVED,
@@ -169,7 +173,7 @@ class AggregateNotificationApiTests(TestCase):
 
                 count_response = self.client.get(reverse('api:aggregate_notification_unread_count'))
                 self.assertEqual(count_response.status_code, 200, count_response.content)
-                self.assertEqual(count_response.json()['count'], 4)
+                self.assertEqual(count_response.json()['count'], 2)
 
                 mark_template_response = self.client.post(
                     reverse('api:aggregate_notification_mark_read'),
@@ -186,11 +190,11 @@ class AggregateNotificationApiTests(TestCase):
                 self.assertEqual(mark_task_response.status_code, 200, mark_task_response.content)
 
                 count_response = self.client.get(reverse('api:aggregate_notification_unread_count'))
-                self.assertEqual(count_response.json()['count'], 2)
+                self.assertEqual(count_response.json()['count'], 0)
         finally:
             shutil.rmtree(media_root, ignore_errors=True)
 
-    def test_aggregate_notifications_include_pending_approval_queue(self):
+    def test_aggregate_notifications_include_each_pending_share_grant(self):
         company = self._create_company('notify-admin')
         admin = User.objects.create_superuser(
             username='notify-admin',
@@ -201,27 +205,67 @@ class AggregateNotificationApiTests(TestCase):
         self._assign_company(admin, company, role='company_admin')
         self._assign_company(owner, company)
 
-        DocumentTemplate.objects.create(
+        template = DocumentTemplate.objects.create(
             owner=owner,
             title='Mau cho duyet',
             description='',
             content='<p>Noi dung</p>',
             source_type=DocumentTemplate.SOURCE_MANUAL,
-            status='pending',
-            visibility='public',
+            status='approved',
+            visibility='private',
         )
-        Prompt.objects.create(
+        prompt = Prompt.objects.create(
             title='Prompt cho duyet',
             owner=owner,
-            status=PROMPT_STATUS_PENDING,
         )
+        grants = []
+        for resource in (template, prompt):
+            grants.append(
+                ShareGrant.objects.create(
+                    content_type=ContentType.objects.get_for_model(type(resource)),
+                    object_id=resource.pk,
+                    scope=SCOPE_EVERYONE,
+                    permission_level=PERMISSION_VIEW,
+                    approval_status=APPROVAL_PENDING_ADMIN,
+                    created_by=owner,
+                    submitted_by=owner,
+                    submitted_at=timezone.now(),
+                )
+            )
+        for index in range(25):
+            extra_prompt = Prompt.objects.create(
+                title=f'Prompt cho duyet {index}',
+                owner=owner,
+            )
+            grants.append(
+                ShareGrant.objects.create(
+                    content_type=ContentType.objects.get_for_model(Prompt),
+                    object_id=extra_prompt.pk,
+                    scope=SCOPE_EVERYONE,
+                    permission_level=PERMISSION_VIEW,
+                    approval_status=APPROVAL_PENDING_ADMIN,
+                    created_by=owner,
+                    submitted_by=owner,
+                    submitted_at=timezone.now(),
+                )
+            )
 
         self.client.force_login(admin)
         response = self.client.get(reverse('api:aggregate_notification_list'))
         self.assertEqual(response.status_code, 200, response.content)
 
         approval_items = [
-            item for item in response.json() if item['source_type'] == 'approval_queue'
+            item for item in response.json() if item['source_type'] == 'share_approval'
         ]
-        self.assertEqual(len(approval_items), 1)
-        self.assertEqual(approval_items[0]['deeplink'], '/pending-approvals')
+        self.assertEqual(len(approval_items), len(grants))
+        self.assertEqual(
+            {item['source_id'] for item in approval_items},
+            {str(grant.pk) for grant in grants},
+        )
+        self.assertTrue(
+            all(item['deeplink'] == '/sharing/pending' for item in approval_items)
+        )
+
+        inbox_response = self.client.get(reverse('api:shares_pending_inbox'))
+        self.assertEqual(inbox_response.status_code, 200, inbox_response.content)
+        self.assertEqual(inbox_response.json()['count'], len(grants))

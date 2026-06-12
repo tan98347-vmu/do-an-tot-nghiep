@@ -14,10 +14,17 @@ from documents.search_helpers import search_documents
 from prompts.search_helpers import search_prompts
 
 
+# class SearchThrottle là lớp giới hạn tần suất gọi (rate limit).
+# vd: gom các thuộc tính/method liên quan vào một nơi.
 class SearchThrottle(UserRateThrottle):
     rate = '60/min'
 
 
+# Là gì: `global_search` là endpoint REST của nhóm tìm kiếm hợp nhất trên các tài nguyên người dùng được phép truy cập; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tìm kiếm và lọc các bản ghi phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được ô tìm kiếm toàn cục sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `GlobalSearchQuerySerializer`, `serializer.is_valid`, `time.monotonic` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @throttle_classes([SearchThrottle])

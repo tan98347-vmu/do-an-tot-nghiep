@@ -1,8 +1,8 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/signing/signed_pdf_detail_screen_pki.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH CHI TIẾT PDF ĐÃ KÝ ===
+// Xem PDF đã ký (preview auto-reload), tải ('download/'), và panel XÁC MINH chữ ký (_buildVerificationPanel 'verify/': trạng thái safe/tampered/untrusted..., hash _shortHash).
+// - _load 'signed-pdfs/<id>/'. Có link sang hòm thư nếu PDF được forward.
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/signing/signed_pdf_detail_screen_pki.dart.
 import 'dart:async';
 import 'dart:html' as html;
 
@@ -15,24 +15,19 @@ import '../../l10n/app_strings.dart';
 import '../../models/signing.dart';
 import '../../widgets/pdf/web_pdf_frame.dart';
 
-// Mục đích: Widget `SignedPdfDetailScreen` triển khai phần việc `Signed Pdf Detail Screen` trong flutter_frontend/lib/screens/signing/signed_pdf_detail_screen_pki.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn CHI TIẾT PDF ĐÃ KÝ; nhận id.
 
 class SignedPdfDetailScreen extends StatefulWidget {
   final int id;
 
+  // Widget màn CHI TIẾT PDF ĐÃ KÝ; nhận id.
   const SignedPdfDetailScreen({super.key, required this.id});
 
   @override
   State<SignedPdfDetailScreen> createState() => _SignedPdfDetailScreenState();
 }
 
-// Mục đích: Widget `_SignedPdfDetailScreenState` triển khai phần việc `Signed Pdf Detail Screen State` trong flutter_frontend/lib/screens/signing/signed_pdf_detail_screen_pki.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn chi tiết PDF đã ký: xem trước, tải, panel xác minh chữ ký.
 
 class _SignedPdfDetailScreenState extends State<SignedPdfDetailScreen> {
   SignedPdfDocumentItem? _item;
@@ -46,22 +41,14 @@ class _SignedPdfDetailScreenState extends State<SignedPdfDetailScreen> {
   AppStrings get _strings => AppStrings.of(context);
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/signing/signed_pdf_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Mở màn: nạp PDF đã ký (_load) và bật auto-reload preview.
   void initState() {
     super.initState();
     _load();
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/signing/signed_pdf_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Rời màn: dừng auto-reload PDF.
   void dispose() {
     _stopPdfAutoReload();
     final current = _pdfUrl;
@@ -76,6 +63,7 @@ class _SignedPdfDetailScreenState extends State<SignedPdfDetailScreen> {
     _pdfAutoReloadTimer = null;
   }
 
+  // Khởi động lại tự tải lại PDF xem trước.
   void _restartPdfAutoReload() {
     _stopPdfAutoReload();
     _pdfAutoReloadTimer = Timer.periodic(const Duration(seconds: 10), (_) {
@@ -85,10 +73,7 @@ class _SignedPdfDetailScreenState extends State<SignedPdfDetailScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_load` triển khai phần việc `load` trong flutter_frontend/lib/screens/signing/signed_pdf_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tải chi tiết PDF đã ký + kết quả xác minh từ server.
 
   Future<void> _load({bool silent = false}) async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -190,11 +175,7 @@ class _SignedPdfDetailScreenState extends State<SignedPdfDetailScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_download` triển khai phần việc `download` trong flutter_frontend/lib/screens/signing/signed_pdf_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Tải PDF đã ký về máy ('download/').
   Future<void> _download() async {
     final verification = _verification;
     if (verification != null && !verification.isAccessAllowed) {
@@ -237,11 +218,7 @@ class _SignedPdfDetailScreenState extends State<SignedPdfDetailScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_formatDateTime` triển khai phần việc `format Date Time` trong flutter_frontend/lib/screens/signing/signed_pdf_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Định dạng thời điểm để hiển thị.
   String _formatDateTime(String value) {
     if (value.trim().isEmpty) return _strings.pick('Không rõ', 'Unknown');
     try {
@@ -257,22 +234,14 @@ class _SignedPdfDetailScreenState extends State<SignedPdfDetailScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_shortHash` triển khai phần việc `short Hash` trong flutter_frontend/lib/screens/signing/signed_pdf_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Rút gọn hash file để hiển thị (vd 8 ký tự đầu).
   String _shortHash(String value) {
     final trimmed = value.trim();
     if (trimmed.length <= 24) return trimmed;
     return '${trimmed.substring(0, 12)}...${trimmed.substring(trimmed.length - 12)}';
   }
 
-  // Mục đích: Phương thức `_statusTitle` triển khai phần việc `status Title` trong flutter_frontend/lib/screens/signing/signed_pdf_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Tiêu đề trạng thái xác minh.
   String _statusTitle(String status) {
     switch (status) {
       case 'safe':
@@ -290,6 +259,7 @@ class _SignedPdfDetailScreenState extends State<SignedPdfDetailScreen> {
     }
   }
 
+  // Màu chữ theo trạng thái xác minh.
   Color _statusColor(String status) {
     switch (status) {
       case 'safe':
@@ -306,6 +276,7 @@ class _SignedPdfDetailScreenState extends State<SignedPdfDetailScreen> {
     }
   }
 
+  // Màu nền badge theo trạng thái xác minh.
   Color _statusBackground(String status) {
     switch (status) {
       case 'safe':
@@ -322,21 +293,19 @@ class _SignedPdfDetailScreenState extends State<SignedPdfDetailScreen> {
     }
   }
 
+  // Icon cho từng bước trong tiến trình xác minh.
   IconData _stepIcon(String status) {
     return status == 'passed' ? Icons.check_circle : Icons.error_outline;
   }
 
+  // Màu cho từng bước xác minh.
   Color _stepColor(String status) {
     return status == 'passed'
         ? const Color(0xFF16A34A)
         : const Color(0xFFDC2626);
   }
 
-  // Mục đích: Phương thức `_buildVerificationPanel` triển khai phần việc `build Verification Panel` trong flutter_frontend/lib/screens/signing/signed_pdf_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Panel kết quả xác minh tổng thể (safe/tampered/untrusted..., hash) từ 'verify/'.
   Widget _buildVerificationPanel(SignedPdfVerificationItem verification) {
     final status = verification.status;
     final foreground = _statusColor(status);
@@ -442,11 +411,7 @@ class _SignedPdfDetailScreenState extends State<SignedPdfDetailScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_buildTimelinePanel` triển khai phần việc `build Timeline Panel` trong flutter_frontend/lib/screens/signing/signed_pdf_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Panel dòng thời gian các chữ ký trên tài liệu.
   Widget _buildTimelinePanel(SignedPdfDocumentItem item) {
     if (item.signingEvents.isEmpty) {
       return Container(
@@ -535,11 +500,7 @@ class _SignedPdfDetailScreenState extends State<SignedPdfDetailScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_buildVerifySignerPanel` triển khai phần việc `build Verify Signer Panel` trong flutter_frontend/lib/screens/signing/signed_pdf_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Panel chi tiết người ký + chứng thư đã xác minh.
   Widget _buildVerifySignerPanel(SignedPdfVerificationItem verification) {
     if (verification.signerReports.isEmpty) {
       return const SizedBox.shrink();
@@ -617,11 +578,7 @@ class _SignedPdfDetailScreenState extends State<SignedPdfDetailScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_buildPreviewArea` triển khai phần việc `build Preview Area` trong flutter_frontend/lib/screens/signing/signed_pdf_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Khung xem trước PDF (auto-reload).
   Widget _buildPreviewArea() {
     if (_pdfUrl != null) {
       return Padding(
@@ -717,11 +674,7 @@ class _SignedPdfDetailScreenState extends State<SignedPdfDetailScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/signing/signed_pdf_detail_screen_pki.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Dựng màn: xem trước PDF + panel xác minh/người ký/timeline + nút tải.
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
     final item = _item;

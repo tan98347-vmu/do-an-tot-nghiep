@@ -1,3 +1,7 @@
+// === MÀN HÌNH KHÁM PHÁ / TÌM VĂN BẢN ĐỂ TÓM TẮT ===
+// Tìm văn bản để tóm tắt (documentSummaryDiscoveryProvider): gõ tìm (_scheduleSearchUpdate) + gợi ý (_fetchSuggestions), lọc theo trạng thái/phạm vi (_statusLabel/_visibilityLabel).
+// Chọn -> mở /summaries/<id> (workspace tóm tắt) hoặc /documents/<id>.
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';

@@ -33,6 +33,8 @@ _PROGRESS_LOG_LOCK = threading.Lock()
 _PROGRESS_LOG_STATE: dict[int, tuple[int, str, str]] = {}
 
 
+# def _remember_progress_snapshot lưu mốc tiến độ gần nhất (làm tròn 10%) trong bộ nhớ để chỉ ghi log khi tiến độ thực sự đổi (giảm spam log).
+# vd: 71% rồi 79% (cùng nhóm 70) -> không log lại.
 def _remember_progress_snapshot(record_id: int, percent: int, stage: str, detail: str) -> bool:
     snapshot = (
         max(0, min(100, int(percent))) // 10,
@@ -45,11 +47,15 @@ def _remember_progress_snapshot(record_id: int, percent: int, stage: str, detail
     return previous != snapshot
 
 
+# def _clear_progress_snapshot xóa mốc tiến độ in-memory của 1 backup khi build kết thúc.
+# vd: gọi ở finally sau khi build xong hoặc lỗi.
 def _clear_progress_snapshot(record_id: int) -> None:
     with _PROGRESS_LOG_LOCK:
         _PROGRESS_LOG_STATE.pop(record_id, None)
 
 
+# def _user_signing_key_pem lấy private key PEM của user (nếu có UserSigningCredential active) để ký file backup; lỗi/không có -> None.
+# vd: admin có chứng thư active -> trả PEM để ký gói backup.
 def _user_signing_key_pem(user) -> bytes | None:
     """Tra ve PEM private key (bytes) cua user neu user co UserSigningCredential active."""
     if user is None:
@@ -70,6 +76,8 @@ def _user_signing_key_pem(user) -> bytes | None:
         return None
 
 
+# def _sign_if_possible ký file plaintext: ưu tiên chữ ký của signer_user, fallback env BACKUP_SIGNER_PRIVATE_KEY_PEM; trả (đường dẫn .sig, trạng thái 'signed'/'unsigned'); lỗi -> unsigned.
+# vd: có khóa ký -> sinh plaintext.zip.sig, status='signed'.
 def _sign_if_possible(plain_path: Path, signer_user=None) -> tuple[Path | None, str]:
     """Ky file plaintext.
 
@@ -94,6 +102,8 @@ def _sign_if_possible(plain_path: Path, signer_user=None) -> tuple[Path | None, 
         return None, SIGNATURE_STATUS_UNSIGNED
 
 
+# def _save_progress cập nhật % + bước + chi tiết vào CompanyBackup trong DB (gọi từ background thread); chỉ ghi log khi mốc tiến độ đổi.
+# vd: _save_progress(id, 80, 'Ma hoa', '...') -> cập nhật progress trong DB.
 def _save_progress(record_id: int, percent: int, stage: str, detail: str) -> None:
     """Cap nhat tien trinh vao DB. Goi tu background thread -> can dong DB conn."""
     try:
@@ -114,6 +124,8 @@ def _save_progress(record_id: int, percent: int, stage: str, detail: str) -> Non
         logger.exception('[company_backups] update progress failed')
 
 
+# def _build_pipeline pipeline cốt lõi tạo backup: dựng zip plaintext -> ký -> mã hóa (password admin / env master key / hoặc giữ plaintext legacy nếu không có khóa) -> dọn file tạm; trả (size, manifest, encryption_meta, signature_path, signature_status).
+# vd: có password -> file cuối là ciphertext AES-GCM kèm .sig.
 def _build_pipeline(
     *,
     company,
@@ -226,6 +238,8 @@ def _build_pipeline(
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
+# def _build_in_thread chạy _build_pipeline trong background thread cho 1 record: cập nhật status ready + manifest/encryption/signature khi xong; lỗi -> status failed và xóa file dở; luôn đóng DB conn cũ.
+# vd: tạo backup async -> thread này chạy nền, frontend poll tiến độ.
 def _build_in_thread(
     record_id: int,
     company_pk: int,
@@ -254,6 +268,8 @@ def _build_in_thread(
         media_root = Path(getattr(dj_settings, 'MEDIA_ROOT', '') or '.').resolve()
         full_path = media_root / record.file_path
 
+        # def _cb để cb (service nghiệp vụ).
+        # vd: nhận đầu vào -> trả kết quả đã xử lý.
         def _cb(percent, stage, detail):
             _save_progress(record_id, percent, stage, detail)
 
@@ -324,6 +340,8 @@ def _build_in_thread(
         close_old_connections()
 
 
+# def create_backup tạo 1 bản backup: tạo record (status creating) rồi build — mặc định async (trả record ngay, build chạy nền) hoặc sync (chờ xong, dùng cho auto-backup/test). password -> mã hóa gói; signer_user -> ký gói.
+# vd: create_backup(company=A, components=[...], kind='manual', password='x') -> record creating, build nền tạo gói mã hóa.
 def create_backup(
     *,
     company,
@@ -463,6 +481,8 @@ def create_backup(
         _clear_progress_snapshot(record.pk)
 
 
+# def delete_backup_file xóa file zip + file chữ ký (.sig) của 1 backup khỏi disk (dùng khi xóa backup hoặc dọn retention).
+# vd: xóa backup #5 -> xóa cả file .zip lẫn .zip.sig.
 def delete_backup_file(record: CompanyBackup) -> None:
     media_root = Path(getattr(dj_settings, 'MEDIA_ROOT', '') or '.')
     if record.file_path:
@@ -493,6 +513,8 @@ def delete_backup_file(record: CompanyBackup) -> None:
                 pass
 
 
+# def enforce_retention xóa các backup auto cũ vượt số lượng giữ lại (retention_count), chỉ giữ N bản mới nhất; trả số bản đã xóa.
+# vd: retention=12, có 15 bản auto -> xóa 3 bản cũ nhất.
 def enforce_retention(company, retention_count: int, kind: str = KIND_AUTO) -> int:
     """Xoa cac ban backup auto cu vuot retention. Tra ve so ban da xoa."""
     if not retention_count or retention_count <= 0:

@@ -1,3 +1,6 @@
+// === THẺ KẾT QUẢ KIỂM TRA TUÂN THỦ ===
+// Hiển thị kết quả một lần kiểm: đạt/không đạt + danh sách mục thiếu (requirement + giải thích) — widget trình bày cho compliance_check_screen.
+
 // r2/M4 — Card hien thi ket qua compliance check.
 //   - Pass: banner xanh + text CHINH XAC (xem yeu cau goc).
 //   - Fail: danh sach requirement chua dat.

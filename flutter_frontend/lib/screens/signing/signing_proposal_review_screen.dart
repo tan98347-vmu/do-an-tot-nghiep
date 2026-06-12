@@ -1,3 +1,6 @@
+// === MÀN HÌNH DUYỆT ĐỀ XUẤT KÝ (HR/được ủy quyền) ===
+// Liệt kê đề xuất ký đang chờ duyệt ('proposals/pending-hr/', _pendingSigningProposalProvider); mỗi _ProposalCard cho Duyệt (_approve 'approve/') hoặc Từ chối (_reject 'reject/').
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,11 +25,13 @@ final _pendingSigningProposalProvider =
 class SigningProposalReviewScreen extends ConsumerWidget {
   final int? initialProposalId;
 
+  // Widget màn DUYỆT ĐỀ XUẤT KÝ (HR/được ủy quyền).
   const SigningProposalReviewScreen({
     super.key,
     this.initialProposalId,
   });
 
+  // Dựng danh sách đề xuất ký đang chờ duyệt (_pendingSigningProposalProvider); mỗi đề xuất là 1 _ProposalCard.
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final proposalsAsync = ref.watch(_pendingSigningProposalProvider);
@@ -81,6 +86,7 @@ class SigningProposalReviewScreen extends ConsumerWidget {
     );
   }
 
+  // Duyệt 1 đề xuất ký -> 'approve/' (khởi tạo quy trình ký).
   Future<void> _approve(
     BuildContext context,
     WidgetRef ref,
@@ -90,6 +96,7 @@ class SigningProposalReviewScreen extends ConsumerWidget {
       await ApiClient().dio.post(
         'signing/proposals/${proposal.id}/approve/',
       );
+      // Làm mới danh sách đề xuất sau khi duyệt/từ chối.
       _invalidate(ref);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -107,6 +114,7 @@ class SigningProposalReviewScreen extends ConsumerWidget {
     }
   }
 
+  // Từ chối 1 đề xuất ký (hỏi lý do) -> 'reject/'.
   Future<void> _reject(
     BuildContext context,
     WidgetRef ref,

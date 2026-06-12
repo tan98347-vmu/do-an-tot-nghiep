@@ -1,8 +1,7 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/assistant/assistant_audio_library_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH THƯ VIỆN AUDIO TRỢ LÝ (VoiceAI) ===
+// Liệt kê các bản ghi âm + transcript của các lượt VoiceAI (_load 'assistant/audio/'); tải xuống (_downloadAudio '.../download/'); phát/dừng (_togglePlayback).
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/assistant/assistant_audio_library_screen.dart.
 import 'dart:html' as html;
 
 import 'package:dio/dio.dart';
@@ -12,22 +11,17 @@ import '../../core/api_client.dart';
 import '../../models/chat.dart';
 import '../../widgets/tasks/task_done_popup.dart';
 
-// Mục đích: Widget `AssistantAudioLibraryScreen` triển khai phần việc `Assistant Audio Library Screen` trong flutter_frontend/lib/screens/assistant/assistant_audio_library_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn THƯ VIỆN AUDIO TRỢ LÝ (VoiceAI).
 
 class AssistantAudioLibraryScreen extends StatefulWidget {
+  // Widget màn THƯ VIỆN AUDIO TRỢ LÝ (VoiceAI).
   const AssistantAudioLibraryScreen({super.key});
 
   @override
   State<AssistantAudioLibraryScreen> createState() => _AssistantAudioLibraryScreenState();
 }
 
-// Mục đích: Widget `_AssistantAudioLibraryScreenState` triển khai phần việc `Assistant Audio Library Screen State` trong flutter_frontend/lib/screens/assistant/assistant_audio_library_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn thư viện audio: tải bản ghi, phát/tải về.
 
 class _AssistantAudioLibraryScreenState extends State<AssistantAudioLibraryScreen> {
   bool _loading = true;
@@ -37,20 +31,13 @@ class _AssistantAudioLibraryScreenState extends State<AssistantAudioLibraryScree
   int? _playingId;
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/assistant/assistant_audio_library_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Mở màn: nạp danh sách bản ghi audio (_load 'assistant/audio/').
   void initState() {
     super.initState();
     _load();
   }
 
-  // Mục đích: Phương thức `_load` triển khai phần việc `load` trong flutter_frontend/lib/screens/assistant/assistant_audio_library_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tải danh sách bản ghi audio từ server ('assistant/audio/').
 
   Future<void> _load() async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -92,11 +79,7 @@ class _AssistantAudioLibraryScreenState extends State<AssistantAudioLibraryScree
     }
   }
 
-  // Mục đích: Phương thức `_downloadAudio` triển khai phần việc `download Audio` trong flutter_frontend/lib/screens/assistant/assistant_audio_library_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Tải file audio của 1 bản ghi về máy.
   Future<void> _downloadAudio(ChatAudioAttachment item) async {
     try {
       // Gọi API hoặc tác vụ bất đồng bộ rồi chờ kết quả trước khi cập nhật giao diện.
@@ -120,11 +103,7 @@ class _AssistantAudioLibraryScreenState extends State<AssistantAudioLibraryScree
     }
   }
 
-  // Mục đích: Phương thức `_togglePlayback` triển khai phần việc `toggle Playback` trong flutter_frontend/lib/screens/assistant/assistant_audio_library_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Phát / tạm dừng nghe lại 1 bản ghi audio.
   Future<void> _togglePlayback(ChatAudioAttachment item) async {
     try {
       if (_playingId == item.id && _player != null) {
@@ -161,11 +140,7 @@ class _AssistantAudioLibraryScreenState extends State<AssistantAudioLibraryScree
     }
   }
 
-  // Mục đích: Phương thức `_formatDateTime` triển khai phần việc `format Date Time` trong flutter_frontend/lib/screens/assistant/assistant_audio_library_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Định dạng thời điểm tạo bản ghi để hiển thị.
   String _formatDateTime(String value) {
     if (value.trim().isEmpty) return '—';
     try {
@@ -181,11 +156,7 @@ class _AssistantAudioLibraryScreenState extends State<AssistantAudioLibraryScree
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/assistant/assistant_audio_library_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Rời màn: dừng phát và giải phóng audio player.
   void dispose() {
     _player?.pause();
     _player = null;
@@ -193,11 +164,7 @@ class _AssistantAudioLibraryScreenState extends State<AssistantAudioLibraryScree
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/assistant/assistant_audio_library_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Dựng danh sách bản ghi audio (tiêu đề, thời lượng, nút phát/tải).
   Widget build(BuildContext context) {
     // Dựng khung màn hình chính để chứa app bar, body, action và các vùng giao diện khác.
 

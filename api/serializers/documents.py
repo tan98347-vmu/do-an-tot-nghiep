@@ -29,6 +29,8 @@ from signing.assistant_quick_sign import (
 )
 
 
+# def _coerce_list_payload để coerce list payload (trong serializer).
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _coerce_list_payload(raw_value):
     if raw_value in (None, '', []):
         return []
@@ -60,6 +62,8 @@ def _coerce_list_payload(raw_value):
     return [raw_value]
 
 
+# def _normalize_document_tags để chuẩn hóa document tags (trong serializer).
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _normalize_document_tags(raw_tags):
     normalized = []
     seen = set()
@@ -75,6 +79,8 @@ def _normalize_document_tags(raw_tags):
     return normalized
 
 
+# def _document_permission_for_user để document permission for user (trong serializer).
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _document_permission_for_user(user, document) -> str | None:
     if not user or not user.is_authenticated:
         return None
@@ -92,6 +98,8 @@ def _document_permission_for_user(user, document) -> str | None:
     peer_level = get_peer_permission_level(user, document)
     return max_peer_permission_level(base_level, peer_level) or base_level
 
+# class DocumentVersionSerializer là serializer định nghĩa dữ liệu vào/ra (DocumentVersion).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class DocumentVersionSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -104,6 +112,8 @@ class DocumentVersionSerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -119,6 +129,8 @@ class DocumentVersionSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_created_by_name để lấy created by name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_created_by_name(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -131,6 +143,8 @@ class DocumentVersionSerializer(serializers.ModelSerializer):
             return obj.created_by.get_full_name() or obj.created_by.username
         return ''
 
+# class DocumentListSerializer là serializer định nghĩa dữ liệu vào/ra (DocumentList).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class DocumentListSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -158,9 +172,13 @@ class DocumentListSerializer(serializers.ModelSerializer):
     peer_audience_count = serializers.SerializerMethodField()
     is_peer_shared_to_me = serializers.SerializerMethodField()
 
+    # def get_peer_audience_count để lấy peer audience count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_peer_audience_count(self, obj):
         return obj.audience_members.count() if hasattr(obj, 'audience_members') else 0
 
+    # def get_is_peer_shared_to_me để lấy is peer shared to me (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_is_peer_shared_to_me(self, obj):
         request = self.context.get('request') if hasattr(self, 'context') else None
         u = getattr(request, 'user', None) if request else None
@@ -168,15 +186,19 @@ class DocumentListSerializer(serializers.ModelSerializer):
             return False
         return obj.audience_members.filter(user=u).exists()
 
+    # def get_my_permission để lấy my permission (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_my_permission(self, obj):
         request = self.context.get('request') if hasattr(self, 'context') else None
         user = getattr(request, 'user', None) if request else None
         return _document_permission_for_user(user, obj)
 
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         model = Document
-        fields = ('id', 'title', 'doc_number', 'status', 'status_display', 'visibility',
+        fields = ('id', 'record_code', 'title', 'doc_number', 'status', 'status_display', 'visibility',
                   'share_status', 'owner_id', 'owner_name', 'group_id', 'group_name',
                   'template_title', 'department_name', 'category_name', 'notes', 'tags', 'source_type', 'is_archived',
                   'version_number', 'version_count',
@@ -186,6 +208,8 @@ class DocumentListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_owner_name để lấy owner name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_owner_name(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -198,6 +222,8 @@ class DocumentListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_group_id để lấy group id (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_group_id(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -210,6 +236,8 @@ class DocumentListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_template_title để lấy template title (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_template_title(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -220,17 +248,25 @@ class DocumentListSerializer(serializers.ModelSerializer):
         """
         return obj.template.title if obj.template else None
 
+    # def get_department_name để lấy department name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_department_name(self, obj):
         return obj.department.name if obj.department else None
 
+    # def get_category_name để lấy category name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_category_name(self, obj):
         return obj.category.name if obj.category else None
 
+    # def get_group_name để lấy group name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_group_name(self, obj):
         return obj.group.name if obj.group else None
 
     
 
+    # def get_status_display để lấy status display (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_status_display(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -243,6 +279,8 @@ class DocumentListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_version_count để lấy version count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_version_count(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -255,6 +293,8 @@ class DocumentListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_is_favorite để lấy is favorite (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_is_favorite(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -270,6 +310,8 @@ class DocumentListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_can_edit để lấy can edit (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_can_edit(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -285,6 +327,8 @@ class DocumentListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_can_delete để lấy can delete (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_can_delete(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -300,6 +344,8 @@ class DocumentListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_signing_status để lấy signing status (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_signing_status(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -315,6 +361,8 @@ class DocumentListSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_can_forward_now để lấy can forward now (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_can_forward_now(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -325,6 +373,8 @@ class DocumentListSerializer(serializers.ModelSerializer):
         """
         return self.get_signing_status(obj) == 'signed'
 
+# class DocumentDetailSerializer là serializer định nghĩa dữ liệu vào/ra (DocumentDetail).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class DocumentDetailSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -365,9 +415,13 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
     peer_audience_count = serializers.SerializerMethodField()
     is_peer_shared_to_me = serializers.SerializerMethodField()
 
+    # def get_peer_audience_count để lấy peer audience count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_peer_audience_count(self, obj):
         return obj.audience_members.count() if hasattr(obj, 'audience_members') else 0
 
+    # def get_is_peer_shared_to_me để lấy is peer shared to me (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_is_peer_shared_to_me(self, obj):
         request = self.context.get('request') if hasattr(self, 'context') else None
         u = getattr(request, 'user', None) if request else None
@@ -375,12 +429,16 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
             return False
         return obj.audience_members.filter(user=u).exists()
 
+    # def get_my_permission để lấy my permission (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_my_permission(self, obj):
         request = self.context.get('request') if hasattr(self, 'context') else None
         user = getattr(request, 'user', None) if request else None
         return _document_permission_for_user(user, obj)
 
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -390,7 +448,7 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
         Tac dung: To chuc logic lien quan toi `Meta` thanh mot don vi ro rang de nhung ham khac goi lai de hon.
         """
         model = Document
-        fields = ('id', 'title', 'content', 'doc_number', 'status', 'visibility',
+        fields = ('id', 'record_code', 'title', 'content', 'doc_number', 'status', 'visibility',
                   'share_status', 'owner', 'owner_name', 'template', 'template_title',
                   'department', 'department_name', 'category', 'category_name',
                   'notes', 'tags', 'is_archived', 'archived_at',
@@ -406,8 +464,10 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
                   'peer_share_status', 'peer_share_approver_note',
                   'peer_audience_count', 'is_peer_shared_to_me',
                   'created_at', 'updated_at')
-        read_only_fields = ('id', 'owner', 'doc_number', 'is_archived', 'archived_at', 'created_at', 'updated_at')
+        read_only_fields = ('id', 'record_code', 'owner', 'doc_number', 'is_archived', 'archived_at', 'created_at', 'updated_at')
 
+    # def _lock_state để lock state (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def _lock_state(self, obj):
         cache = getattr(self, '_manual_edit_lock_cache', None)
         if cache is None:
@@ -423,6 +483,8 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_owner_name để lấy owner name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_owner_name(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -433,12 +495,18 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
         """
         return obj.owner.get_full_name() or obj.owner.username
 
+    # def get_prompt_id để lấy prompt id (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_prompt_id(self, obj):
         return obj.prompt_id
 
+    # def get_prompt_title để lấy prompt title (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_prompt_title(self, obj):
         return obj.prompt.title if obj.prompt else None
 
+    # def get_applied_prompt để lấy applied prompt (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_applied_prompt(self, obj):
         if obj.prompt_id and obj.prompt:
             return {
@@ -453,12 +521,16 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
             }
         return None
 
+    # def get_applied_user_rules để lấy applied user rules (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_applied_user_rules(self, obj):
         snap = obj.applied_prompt_snapshot or {}
         if isinstance(snap, dict):
             return (snap.get('raw_user_text') or '').strip()
         return ''
 
+    # def get_template_title để lấy template title (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_template_title(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -469,17 +541,25 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
         """
         return obj.template.title if obj.template else None
 
+    # def get_department_name để lấy department name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_department_name(self, obj):
         return obj.department.name if obj.department else None
 
+    # def get_category_name để lấy category name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_category_name(self, obj):
         return obj.category.name if obj.category else None
 
+    # def get_group_name để lấy group name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_group_name(self, obj):
         return obj.group.name if obj.group else None
 
     
 
+    # def get_has_file để lấy has file (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_has_file(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -492,6 +572,8 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_version_count để lấy version count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_version_count(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -504,6 +586,8 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_is_favorite để lấy is favorite (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_is_favorite(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -519,6 +603,8 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_can_edit để lấy can edit (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_can_edit(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -534,6 +620,8 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_can_delete để lấy can delete (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_can_delete(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -549,6 +637,8 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_mailbox_thread_count để lấy mailbox thread count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_mailbox_thread_count(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -561,6 +651,8 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_signing_status để lấy signing status (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_signing_status(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -576,6 +668,8 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_can_forward_now để lấy can forward now (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_can_forward_now(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -586,6 +680,8 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
         """
         return self.get_signing_status(obj) == 'signed'
 
+    # def get_assistant_action để lấy assistant action (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_assistant_action(self, obj):
         request = self.context.get('request')
         user = getattr(request, 'user', None)
@@ -600,6 +696,8 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
             pass
         return build_quick_sign_plan_payload(plan)
 
+    # def get_can_manual_edit để lấy can manual edit (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_can_manual_edit(self, obj):
         request = self.context.get('request')
         user = getattr(request, 'user', None)
@@ -610,24 +708,38 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
             return can_edit_document(user, obj)
         return lock_state.code == 'manual_edit_active' and lock_state.can_resume_manual_edit
 
+    # def get_can_resume_manual_edit để lấy can resume manual edit (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_can_resume_manual_edit(self, obj):
         return self._lock_state(obj).can_resume_manual_edit
 
+    # def get_manual_edit_active để lấy manual edit active (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_manual_edit_active(self, obj):
         return self._lock_state(obj).manual_edit_active
 
+    # def get_manual_edit_session_id để lấy manual edit session id (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_manual_edit_session_id(self, obj):
         return self._lock_state(obj).manual_edit_session_id
 
+    # def get_manual_edit_session_status để lấy manual edit session status (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_manual_edit_session_status(self, obj):
         return self._lock_state(obj).manual_edit_session_status
 
+    # def get_manual_edit_lock_message để lấy manual edit lock message (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_manual_edit_lock_message(self, obj):
         return self._lock_state(obj).detail
 
+    # def get_manual_edit_locked_by_name để lấy manual edit locked by name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_manual_edit_locked_by_name(self, obj):
         return self._lock_state(obj).manual_edit_locked_by_name
 
+# class DocumentWriteSerializer là serializer định nghĩa dữ liệu vào/ra (DocumentWrite).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class DocumentWriteSerializer(serializers.ModelSerializer):
     
 
@@ -638,11 +750,15 @@ class DocumentWriteSerializer(serializers.ModelSerializer):
     Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `api/urls.py`, `documents.models`, `documents.mailbox_services`, `documents.pdf_preview`, `accounts.permissions`. Nam trong pham vi module hien tai.
     Tac dung: Giam viec lap rule chuyen doi du lieu giua request, response va model lien quan toi `DocumentWriteSerializer`.
     """
+    # def to_internal_value để to internal value (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def to_internal_value(self, data):
         original = data
         if hasattr(data, 'copy'):
             data = data.copy()
 
+        # def _set_field_value để thiết lập field value (trong serializer).
+        # vd: nhận đầu vào -> trả kết quả đã xử lý.
         def _set_field_value(target, field_name, value):
             if hasattr(target, 'setlist') and isinstance(value, list):
                 target.setlist(field_name, value)
@@ -680,6 +796,8 @@ class DocumentWriteSerializer(serializers.ModelSerializer):
             _set_field_value(data, 'tags', _coerce_list_payload(raw_tags))
         return super().to_internal_value(data)
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -691,6 +809,8 @@ class DocumentWriteSerializer(serializers.ModelSerializer):
         model = Document
         fields = ('title', 'content', 'department', 'category', 'notes', 'status', 'tags')
 
+    # def validate để kiểm tra hợp lệ (trong serializer).
+    # vd: dữ liệu sai -> báo lỗi/False; hợp lệ -> True hoặc giá trị đã chuẩn hóa.
     def validate(self, attrs):
         request = self.context.get('request')
         company = get_user_company(getattr(request, 'user', None))
@@ -706,6 +826,8 @@ class DocumentWriteSerializer(serializers.ModelSerializer):
 
     
 
+    # def update để cập nhật (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def update(self, instance, validated_data):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -719,6 +841,8 @@ class DocumentWriteSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+# class DocumentMailboxEntrySerializer là serializer định nghĩa dữ liệu vào/ra (DocumentMailboxEntry).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class DocumentMailboxEntrySerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -734,6 +858,8 @@ class DocumentMailboxEntrySerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -763,6 +889,8 @@ class DocumentMailboxEntrySerializer(serializers.ModelSerializer):
 
     
 
+    # def get_forwarded_by_name để lấy forwarded by name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_forwarded_by_name(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -775,6 +903,8 @@ class DocumentMailboxEntrySerializer(serializers.ModelSerializer):
 
     
 
+    # def get_forwarded_to_name để lấy forwarded to name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_forwarded_to_name(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -787,6 +917,8 @@ class DocumentMailboxEntrySerializer(serializers.ModelSerializer):
 
     
 
+    # def get_actioned_by_name để lấy actioned by name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_actioned_by_name(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -799,6 +931,8 @@ class DocumentMailboxEntrySerializer(serializers.ModelSerializer):
             return obj.actioned_by.get_full_name() or obj.actioned_by.username
         return ''
 
+# class DocumentMailboxThreadSerializer là serializer định nghĩa dữ liệu vào/ra (DocumentMailboxThread).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class DocumentMailboxThreadSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -818,6 +952,8 @@ class DocumentMailboxThreadSerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -851,6 +987,8 @@ class DocumentMailboxThreadSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_created_by_name để lấy created by name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_created_by_name(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -863,6 +1001,8 @@ class DocumentMailboxThreadSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_last_action_by_name để lấy last action by name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_last_action_by_name(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -877,6 +1017,8 @@ class DocumentMailboxThreadSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_latest_sender_name để lấy latest sender name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_latest_sender_name(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -892,6 +1034,8 @@ class DocumentMailboxThreadSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_latest_terminal_actor_name để lấy latest terminal actor name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_latest_terminal_actor_name(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -906,6 +1050,8 @@ class DocumentMailboxThreadSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_branch_count để lấy branch count (trong serializer).
+    # vd: nhận đầu vào -> trả kết quả đã xử lý.
     def get_branch_count(self, obj):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.

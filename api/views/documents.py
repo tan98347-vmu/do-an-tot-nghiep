@@ -41,7 +41,11 @@ from documents.ai_summary import (
     DocumentSummaryUnavailable,
     summarize_document_content,
 )
-from documents.runtime_helpers import _ascii_safe_name, _extract_text_from_docx
+from documents.runtime_helpers import (
+    _ascii_safe_name,
+    _extract_text_from_docx,
+    resolve_document_company_for_generation,
+)
 from documents.edit_lock_state import get_document_edit_lock_state
 from accounts.permissions import (
     can_delete_document,
@@ -53,6 +57,13 @@ from accounts.permissions import (
 )
 from accounts.runtime_guard import CompanyRuntimeGuard
 from accounts.tenancy import filter_queryset_by_current_company, get_user_company
+from api.security.prompt_guard import (
+    VERDICT_BLOCK,
+    prompt_check_expected_payload,
+    run_full_pipeline,
+    verify_prompt_check_token,
+    wrap_user_rules,
+)
 from ..serializers.documents import (
     DocumentDetailSerializer,
     DocumentListSerializer,
@@ -65,6 +76,64 @@ from ..trash_services import mark_deleted
 _preview_logger = logging.getLogger('documents.preview_pdf')
 _summary_logger = logging.getLogger('documents.ai_summary')
 
+
+# Là gì: `_prepare_document_summary_user_rules` là helper nội bộ của module `documents.py`, phục vụ nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản.
+# Chức năng backend: Hàm tạo hoặc xử lý nội dung tóm tắt; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình văn bản, chi tiết văn bản và hộp thư.
+# Mối liên hệ: Hàm phối hợp với `str.strip`, `request.data.get`, `prompt_check_expected_payload` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
+def _prepare_document_summary_user_rules(request, document):
+    raw_rules = str(request.data.get('user_extra_rules') or '').strip()
+    if not raw_rules:
+        return '', None
+
+    expected_check = prompt_check_expected_payload(
+        user_id=request.user.pk,
+        scope='summary',
+        context='document_summary',
+        prompt_role='extra_instruction',
+        prompt_text=raw_rules,
+        target_id=document.pk,
+    )
+    check_ok, check_why = verify_prompt_check_token(
+        str(request.data.get('prompt_check_token') or '').strip(),
+        expected_check,
+    )
+    if not check_ok:
+        return '', Response(
+            {
+                'detail': (
+                    'Cần bấm Check prompt lại trước khi tóm tắt '
+                    f'({check_why}).'
+                ),
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    guard_result, _audit = run_full_pipeline(
+        raw_rules,
+        request.user,
+        include_llm=True,
+    )
+    if guard_result.verdict == VERDICT_BLOCK:
+        return '', Response(
+            {
+                'detail': (
+                    guard_result.reason
+                    or 'Prompt tùy chỉnh không đạt yêu cầu an toàn.'
+                ),
+                'flags': guard_result.flags,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    safe_block, _nonce = wrap_user_rules(guard_result.sanitized_text)
+    return safe_block, None
+
+# Là gì: `_document_edit_locked_response` là helper nội bộ của module `documents.py`, phục vụ nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản.
+# Chức năng backend: Hàm xử lý phần việc `document edit locked response` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình văn bản, chi tiết văn bản và hộp thư.
+# Mối liên hệ: Hàm phối hợp với `get_document_edit_lock_state` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 def _document_edit_locked_response(document):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -78,6 +147,11 @@ def _document_edit_locked_response(document):
         status=status.HTTP_409_CONFLICT,
     )
 
+# Là gì: `_normalize_search_terms` là helper nội bộ của module `documents.py`, phục vụ nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản.
+# Chức năng backend: Hàm tìm kiếm và lọc các bản ghi phù hợp, đồng thời chuẩn hóa dữ liệu về định dạng thống nhất; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình văn bản, chi tiết văn bản và hộp thư.
+# Mối liên hệ: Hàm phối hợp với `re.sub`, `str.strip`, `re.split` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _normalize_search_terms(raw_query):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -91,6 +165,11 @@ def _normalize_search_terms(raw_query):
     normalized = re.sub(r'[#,:;]+', ' ', str(raw_query or '').strip())
     return [term for term in re.split(r'\s+', normalized) if term]
 
+# Là gì: `_build_document_search_query` là helper nội bộ của module `documents.py`, phục vụ nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản.
+# Chức năng backend: Hàm tìm kiếm và lọc các bản ghi phù hợp, đồng thời tổng hợp dữ liệu đầu vào thành cấu trúc phục vụ bước tiếp theo; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình văn bản, chi tiết văn bản và hộp thư.
+# Mối liên hệ: Hàm phối hợp với `str.strip`, `Q`, `_field_q` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _build_document_search_query(raw_query):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -100,6 +179,7 @@ def _build_document_search_query(raw_query):
     Tac dung: Co lap rieng buoc dung payload hoac cau truc du lieu trung gian de cac endpoint cung file tai su dung dung mot quy tac.
     """
     from django.db.models import Q
+    from accounts.record_codes import DOCUMENT_RECORD_PREFIX, parse_record_code
 
     fields = (
         'title',
@@ -124,6 +204,11 @@ def _build_document_search_query(raw_query):
 
     
 
+    # Là gì: `_field_q` là hàm cục bộ bên trong `_build_document_search_query`, chỉ phục vụ bước xử lý nội bộ của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản.
+    # Chức năng backend: Hàm xử lý phần việc `field q` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình văn bản, chi tiết văn bản và hộp thư.
+    # Mối liên hệ: Hàm phối hợp với `Q` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def _field_q(value):
         """
         Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -138,6 +223,9 @@ def _build_document_search_query(raw_query):
         return query
 
     combined = _field_q(raw)
+    record_id = parse_record_code(raw, DOCUMENT_RECORD_PREFIX)
+    if record_id is not None:
+        combined |= Q(pk=record_id)
     terms = _normalize_search_terms(raw)
     if len(terms) <= 1:
         return combined
@@ -148,6 +236,11 @@ def _build_document_search_query(raw_query):
         token_query = term_query if not token_query.children else token_query & term_query
     return combined | token_query
 
+# Là gì: `document_list_create` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp, đồng thời kiểm tra đầu vào và tạo dữ liệu mới; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.GET.get`, `request.GET.get.strip`, `qs.select_related` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def document_list_create(request):
@@ -246,6 +339,11 @@ def document_list_create(request):
         )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# Là gì: `document_detail_view` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_document_detail_queryset`, `get_object_or_404`, `CompanyRuntimeGuard.assert_file_field` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def document_detail_view(request, pk):
@@ -308,6 +406,11 @@ def document_detail_view(request, pk):
         return Response(DocumentDetailSerializer(doc, context={'request': request}).data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# Là gì: `document_download` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm chuẩn bị và trả tệp cho phía client tải xuống; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_document_detail_queryset`, `get_object_or_404`, `CompanyRuntimeGuard.assert_file_field` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect lên tệp hoặc storage; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def document_download(request, pk):
@@ -340,6 +443,11 @@ def document_download(request, pk):
     return response
 
 
+# Là gì: `document_summarize` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tạo hoặc xử lý nội dung tóm tắt; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_document_detail_queryset`, `get_object_or_404`, `CompanyRuntimeGuard.assert_file_field` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_summarize(request, pk):
@@ -367,8 +475,16 @@ def document_summarize(request, pk):
             'style': request.data.get('style'),
             'max_words': request.data.get('max_words'),
         }
+    safe_block, prompt_error = _prepare_document_summary_user_rules(request, doc)
+    if prompt_error is not None:
+        return prompt_error
     try:
-        payload = summarize_document_content(doc, user=request.user, options=raw_options)
+        payload = summarize_document_content(
+            doc,
+            user=request.user,
+            options=raw_options,
+            safe_user_rules_block=safe_block,
+        )
     except DocumentSummaryUnavailable as exc:
         return Response({'detail': exc.detail}, status=exc.status_code)
     except Exception as exc:
@@ -387,6 +503,11 @@ def document_summarize(request, pk):
     return Response(payload)
 
 
+# Là gì: `_do_summarize_task` là helper nội bộ của module `documents.py`, phục vụ nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản.
+# Chức năng backend: Hàm tạo hoặc xử lý nội dung tóm tắt, đồng thời thực thi phần xử lý nội bộ của luồng hiện tại; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình văn bản, chi tiết văn bản và hộp thư.
+# Mối liên hệ: Hàm phối hợp với `User.objects.get`, `get_document_detail_queryset`, `qs.filter.first` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _do_summarize_task(task_id, user_id, document_id, options_payload, safe_user_rules_block):
     from django.contrib.auth.models import User
     from documents.ai_summary import (
@@ -400,9 +521,19 @@ def _do_summarize_task(task_id, user_id, document_id, options_payload, safe_user
     if not doc:
         raise ValueError('Van ban khong ton tai hoac khong co quyen.')
 
+    # Là gì: `_cb` là hàm cục bộ bên trong `_do_summarize_task`, chỉ phục vụ bước xử lý nội bộ của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản.
+    # Chức năng backend: Hàm xử lý phần việc `cb` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình văn bản, chi tiết văn bản và hộp thư.
+    # Mối liên hệ: Hàm phối hợp với `update_progress` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def _cb(pct, stage, detail=''):
         update_progress(task_id, pct, stage, detail)
 
+    # Là gì: `_cancel_cb` là hàm cục bộ bên trong `_do_summarize_task`, chỉ phục vụ bước xử lý nội bộ của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản.
+    # Chức năng backend: Hàm yêu cầu dừng một tiến trình đang chờ hoặc đang chạy; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình văn bản, chi tiết văn bản và hộp thư.
+    # Mối liên hệ: Hàm phối hợp với `check_cancel` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def _cancel_cb():
         check_cancel(task_id)
 
@@ -417,6 +548,11 @@ def _do_summarize_task(task_id, user_id, document_id, options_payload, safe_user
     return payload
 
 
+# Là gì: `document_summarize_async` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tạo hoặc xử lý nội dung tóm tắt; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_document_detail_queryset`, `qs.filter.first`, `qs.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_summarize_async(request, pk):
@@ -424,7 +560,8 @@ def document_summarize_async(request, pk):
     from ai_tasks.services.task_runner import create_task, run_in_thread
 
     qs = get_document_detail_queryset(request.user)
-    if not qs.filter(pk=pk).exists():
+    doc = qs.filter(pk=pk).first()
+    if doc is None:
         return Response({'detail': 'Van ban khong ton tai.'}, status=status.HTTP_404_NOT_FOUND)
 
     raw_options = request.data.get('options')
@@ -435,7 +572,9 @@ def document_summarize_async(request, pk):
             'style': request.data.get('style'),
             'max_words': request.data.get('max_words'),
         }
-    safe_block = str(request.data.get('safe_user_rules_block') or '').strip()
+    safe_block, prompt_error = _prepare_document_summary_user_rules(request, doc)
+    if prompt_error is not None:
+        return prompt_error
 
     task = create_task(
         user=request.user,
@@ -451,6 +590,11 @@ def document_summarize_async(request, pk):
     }, status=status.HTTP_202_ACCEPTED)
 
 
+# Là gì: `document_preview_pdf` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tạo dữ liệu xem trước mà chưa ghi nhận thay đổi cuối cùng; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_document_detail_queryset`, `get_object_or_404`, `build_document_preview_pdf` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect lên tệp hoặc storage; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def document_preview_pdf(request, pk):
@@ -498,6 +642,11 @@ def document_preview_pdf(request, pk):
     return response
 
 
+# Là gì: `_ascii_safe_pdf_name` là helper nội bộ của module `documents.py`, phục vụ nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản.
+# Chức năng backend: Hàm xử lý phần việc `ascii safe pdf name` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình văn bản, chi tiết văn bản và hộp thư.
+# Mối liên hệ: Hàm phối hợp với `re.sub`, `str.strip`, `safe.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _ascii_safe_pdf_name(title: str) -> str:
     import re
     safe = re.sub(r'[^A-Za-z0-9._-]+', '_', str(title or '').strip())
@@ -505,6 +654,11 @@ def _ascii_safe_pdf_name(title: str) -> str:
     return safe[:120]
 
 
+# Là gì: `document_download_pdf` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm chuẩn bị và trả tệp cho phía client tải xuống; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_document_detail_queryset`, `get_object_or_404`, `build_document_preview_pdf` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect lên tệp hoặc storage; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def document_download_pdf(request, pk):
@@ -540,6 +694,11 @@ def document_download_pdf(request, pk):
     return response
 
 
+# Là gì: `document_version_download_pdf` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm chuẩn bị và trả tệp cho phía client tải xuống; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_document_detail_queryset`, `get_object_or_404`, `build_document_version_preview_pdf` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect lên tệp hoặc storage; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def document_version_download_pdf(request, pk, version):
@@ -571,6 +730,11 @@ def document_version_download_pdf(request, pk, version):
     return response
 
 
+# Là gì: `document_content_html` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `document content html` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_document_detail_queryset`, `get_object_or_404`, `CompanyRuntimeGuard.assert_file_field` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect lên tệp hoặc storage; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def document_content_html(request, pk):
@@ -635,6 +799,11 @@ def document_content_html(request, pk):
 </html>"""
     return Response({'html': full_html})
 
+# Là gì: `template_preview_pdf` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tạo dữ liệu xem trước mà chưa ghi nhận thay đổi cuối cùng; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `get_template_detail_queryset`, `build_template_preview_pdf` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect lên tệp hoặc storage; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def template_preview_pdf(request, pk):
@@ -679,6 +848,11 @@ def template_preview_pdf(request, pk):
     response['X-Template-Preview'] = 'pdf'
     return response
 
+# Là gì: `document_finalize` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `document finalize` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `doc.save` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_finalize(request, pk):
@@ -696,6 +870,11 @@ def document_finalize(request, pk):
     doc.save(update_fields=['status'])
     return Response({'status': doc.status})
 
+# Là gì: `document_archive` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm chuyển dữ liệu sang trạng thái lưu trữ; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `timezone.now`, `doc.save` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_archive(request, pk):
@@ -718,6 +897,11 @@ def document_archive(request, pk):
     doc.save(update_fields=['status', 'is_archived', 'archived_at'])
     return Response({'status': 'archived'})
 
+# Là gì: `document_unarchive` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `document unarchive` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `doc.save` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_unarchive(request, pk):
@@ -735,6 +919,11 @@ def document_unarchive(request, pk):
     doc.save(update_fields=['status', 'is_archived', 'archived_at'])
     return Response({'status': 'final'})
 
+# Là gì: `document_share` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm thiết lập hoặc cập nhật quyền chia sẻ tài nguyên; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `request.data.get`, `doc.save` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_share(request, pk):
@@ -771,6 +960,11 @@ def document_share(request, pk):
     doc.save(update_fields=['visibility', 'group', 'share_status'])
     return Response({'visibility': doc.visibility, 'share_status': doc.share_status})
 
+# Là gì: `document_favorite` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `document favorite` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `get_accessible_documents`, `DocumentFavorite.objects.get_or_create` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_favorite(request, pk):
@@ -788,6 +982,11 @@ def document_favorite(request, pk):
         return Response({'favorited': False})
     return Response({'favorited': True})
 
+# Là gì: `document_pending_shares` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `document pending shares` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `Document.objects.none`, `Document.objects.filter`, `UserGroupMembership.objects.filter.values_list` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def document_pending_shares(request):
@@ -819,6 +1018,11 @@ def document_pending_shares(request):
     serializer = DocumentListSerializer(qs.order_by('-created_at'), many=True, context={'request': request})
     return Response(serializer.data)
 
+# Là gì: `document_approve_share` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm chấp thuận yêu cầu và chuyển trạng thái nghiệp vụ, đồng thời thiết lập hoặc cập nhật quyền chia sẻ tài nguyên; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `request.data.get`, `is_leader_of` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_approve_share(request, pk):
@@ -854,6 +1058,11 @@ def document_approve_share(request, pk):
 
     return Response(DocumentDetailSerializer(doc, context={'request': request}).data)
 
+# Là gì: `document_check_title` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm kiểm tra điều kiện và trả kết quả để bước sau quyết định; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.GET.get.strip`, `request.GET.get`, `Document.objects.filter.first` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def document_check_title(request):
@@ -877,6 +1086,11 @@ def document_check_title(request):
         'version_count': doc.versions.count(),
     }})
 
+# Là gì: `document_versions` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `document versions` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_document_detail_queryset`, `get_object_or_404`, `DocumentVersion.objects.filter` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def document_versions(request, pk):
@@ -894,6 +1108,11 @@ def document_versions(request, pk):
     versions = DocumentVersion.objects.filter(document=doc)
     return Response(DocumentVersionSerializer(versions, many=True).data)
 
+# Là gì: `document_version_restore` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm khôi phục dữ liệu về trạng thái hoạt động; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `get_document_detail_queryset`, `is_document_edit_locked` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_version_restore(request, pk, ver_id):
@@ -963,6 +1182,11 @@ def document_version_restore(request, pk, ver_id):
 
     return Response(DocumentDetailSerializer(doc, context={'request': request}).data)
 
+# Là gì: `document_version_toggle_hide` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `document version toggle hide` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_document_detail_queryset`, `get_object_or_404`, `is_document_edit_locked` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_version_toggle_hide(request, pk, ver_id):
@@ -986,6 +1210,60 @@ def document_version_toggle_hide(request, pk, ver_id):
     ver.save(update_fields=['is_hidden'])
     return Response(DocumentVersionSerializer(ver).data)
 
+# Là gì: `document_version_diff` là endpoint REST so sánh nội dung một phiên bản văn bản với phiên bản kế sau (hoặc nội dung hiện tại nếu là bản mới nhất).
+# Chức năng backend: Hàm dựng unified diff theo dòng giữa nội dung bản đã chọn và bản ngay sau nó; đầu vào được kiểm tra quyền truy cập trước khi tạo kết quả.
+# Vai trò với UI: Màn chi tiết văn bản dùng để hiển thị phần "So sánh với phiên bản sau" trong tab lịch sử phiên bản.
+# Mối liên hệ: Hàm phối hợp với `get_document_detail_queryset`, `get_object_or_404`, `doc.versions.order_by` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def document_version_diff(request, pk, ver_id):
+    """
+    Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
+    Vai tro backend: Ham `document_version_diff` la endpoint REST so sanh noi dung mot phien ban van ban voi phien ban ke sau theo request hien tai.
+    Vai tro cua no trong frontend: Frontend goi truc tiep endpoint nay khi nguoi dung bam "So sanh voi phien ban sau" trong tab lich su phien ban.
+    Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `api/urls.py`, `documents.models`, `accounts.permissions`. Phan anh logic cua `template_version_diff` ben mau van ban.
+    Tac dung: Bien request thanh JSON diff_lines dung cho thao tac so sanh phien ban tren giao dien.
+    """
+    import difflib
+    from documents.models import DocumentVersion
+    qs = get_document_detail_queryset(request.user)
+    doc = get_object_or_404(qs, pk=pk)
+    ver = get_object_or_404(DocumentVersion, pk=ver_id, document=doc)
+
+    # Danh sach phien ban moi-nhat-truoc (khop ordering ['-version_number'] cua model).
+    all_versions = list(doc.versions.order_by('-version_number'))
+    ver_index = next((i for i, v in enumerate(all_versions) if v.id == ver.id), None)
+
+    old_content = ver.content or ''
+    if ver_index is not None and ver_index > 0:
+        # Co phien ban moi hon -> so voi ban ke sau.
+        newer_ver = all_versions[ver_index - 1]
+        new_content = newer_ver.content or ''
+    else:
+        # La ban moi nhat -> so voi noi dung hien tai cua van ban.
+        new_content = doc.content or ''
+
+    old_lines = old_content.splitlines(keepends=True)
+    new_lines = new_content.splitlines(keepends=True)
+    diff = list(difflib.unified_diff(
+        old_lines, new_lines,
+        fromfile=f'v{ver.version_number}',
+        tofile='phiên bản sau',
+        lineterm=''
+    ))
+    return Response({
+        'old_version': ver.version_number,
+        'diff_lines': diff,
+        'old_content': old_content,
+        'new_content': new_content,
+    })
+
+# Là gì: `document_upload` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tiếp nhận, kiểm tra và lưu tệp được tải lên; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.data.get.strip`, `request.data.get`, `request.FILES.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_upload(request):
@@ -1006,6 +1284,7 @@ def document_upload(request):
     text_content = _extract_text_from_docx(docx_file)
     doc = Document(
         title=title, content=text_content, owner=request.user,
+        company=resolve_document_company_for_generation(request.user),
         source_type=SOURCE_UPLOADED, status=DOC_STATUS_DRAFT,
         visibility='private',
         share_status=SHARE_ACTIVE,
@@ -1020,6 +1299,11 @@ def document_upload(request):
         status=status.HTTP_201_CREATED,
     )
 
+# Là gì: `_accessible_mailbox_threads` là helper nội bộ của module `documents.py`, phục vụ nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản.
+# Chức năng backend: Hàm xử lý phần việc `accessible mailbox threads` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình văn bản, chi tiết văn bản và hộp thư.
+# Mối liên hệ: Hàm phối hợp với `DocumentMailboxThread.objects.none`, `DocumentMailboxThread.objects.all`, `get_user_company` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _accessible_mailbox_threads(user):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -1049,6 +1333,11 @@ def _accessible_mailbox_threads(user):
     ).distinct()
     return filter_queryset_by_current_company(queryset, user)
 
+# Là gì: `_accessible_mailbox_entries` là helper nội bộ của module `documents.py`, phục vụ nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản.
+# Chức năng backend: Hàm xử lý phần việc `accessible mailbox entries` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình văn bản, chi tiết văn bản và hộp thư.
+# Mối liên hệ: Hàm phối hợp với `DocumentMailboxEntry.objects.none`, `DocumentMailboxEntry.objects.all`, `get_user_company` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _accessible_mailbox_entries(user):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -1073,6 +1362,11 @@ def _accessible_mailbox_entries(user):
     ).distinct()
     return filter_queryset_by_current_company(queryset, user)
 
+# Là gì: `_resolve_forward_recipients` là helper nội bộ của module `documents.py`, phục vụ nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản.
+# Chức năng backend: Hàm xác định đối tượng hoặc cấu hình hiệu lực từ ngữ cảnh hiện tại, đồng thời chuyển tiếp tài nguyên cho người nhận tiếp theo; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ các màn hình văn bản, chi tiết văn bản và hộp thư.
+# Mối liên hệ: Hàm phối hợp với `str.strip`, `User.objects.filter`, `get_user_company` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _resolve_forward_recipients(actor, user_ids):
     """
     Thuoc chuc nang nao: Van ban cua toi, Van ban chia se trong nhom, Van ban chia se cong khai, Van ban yeu thich, Van ban da luu tru, Hom thu, Thung rac va Yeu cau phe duyet.
@@ -1094,6 +1388,11 @@ def _resolve_forward_recipients(actor, user_ids):
         raise MailboxFlowError('Danh sach nguoi nhan khong hop le, da bi khoa hoac khac cong ty.')
     return recipients
 
+# Là gì: `document_forward` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm chuyển tiếp tài nguyên cho người nhận tiếp theo; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `get_accessible_documents`, `_resolve_forward_recipients` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_forward(request, pk):
@@ -1117,6 +1416,11 @@ def document_forward(request, pk):
         return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(DocumentMailboxThreadSerializer(thread, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
+# Là gì: `mailbox_thread_list` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_accessible_mailbox_threads`, `strip`, `request.GET.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def mailbox_thread_list(request):
@@ -1143,6 +1447,11 @@ def mailbox_thread_list(request):
         threads = threads.filter(status=status_filter)
     return Response(DocumentMailboxThreadSerializer(threads.order_by('-updated_at'), many=True, context={'request': request}).data)
 
+# Là gì: `mailbox_thread_detail` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `_accessible_mailbox_threads`, `DocumentMailboxThreadSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def mailbox_thread_detail(request, thread_id):
@@ -1156,6 +1465,11 @@ def mailbox_thread_detail(request, thread_id):
     thread = get_object_or_404(_accessible_mailbox_threads(request.user), pk=thread_id)
     return Response(DocumentMailboxThreadSerializer(thread, context={'request': request}).data)
 
+# Là gì: `mailbox_thread_verify` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xác minh tính hợp lệ hoặc tính toàn vẹn của dữ liệu; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `_accessible_mailbox_threads`, `CompanyRuntimeGuard.assert_file_field` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def mailbox_thread_verify(request, thread_id):
@@ -1178,6 +1492,11 @@ def mailbox_thread_verify(request, thread_id):
         return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(report, status=status.HTTP_200_OK if report.get('is_safe') else status.HTTP_409_CONFLICT)
 
+# Là gì: `mailbox_thread_preview_pdf` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tạo dữ liệu xem trước mà chưa ghi nhận thay đổi cuối cùng; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `_accessible_mailbox_threads`, `CompanyRuntimeGuard.assert_file_field` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect lên tệp hoặc storage; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def mailbox_thread_preview_pdf(request, thread_id):
@@ -1208,6 +1527,11 @@ def mailbox_thread_preview_pdf(request, thread_id):
     response['Content-Disposition'] = f'inline; filename=\"{name}\"'
     return response
 
+# Là gì: `mailbox_entry_forward` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm chuyển tiếp tài nguyên cho người nhận tiếp theo; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `_accessible_mailbox_entries`, `_resolve_forward_recipients` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def mailbox_entry_forward(request, entry_id):
@@ -1232,6 +1556,11 @@ def mailbox_entry_forward(request, entry_id):
         return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(DocumentMailboxThreadSerializer(thread, context={'request': request}).data)
 
+# Là gì: `mailbox_entry_complete` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `mailbox entry complete` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `_accessible_mailbox_entries`, `complete_mailbox_entry` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def mailbox_entry_complete(request, entry_id):
@@ -1250,6 +1579,11 @@ def mailbox_entry_complete(request, entry_id):
     entry.refresh_from_db()
     return Response({'detail': entry.thread.last_action_summary, 'thread_id': entry.thread_id, 'entry_id': entry.id})
 
+# Là gì: `mailbox_entry_reject` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm từ chối yêu cầu và ghi nhận lý do; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `_accessible_mailbox_entries`, `reject_mailbox_entry` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def mailbox_entry_reject(request, entry_id):
@@ -1268,6 +1602,11 @@ def mailbox_entry_reject(request, entry_id):
     entry.refresh_from_db()
     return Response({'detail': entry.thread.last_action_summary, 'thread_id': entry.thread_id, 'entry_id': entry.id})
 
+# Là gì: `mailbox_entry_sign` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm thực hiện hoặc chuẩn bị thao tác ký số; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `_accessible_mailbox_entries`, `ensure_mailbox_entry_signing_task` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def mailbox_entry_sign(request, entry_id):
@@ -1300,6 +1639,11 @@ def mailbox_entry_sign(request, entry_id):
     }
     return Response(payload, status=status.HTTP_201_CREATED if result.get('created') else status.HTTP_200_OK)
 
+# Là gì: `mailbox_entry_verify` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xác minh tính hợp lệ hoặc tính toàn vẹn của dữ liệu; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `_accessible_mailbox_entries`, `CompanyRuntimeGuard.assert_file_field` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def mailbox_entry_verify(request, entry_id):
@@ -1322,6 +1666,11 @@ def mailbox_entry_verify(request, entry_id):
         return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
     return Response(report, status=status.HTTP_200_OK if report.get('is_safe') else status.HTTP_409_CONFLICT)
 
+# Là gì: `mailbox_entry_preview_pdf` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tạo dữ liệu xem trước mà chưa ghi nhận thay đổi cuối cùng; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `_accessible_mailbox_entries`, `CompanyRuntimeGuard.assert_file_field` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect lên tệp hoặc storage; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def mailbox_entry_preview_pdf(request, entry_id):
@@ -1352,6 +1701,11 @@ def mailbox_entry_preview_pdf(request, entry_id):
     response['Content-Disposition'] = f'inline; filename=\"{name}\"'
     return response
 
+# Là gì: `template_content_html` là endpoint REST của nhóm danh sách, chi tiết, phiên bản, tệp và vòng đời văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `template content html` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được các màn hình văn bản, chi tiết văn bản và hộp thư sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `get_template_detail_queryset`, `str.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect lên tệp hoặc storage; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def template_content_html(request, pk):

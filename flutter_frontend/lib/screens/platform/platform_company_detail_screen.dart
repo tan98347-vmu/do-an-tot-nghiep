@@ -1,3 +1,6 @@
+// === MÀN HÌNH CHI TIẾT CÔNG TY (platform-admin) ===
+// Dashboard của 1 công ty (companyDashboardProvider): tổng quan + thống kê mở rộng (_ExtendedStatsGrid), hoạt động, sao lưu, lưu trữ qua các tab widget. _refreshAll làm mới toàn bộ.
+
 // r5/M9 — Dashboard chi tiet cho 1 cong ty (platform admin only).
 //
 // Route: /platform/companies/:id

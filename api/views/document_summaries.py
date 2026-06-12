@@ -32,6 +32,8 @@ from api.security.prompt_guard import (
     run_full_pipeline,
     sign_scoped_preview_token,
     verify_scoped_preview_token,
+    prompt_check_expected_payload,
+    verify_prompt_check_token,
     wrap_user_rules,
 )
 from api.serializers.document_summaries import (
@@ -71,6 +73,11 @@ _SUMMARY_PREVIEW_SALT = 'document_summary.preview.v1'
 _SUMMARY_EXPORT_KEY = 'summary_export'
 
 
+# Là gì: `_coerce_tag_list` là helper nội bộ của module `document_summaries.py`, phục vụ nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI.
+# Chức năng backend: Hàm truy vấn và trả về danh sách dữ liệu phù hợp; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ không gian làm việc tóm tắt văn bản.
+# Mối liên hệ: Hàm phối hợp với `raw_value.strip`, `json.loads`, `item.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _coerce_tag_list(raw_value):
     if raw_value in (None, '', []):
         return []
@@ -96,6 +103,11 @@ def _coerce_tag_list(raw_value):
     return [str(raw_value)]
 
 
+# Là gì: `_document_summary_queryset` là helper nội bộ của module `document_summaries.py`, phục vụ nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI.
+# Chức năng backend: Hàm tạo hoặc xử lý nội dung tóm tắt; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ không gian làm việc tóm tắt văn bản.
+# Mối liên hệ: Hàm phối hợp với `str.strip.lower`, `str.strip`, `get_accessible_documents.select_related.order_by` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _document_summary_queryset(user, scope: str):
     scope_value = str(scope or 'all').strip().lower()
     # Chi lay van ban user CO QUYEN XEM (owner + ShareGrant active + mailbox/ky so).
@@ -125,6 +137,11 @@ def _document_summary_queryset(user, scope: str):
     return qs.filter(is_archived=False), 'all'
 
 
+# Là gì: `_apply_discovery_filters` là helper nội bộ của module `document_summaries.py`, phục vụ nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI.
+# Chức năng backend: Hàm xử lý phần việc `apply discovery filters` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ không gian làm việc tóm tắt văn bản.
+# Mối liên hệ: Hàm phối hợp với `str.strip`, `request.GET.get`, `str.strip.lower` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _apply_discovery_filters(qs, request):
     base_qs = qs
     q = str(request.GET.get('q', '') or '').strip()
@@ -189,6 +206,11 @@ def _apply_discovery_filters(qs, request):
     return qs
 
 
+# Là gì: `_matched_field` là helper nội bộ của module `document_summaries.py`, phục vụ nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI.
+# Chức năng backend: Hàm xử lý phần việc `matched field` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ không gian làm việc tóm tắt văn bản.
+# Mối liên hệ: Hàm phối hợp với `query.casefold`, `join`, `document.owner.get_full_name` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _matched_field(document, query: str) -> str:
     needle = query.casefold()
     field_checks = (
@@ -207,6 +229,11 @@ def _matched_field(document, query: str) -> str:
     return 'title'
 
 
+# Là gì: `_document_caption` là helper nội bộ của module `document_summaries.py`, phục vụ nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI.
+# Chức năng backend: Hàm xử lý phần việc `document caption` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ không gian làm việc tóm tắt văn bản.
+# Mối liên hệ: Hàm phối hợp với `parts.append`, `_coerce_tag_list`, `join` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _document_caption(document) -> str:
     parts = []
     if document.doc_number:
@@ -221,6 +248,11 @@ def _document_caption(document) -> str:
     return ' • '.join(part for part in parts if part)
 
 
+# Là gì: `_collect_tag_suggestions` là helper nội bộ của module `document_summaries.py`, phục vụ nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI.
+# Chức năng backend: Hàm xử lý phần việc `collect tag suggestions` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ không gian làm việc tóm tắt văn bản.
+# Mối liên hệ: Hàm phối hợp với `query.casefold`, `_coerce_tag_list`, `tag.casefold` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _collect_tag_suggestions(documents, query: str):
     needle = query.casefold()
     suggestions = []
@@ -245,6 +277,11 @@ def _collect_tag_suggestions(documents, query: str):
     return suggestions
 
 
+# Là gì: `_build_discovery_facets` là helper nội bộ của module `document_summaries.py`, phục vụ nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI.
+# Chức năng backend: Hàm tổng hợp dữ liệu đầu vào thành cấu trúc phục vụ bước tiếp theo; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ không gian làm việc tóm tắt văn bản.
+# Mối liên hệ: Hàm phối hợp với `qs.exclude.values.distinct.order_by`, `qs.exclude.values.distinct`, `qs.exclude.values` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _build_discovery_facets(qs):
     category_rows = qs.exclude(category__isnull=True).values(
         'category_id',
@@ -310,6 +347,11 @@ def _build_discovery_facets(qs):
     }
 
 
+# Là gì: `_parse_summary_options_payload` là helper nội bộ của module `document_summaries.py`, phục vụ nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI.
+# Chức năng backend: Hàm tạo hoặc xử lý nội dung tóm tắt, đồng thời phân tích dữ liệu thô thành cấu trúc có thể sử dụng; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ không gian làm việc tóm tắt văn bản.
+# Mối liên hệ: Hàm phối hợp với `data.get`, `normalize_summary_options` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _parse_summary_options_payload(data):
     raw_options = data.get('options')
     if not isinstance(raw_options, dict):
@@ -321,6 +363,11 @@ def _parse_summary_options_payload(data):
     return normalize_summary_options(raw_options)
 
 
+# Là gì: `_parse_summary_request` là helper nội bộ của module `document_summaries.py`, phục vụ nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI.
+# Chức năng backend: Hàm tạo hoặc xử lý nội dung tóm tắt, đồng thời phân tích dữ liệu thô thành cấu trúc có thể sử dụng; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ không gian làm việc tóm tắt văn bản.
+# Mối liên hệ: Hàm phối hợp với `DocumentSummaryRequestSerializer`, `serializer.is_valid`, `_parse_summary_options_payload` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _parse_summary_request(data):
     serializer = DocumentSummaryRequestSerializer(data=data)
     serializer.is_valid(raise_exception=True)
@@ -329,10 +376,16 @@ def _parse_summary_request(data):
         'options': _parse_summary_options_payload(data),
         'user_extra_rules': str(validated.get('user_extra_rules', '') or '').strip(),
         'preview_token': str(validated.get('preview_token', '') or '').strip(),
+        'prompt_check_token': str(validated.get('prompt_check_token', '') or '').strip(),
         'prompt_id': validated.get('prompt_id'),
     }
 
 
+# Là gì: `_prompt_scope_tokens` là helper nội bộ của module `document_summaries.py`, phục vụ nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI.
+# Chức năng backend: Hàm xử lý phần việc `prompt scope tokens` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ không gian làm việc tóm tắt văn bản.
+# Mối liên hệ: Hàm phối hợp với `tokens.update`, `str.strip.lower`, `str.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect ghi cơ sở dữ liệu.
 def _prompt_scope_tokens(prompt: Prompt) -> set[str]:
     tokens = set()
     usage_scope = getattr(prompt, 'usage_scope', None)
@@ -360,6 +413,11 @@ def _prompt_scope_tokens(prompt: Prompt) -> set[str]:
     return tokens
 
 
+# Là gì: `_prompt_supports_scope` là helper nội bộ của module `document_summaries.py`, phục vụ nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI.
+# Chức năng backend: Hàm xử lý phần việc `prompt supports scope` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ không gian làm việc tóm tắt văn bản.
+# Mối liên hệ: Hàm phối hợp với `_prompt_scope_tokens` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _prompt_supports_scope(prompt: Prompt, scope: str) -> bool:
     tokens = _prompt_scope_tokens(prompt)
     if not tokens:
@@ -367,6 +425,11 @@ def _prompt_supports_scope(prompt: Prompt, scope: str) -> bool:
     return scope in tokens or f'scope:{scope}' in tokens
 
 
+# Là gì: `_resolve_summary_prompt` là helper nội bộ của module `document_summaries.py`, phục vụ nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI.
+# Chức năng backend: Hàm xác định đối tượng hoặc cấu hình hiệu lực từ ngữ cảnh hiện tại, đồng thời tạo hoặc xử lý nội dung tóm tắt; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ không gian làm việc tóm tắt văn bản.
+# Mối liên hệ: Hàm phối hợp với `get_accessible_prompts.filter.first`, `get_accessible_prompts.filter`, `get_accessible_prompts` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 def _resolve_summary_prompt(user, prompt_id):
     if not prompt_id:
         return None, None
@@ -381,6 +444,11 @@ def _resolve_summary_prompt(user, prompt_id):
     return prompt, None
 
 
+# Là gì: `_compose_summary_rules` là helper nội bộ của module `document_summaries.py`, phục vụ nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI.
+# Chức năng backend: Hàm tạo hoặc xử lý nội dung tóm tắt; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ không gian làm việc tóm tắt văn bản.
+# Mối liên hệ: Hàm phối hợp với `str.strip`, `join.strip`, `prompt_parts.append` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _compose_summary_rules(prompt, user_extra_rules_raw: str) -> str:
     parts = []
     if prompt is not None:
@@ -400,6 +468,11 @@ def _compose_summary_rules(prompt, user_extra_rules_raw: str) -> str:
     return '\n\n'.join(part for part in parts if part).strip()
 
 
+# Là gì: `_selected_prompt_payload` là helper nội bộ của module `document_summaries.py`, phục vụ nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI.
+# Chức năng backend: Hàm xử lý phần việc `selected prompt payload` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ không gian làm việc tóm tắt văn bản.
+# Mối liên hệ: Hàm được các endpoint hoặc helper cùng module gọi khi cần cùng quy tắc xử lý.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _selected_prompt_payload(prompt):
     if prompt is None:
         return None
@@ -409,6 +482,11 @@ def _selected_prompt_payload(prompt):
     }
 
 
+# Là gì: `_store_latest_summary_export` là helper nội bộ của module `document_summaries.py`, phục vụ nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI.
+# Chức năng backend: Hàm kết xuất dữ liệu thành tệp hoặc định dạng trao đổi, đồng thời tạo hoặc xử lý nội dung tóm tắt; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ không gian làm việc tóm tắt văn bản.
+# Mối liên hệ: Hàm phối hợp với `str.strip`, `timezone.now.isoformat`, `payload.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect ghi cơ sở dữ liệu.
 def _store_latest_summary_export(document, payload, *, user, prompt, user_extra_rules):
     snapshot = dict(document.applied_prompt_snapshot or {})
     summary_snapshot = {
@@ -435,6 +513,11 @@ def _store_latest_summary_export(document, payload, *, user, prompt, user_extra_
     document.applied_prompt_snapshot = snapshot
 
 
+# Là gì: `_latest_summary_export` là helper nội bộ của module `document_summaries.py`, phục vụ nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI.
+# Chức năng backend: Hàm kết xuất dữ liệu thành tệp hoặc định dạng trao đổi, đồng thời tạo hoặc xử lý nội dung tóm tắt; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ không gian làm việc tóm tắt văn bản.
+# Mối liên hệ: Hàm phối hợp với `snapshot.get`, `str.strip`, `summary_snapshot.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _latest_summary_export(document):
     snapshot = document.applied_prompt_snapshot or {}
     if not isinstance(snapshot, dict):
@@ -471,6 +554,11 @@ def _latest_summary_export(document):
     )
 
 
+# Là gì: `document_summary_discovery` là endpoint REST của nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tạo hoặc xử lý nội dung tóm tắt; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được không gian làm việc tóm tắt văn bản sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_document_summary_queryset`, `request.GET.get`, `_apply_discovery_filters` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def document_summary_discovery(request):
@@ -502,6 +590,11 @@ def document_summary_discovery(request):
     )
 
 
+# Là gì: `document_summary_suggest` là endpoint REST của nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tạo hoặc xử lý nội dung tóm tắt; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được không gian làm việc tóm tắt văn bản sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `str.strip`, `request.GET.get`, `_document_summary_queryset` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def document_summary_suggest(request):
@@ -554,6 +647,11 @@ def document_summary_suggest(request):
     return Response({'items': suggestions[:12]})
 
 
+# Là gì: `_summary_target_document` là helper nội bộ của module `document_summaries.py`, phục vụ nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI.
+# Chức năng backend: Hàm tạo hoặc xử lý nội dung tóm tắt; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ không gian làm việc tóm tắt văn bản.
+# Mối liên hệ: Hàm phối hợp với `get_accessible_documents`, `get_object_or_404`, `CompanyRuntimeGuard.assert_file_field` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _summary_target_document(request, pk):
     # Chi cho tom tat van ban user CO QUYEN XEM (khong gom van ban cho duyet).
     qs = get_accessible_documents(request.user)
@@ -567,6 +665,11 @@ def _summary_target_document(request, pk):
     return document
 
 
+# Là gì: `document_summary_preview` là endpoint REST của nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tạo dữ liệu xem trước mà chưa ghi nhận thay đổi cuối cùng, đồng thời tạo hoặc xử lý nội dung tóm tắt; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được không gian làm việc tóm tắt văn bản sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_summary_target_document`, `_parse_summary_request`, `_resolve_summary_prompt` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_summary_preview(request, pk):
@@ -628,6 +731,11 @@ def document_summary_preview(request, pk):
     return Response(preview_payload)
 
 
+# Là gì: `document_summary_generate` là endpoint REST của nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm sinh nội dung hoặc tệp mới từ dữ liệu đầu vào, đồng thời tạo hoặc xử lý nội dung tóm tắt; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được không gian làm việc tóm tắt văn bản sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `_summary_target_document`, `_parse_summary_request`, `_resolve_summary_prompt` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_summary_generate(request, pk):
@@ -643,11 +751,30 @@ def document_summary_generate(request, pk):
 
     user_extra_rules_raw = summary_request['user_extra_rules']
     preview_token = summary_request['preview_token']
+    prompt_check_token = summary_request['prompt_check_token']
     combined_rules_raw = _compose_summary_rules(prompt, user_extra_rules_raw)
 
     safe_block = ''
     guard_report = None
     if combined_rules_raw:
+        if user_extra_rules_raw:
+            expected_check = prompt_check_expected_payload(
+                user_id=request.user.pk,
+                scope='summary',
+                context='document_summary',
+                prompt_role='extra_instruction',
+                prompt_text=user_extra_rules_raw,
+                target_id=document.pk,
+            )
+            check_ok, check_why = verify_prompt_check_token(
+                prompt_check_token,
+                expected_check,
+            )
+            if not check_ok:
+                return Response(
+                    {'detail': f'Can check prompt lai truoc khi tom tat ({check_why}).'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         if not preview_token:
             return Response(
                 {'detail': 'Phai xem truoc prompt (preview_token bat buoc).'},
@@ -724,6 +851,11 @@ def document_summary_generate(request, pk):
     return Response(payload)
 
 
+# Là gì: `document_summary_download` là hàm điều phối nghiệp vụ của module `document_summaries.py`, thuộc nhóm tạo, xem và quản lý bản tóm tắt văn bản bằng AI.
+# Chức năng backend: Hàm chuẩn bị và trả tệp cho phía client tải xuống, đồng thời tạo hoặc xử lý nội dung tóm tắt; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ không gian làm việc tóm tắt văn bản.
+# Mối liên hệ: Hàm phối hợp với `Request`, `JWTAuthentication`, `SessionAuthentication` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 def document_summary_download(request, pk):
     """Plain Django view (KHONG dung @api_view) — debug Python 3.14 + DRF compat issue.
 

@@ -7,6 +7,8 @@ from document_templates.models import (
 )
 
 
+# def _auto_status quyết định trạng thái duyệt khi tạo/sửa mẫu theo nguồn + phạm vi + vai trò: superuser hoặc private -> approved; group mà là trưởng nhóm -> approved, không phải -> pending_leader; public -> pending (chờ admin).
+# vd: nhân viên thường tạo mẫu visibility='group' -> 'pending_leader'.
 def _auto_status(source_type, visibility, user, target_group=None):
     if user and user.is_superuser:
         return STATUS_APPROVED

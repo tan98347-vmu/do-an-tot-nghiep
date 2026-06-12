@@ -8,6 +8,7 @@ from .models import Document, DocumentNumberConfig
 
 # [Web] `DocumentAdmin` gom một cụm xử lý backend dùng chung cho nhóm màn Văn bản và Hòm thư.
 
+# vd: trang admin hiển thị/lọc các bản ghi của model này.
 @admin.register(Document)
 class DocumentAdmin(admin.ModelAdmin):
     list_display = ('title', 'doc_number', 'owner', 'status', 'department', 'category', 'template', 'created_at')
@@ -16,6 +17,7 @@ class DocumentAdmin(admin.ModelAdmin):
 
 # [Web] `DocumentNumberConfigAdmin` gom một cụm xử lý backend dùng chung cho nhóm màn Văn bản và Hòm thư.
 
+# vd: trang admin hiển thị/lọc các bản ghi của model này.
 @admin.register(DocumentNumberConfig)
 class DocumentNumberConfigAdmin(admin.ModelAdmin):
     list_display = ('department', 'prefix', 'year', 'last_number', 'category')

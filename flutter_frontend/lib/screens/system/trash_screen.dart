@@ -1,8 +1,9 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/system/trash_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH THÙNG RÁC ===
+// Liệt kê các bản ghi đã XÓA MỀM (mẫu/văn bản/...) để khôi phục hoặc xóa vĩnh viễn.
+// - _loadTrash(): GET 'trash/entries/' (có tìm kiếm _onSearchChanged, lọc theo loại _labelForCategory).
+// - Chọn nhiều rồi: _restoreSelected() POST 'trash/restore/'; _deleteSelected() POST 'trash/delete/' (xác nhận qua _confirmPermanentDelete).
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/system/trash_screen.dart.
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -15,25 +16,21 @@ import '../../models/trash.dart';
 import '../../providers/documents_provider.dart';
 import '../../providers/templates_provider.dart';
 
-// Mục đích: Widget `TrashScreen` triển khai phần việc `Trash Screen` trong flutter_frontend/lib/screens/system/trash_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn THÙNG RÁC — ConsumerStatefulWidget.
 
 class TrashScreen extends ConsumerStatefulWidget {
+  // Widget màn THÙNG RÁC (văn bản/mẫu/prompt đã xóa).
   const TrashScreen({super.key});
 
   @override
   ConsumerState<TrashScreen> createState() => _TrashScreenState();
 }
 
-// Mục đích: Widget `_TrashScreenState` triển khai phần việc `Trash Screen State` trong flutter_frontend/lib/screens/system/trash_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn thùng rác: tải mục đã xóa, tìm kiếm, chọn nhiều, khôi phục/xóa vĩnh viễn.
 
 class _TrashScreenState extends ConsumerState<TrashScreen> {
   AppStrings get _strings => AppStrings.of(context);
+  // Chọn chuỗi VI/EN (i18n).
   String _pick(String vi, String en) => _strings.pick(vi, en);
 
   static const _categories = <String, String>{
@@ -59,32 +56,21 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
   String? _error;
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/system/trash_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Mở màn: nạp danh sách mục trong thùng rác.
   void initState() {
     super.initState();
     _loadTrash();
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/system/trash_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Rời màn: dọn controller tìm kiếm.
   void dispose() {
     _debounce?.cancel();
     _searchCtrl.dispose();
     super.dispose();
   }
 
-  // Mục đích: Phương thức `_loadTrash` triển khai phần việc `load Trash` trong flutter_frontend/lib/screens/system/trash_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tải danh sách mục trong thùng rác từ server.
 
   Future<void> _loadTrash() async {
     if (!mounted) return;
@@ -133,11 +119,7 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_readableError` triển khai phần việc `readable Error` trong flutter_frontend/lib/screens/system/trash_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Đổi lỗi API thành thông điệp dễ đọc.
   String _readableError(Object error) {
     if (error is DioException) {
       final data = error.response?.data;
@@ -153,11 +135,7 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
         'Khong tai duoc thung rac: $error', 'Could not load trash: $error');
   }
 
-  // Mục đích: Phương thức `_onSearchChanged` triển khai phần việc `on Search Changed` trong flutter_frontend/lib/screens/system/trash_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Lọc mục thùng rác theo từ khóa.
   void _onSearchChanged(String value) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
@@ -169,11 +147,7 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_restoreSelected` triển khai phần việc `restore Selected` trong flutter_frontend/lib/screens/system/trash_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nút Khôi phục: khôi phục các mục đã chọn về danh sách gốc.
   Future<void> _restoreSelected({List<TrashEntry>? entries}) async {
     final selected = entries ??
         _entries
@@ -225,11 +199,7 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_confirmPermanentDelete` triển khai phần việc `confirm Permanent Delete` trong flutter_frontend/lib/screens/system/trash_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Hỏi xác nhận trước khi xóa vĩnh viễn.
   Future<bool> _confirmPermanentDelete(int count) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -262,11 +232,7 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
     return confirmed == true;
   }
 
-  // Mục đích: Phương thức `_deleteSelected` triển khai phần việc `delete Selected` trong flutter_frontend/lib/screens/system/trash_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nút Xóa vĩnh viễn: xóa hẳn các mục đã chọn (không khôi phục được).
   Future<void> _deleteSelected({List<TrashEntry>? entries}) async {
     final selected = entries ??
         _entries
@@ -315,10 +281,7 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_showSnack` triển khai phần việc `show Snack` trong flutter_frontend/lib/screens/system/trash_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Hiện snackbar thông báo (thường/lỗi).
 
   void _showSnack(String message, {bool error = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -329,11 +292,7 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
     );
   }
 
-  // Mục đích: Phương thức `_labelForCategory` triển khai phần việc `label For Category` trong flutter_frontend/lib/screens/system/trash_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nhãn loại đối tượng (văn bản/mẫu/prompt) trong thùng rác.
   String _labelForCategory(String category) => switch (category) {
         'all' => _pick('Tat ca', 'All'),
         'template' => _pick('Mau van ban', 'Templates'),
@@ -345,11 +304,7 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
         _ => _categories[category] ?? category,
       };
 
-  // Mục đích: Phương thức `_formatStamp` triển khai phần việc `format Stamp` trong flutter_frontend/lib/screens/system/trash_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Định dạng thời điểm xóa để hiển thị.
   String _formatStamp(String value) {
     if (value.isEmpty) return '';
     return value
@@ -358,11 +313,7 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/system/trash_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Dựng màn: tìm kiếm + danh sách mục đã xóa + nút Khôi phục/Xóa vĩnh viễn (chọn nhiều).
   Widget build(BuildContext context) {
     final isCompact = MediaQuery.sizeOf(context).width < 820;
     return Padding(
@@ -667,10 +618,7 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
   }
 }
 
-// Mục đích: Lớp `_TrashMetaChip` triển khai phần việc `Trash Meta Chip` trong flutter_frontend/lib/screens/system/trash_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget chip metadata mục thùng rác (loại/ngày xóa).
 
 class _TrashMetaChip extends StatelessWidget {
   final String label;
@@ -678,10 +626,7 @@ class _TrashMetaChip extends StatelessWidget {
   const _TrashMetaChip({required this.label});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/system/trash_screen.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng chip metadata.
 
   Widget build(BuildContext context) {
     return Container(

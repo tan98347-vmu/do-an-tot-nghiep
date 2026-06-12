@@ -1,9 +1,56 @@
 """
-Thuoc chuc nang nao: Yeu cau ky, PDF da ky, Hom thu va Uy quyen ky so.
-Vai tro backend: File `signing/models.py` giu hoac ho tro luong backend cho de xuat ky, packet ky, nhiem vu ky, xac minh PDF, PKI noi bo va quyen uy quyen.
-Vai tro cua no trong frontend: Cac man `/signing/tasks`, `/signed-pdfs`, `/signing/access` va mot phan thao tac o `/mailbox` phu thuoc truc tiep hoac gian tiep vao file nay.
-Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `api/urls.py`, `api/serializers/signing.py`, `signing.models`, `signing.permissions`, `signing.pki`, `signing.services`.
-Tac dung: Giu cho quy trinh ky nhieu buoc, trang thai chu ky va kiem tra toan ven PDF nhat quan giua nguoi de xuat, nguoi ky va man tra cuu.
+## Quan hệ chính xác
+
+  services.py
+      │ ra lệnh ký
+      ▼
+  pki.sign_pdf_incremental()
+      │ private key + SHA-256
+      ▼
+  PDF có chữ ký
+
+  services.py
+      │ yêu cầu kiểm tra
+      ▼
+  pki.validate_pdf_signatures()
+      │ public key + hash tính lại
+      ▼
+  safe / untrusted / invalid / tampered
+
+  services.py
+      │ xử lý kết quả
+      ▼
+  Cập nhật task, packet và database
+
+  Vì vậy, kết luận chính xác là:
+
+  > services.py quản lý luồng nghiệp vụ; pki.py là bộ máy mật mã thực hiện cả ký bằng private key lẫn xác minh bằng public key. 
+
+  
+  SHA-256 = máy tạo dấu vân tay của PDF
+  RSA private key = công cụ tạo chữ ký
+  X.509 certificate = giấy chứng minh người ký
+  PKCS#7 = phong bì đóng gói tất cả thông tin trên
+  PDF = tài liệu chứa phong bì đó
+
+  ## PKCS#7 chứa gì?
+
+  Một chữ ký PKCS#7 thường chứa:
+
+  SignedData
+  ├── Digest algorithm: SHA-256
+  ├── Certificate của người ký
+  │   ├── Tên người ký
+  │   ├── Public key
+  │   ├── Serial number
+  │   ├── Issuer/CA
+  │   └── Thời hạn certificate
+  ├── Signed attributes
+  │   ├── Hash của nội dung PDF
+  │   ├── Loại nội dung
+  │   └── Thời gian người ký khai báo
+  └── Signature value
+      └── Kết quả ký bằng RSA private key
 """
 
 import uuid

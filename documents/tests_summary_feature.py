@@ -13,6 +13,7 @@ from accounts.models import (
     UserGroup,
     UserGroupMembership,
 )
+from api.security.prompt_preflight_llm import PromptLlmAssessment
 from document_templates.models import TemplateCategory
 from documents.models import Document, SHARE_ACTIVE
 
@@ -67,6 +68,33 @@ class DocumentSummaryFeatureTests(TestCase):
             name='Policies',
         )
         self.client.force_authenticate(self.user)
+        patcher = patch(
+            'api.security.prompt_guard.classify_prompt_with_llm',
+            return_value=PromptLlmAssessment(
+                verdict='pass',
+                security='safe',
+                quality='meaningful',
+                relevance='relevant',
+                model_name='test-preflight-model',
+            ),
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _check_summary_prompt(self, document, prompt_text):
+        response = self.client.post(
+            reverse('api:prompt_check'),
+            {
+                'scope': 'summary',
+                'context': 'document_summary',
+                'prompt_role': 'extra_instruction',
+                'prompt_text': prompt_text,
+                'target_id': document.pk,
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        return response.json()['prompt_check_token']
 
     def test_discovery_filters_and_returns_facets(self):
         private_doc = Document.objects.create(
@@ -199,12 +227,15 @@ class DocumentSummaryFeatureTests(TestCase):
             title='Thong bao nghi le',
             content='Nghi le 02/09.',
         )
+        prompt_text = 'Tom tat ngan gon hon.'
+        prompt_check_token = self._check_summary_prompt(document, prompt_text)
 
         response = self.client.post(
             reverse('api:document_summary_generate', args=[document.pk]),
             data={
                 'options': {'length': 'standard', 'language': 'vi', 'style': 'formal'},
-                'user_extra_rules': 'Tom tat ngan gon hon.',
+                'user_extra_rules': prompt_text,
+                'prompt_check_token': prompt_check_token,
             },
             format='json',
         )
@@ -219,6 +250,8 @@ class DocumentSummaryFeatureTests(TestCase):
             title='Quarterly policy',
             content='This policy starts on 01 June. Submit all approvals before 25 May.',
         )
+        prompt_text = 'Focus on deadlines only.'
+        prompt_check_token = self._check_summary_prompt(document, prompt_text)
 
         preview_response = self.client.post(
             reverse('api:document_summary_preview', args=[document.pk]),
@@ -228,7 +261,7 @@ class DocumentSummaryFeatureTests(TestCase):
                     'language': 'en',
                     'style': 'executive',
                 },
-                'user_extra_rules': 'Focus on deadlines only.',
+                'user_extra_rules': prompt_text,
             },
             format='json',
         )
@@ -247,8 +280,9 @@ class DocumentSummaryFeatureTests(TestCase):
                         'language': 'en',
                         'style': 'executive',
                     },
-                    'user_extra_rules': 'Focus on deadlines only.',
+                    'user_extra_rules': prompt_text,
                     'preview_token': preview_token,
+                    'prompt_check_token': prompt_check_token,
                 },
                 format='json',
             )
@@ -257,7 +291,13 @@ class DocumentSummaryFeatureTests(TestCase):
         payload = response.json()
         self.assertEqual(payload['applied_options']['style'], 'executive')
         self.assertIn('Summary:', payload['summary'])
-        self.assertIn('Focus on deadlines only.', fake_llm.messages[0].content)
+        self.assertNotIn('Focus on deadlines only.', fake_llm.messages[0].content)
+        self.assertTrue(
+            any(
+                'Focus on deadlines only.' in str(message.content)
+                for message in fake_llm.messages[1:]
+            )
+        )
         self.assertIn('trust="untrusted"', fake_llm.messages[-1].content)
 
     def test_preview_blocks_obvious_injection(self):

@@ -122,12 +122,16 @@ _CHILD_FILTERS = {
 }
 
 
+# def get_model_class lấy class model Django từ nhãn dạng 'app.Model'.
+# vd: 'prompts.Prompt' -> class Prompt.
 def get_model_class(label: str):
     from django.apps import apps
     app_label, model_name = label.split('.')
     return apps.get_model(app_label, model_name)
 
 
+# def filter_queryset_for_company trả queryset của 1 model đã lọc đúng phạm vi 1 công ty: model có FK company trực tiếp -> filter(company=...); model con -> dùng mapping _CHILD_FILTERS (lookup lồng qua cha); vài model đặc biệt (AIUsageLog/Prompt/DepartmentDelegation) lọc gián tiếp qua user/department của công ty.
+# vd: 'documents.DocumentVersion' -> lọc theo document__company = công ty.
 def filter_queryset_for_company(model_label: str, company):
     """
     Tra ve queryset duoc filter dung company scope.
@@ -160,6 +164,8 @@ def filter_queryset_for_company(model_label: str, company):
     return model._default_manager.none()
 
 
+# def models_for_components trả danh sách (nhãn, class) các model thuộc các component được chọn, theo đúng thứ tự khai báo (con trước cha).
+# vd: ['prompts'] -> [('prompts.PromptInjectionLog',...), ('prompts.Prompt',...)].
 def models_for_components(components):
     """Tra ve danh sach (model_label, model_class) cho cac component duoc chon."""
     out = []
@@ -169,11 +175,15 @@ def models_for_components(components):
     return out
 
 
+# def delete_order trả thứ tự XÓA khi restore (replace): con trước cha để tránh vi phạm khóa ngoại (ProtectedError).
+# vd: xóa TemplateVersion trước rồi mới xóa DocumentTemplate.
 def delete_order(components):
     """Tra ve thu tu xoa: theo COMPONENT_MODELS (da sap xep child truoc parent)."""
     return models_for_components(components)
 
 
+# def import_order trả thứ tự NHẬP khi restore: ngược với delete_order (cha trước con) để FK hợp lệ lúc tạo lại.
+# vd: tạo DocumentTemplate trước rồi mới tạo TemplateVersion.
 def import_order(components):
     """Thu tu import = nguoc lai delete_order (parent truoc child)."""
     return list(reversed(models_for_components(components)))

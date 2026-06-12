@@ -12,6 +12,8 @@ _NUMBERED_RE = re.compile(r'^\d+\.\s+(.+?)\s*$')
 _BOLD_RE = re.compile(r'\*\*(.+?)\*\*')
 
 
+# def export_summary_docx để xuất summary docx.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def export_summary_docx(summary) -> bytes:
     buffer = BytesIO()
     doc = DocxDocument()
@@ -38,6 +40,8 @@ def export_summary_docx(summary) -> bytes:
     return buffer.getvalue()
 
 
+# def export_summary_md để xuất summary md.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def export_summary_md(summary) -> str:
     lines = [
         '---',
@@ -53,6 +57,8 @@ def export_summary_md(summary) -> str:
     return '\n'.join(lines)
 
 
+# def _render_markdown_to_docx để kết xuất markdown to docx.
+# vd: nhận tham số đầu vào -> trả cấu trúc dữ liệu/chuỗi đã dựng.
 def _render_markdown_to_docx(doc: DocxDocument, text: str) -> None:
     in_code_block = False
     for raw_line in str(text or '').splitlines():
@@ -93,6 +99,8 @@ def _render_markdown_to_docx(doc: DocxDocument, text: str) -> None:
         _write_inline_runs(doc.add_paragraph(), line)
 
 
+# def _write_inline_runs để write inline runs.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _write_inline_runs(paragraph, text: str) -> None:
     last_index = 0
     for match in _BOLD_RE.finditer(text):
@@ -104,11 +112,15 @@ def _write_inline_runs(paragraph, text: str) -> None:
         paragraph.add_run(text[last_index:])
 
 
+# def _summary_title để summary title.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _summary_title(summary) -> str:
     document = getattr(summary, 'document', None)
     return str(getattr(document, 'title', None) or 'Văn bản')
 
 
+# def _summary_text để summary text.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _summary_text(summary) -> str:
     for attr in ('content_md', 'summary', 'content_text'):
         value = getattr(summary, attr, None)
@@ -117,6 +129,8 @@ def _summary_text(summary) -> str:
     return ''
 
 
+# def _summary_created_by để summary created by.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _summary_created_by(summary) -> str:
     explicit_name = str(getattr(summary, 'created_by_name', '') or '').strip()
     if explicit_name:
@@ -131,10 +145,14 @@ def _summary_created_by(summary) -> str:
     )
 
 
+# def _summary_model_name để summary model name.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _summary_model_name(summary) -> str:
     return str(getattr(summary, 'model_name', None) or '—')
 
 
+# def _summary_created_at để summary created at.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _summary_created_at(summary) -> str:
     created_at = getattr(summary, 'created_at', None)
     if created_at is None:
@@ -142,6 +160,8 @@ def _summary_created_at(summary) -> str:
     return created_at.strftime('%d/%m/%Y %H:%M')
 
 
+# def _summary_created_at_iso để summary created at iso.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _summary_created_at_iso(summary) -> str:
     created_at = getattr(summary, 'created_at', None)
     if created_at is None:
@@ -149,5 +169,7 @@ def _summary_created_at_iso(summary) -> str:
     return created_at.isoformat()
 
 
+# def _yaml_escape để yaml escape.
+# vd: nhận đầu vào -> trả kết quả đã xử lý.
 def _yaml_escape(value: str) -> str:
     return str(value or '').replace('\\', '\\\\').replace('"', '\\"')

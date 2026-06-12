@@ -1,3 +1,7 @@
+// === MÀN HÌNH SAO LƯU (legacy, cấp hệ thống) ===
+// Tạo/tải/xóa backup toàn cục: _createBackup() POST 'admin/backup/create/', _downloadBackup(), _deleteBackup().
+// Hiển thị thống kê DB (_buildDbStatsCard) và danh sách file backup (_buildFilesCard). _loadData() GET 'admin/backup/'.
+
 import 'dart:html' as html;
 
 import 'package:dio/dio.dart';
@@ -8,6 +12,7 @@ import '../../core/api_client.dart';
 import '../../l10n/app_strings.dart';
 
 class BackupScreen extends ConsumerStatefulWidget {
+  // Widget màn SAO LƯU (legacy, cấp hệ thống).
   const BackupScreen({super.key});
 
   @override
@@ -34,12 +39,14 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
 
   AppStrings get _strings => AppStrings.of(context);
 
+  // Mở màn: nạp thống kê DB + danh sách file backup (_loadData).
   @override
   void initState() {
     super.initState();
     _loadData();
   }
 
+  // Đổi key app/thành phần thành nhãn tiếng Việt để hiển thị.
   String _appLabel(String key) {
     final label = _appLabels[key];
     if (label == null) return key;
@@ -64,6 +71,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     }
   }
 
+  // Nút Tạo backup -> POST 'admin/backup/create/'.
   Future<void> _createBackup() async {
     setState(() => _creating = true);
     try {
@@ -102,6 +110,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     }
   }
 
+  // Tải 1 file backup về máy ('admin/backup/<file>/download/').
   Future<void> _downloadBackup(String filename) async {
     try {
       final resp = await ApiClient().dio.get(
@@ -128,6 +137,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     }
   }
 
+  // Xóa 1 file backup (có xác nhận).
   Future<void> _deleteBackup(String filename) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -177,6 +187,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     }
   }
 
+  // Dựng màn: thẻ tạo backup + thống kê DB + danh sách file backup.
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -255,6 +266,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     );
   }
 
+  // Thẻ chọn thành phần và nút tạo backup.
   Widget _buildCreateCard() {
     return Card(
       elevation: 1,
@@ -371,6 +383,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     );
   }
 
+  // Thẻ hiển thị thống kê dung lượng/số bản ghi của DB.
   Widget _buildDbStatsCard() {
     return Card(
       elevation: 1,

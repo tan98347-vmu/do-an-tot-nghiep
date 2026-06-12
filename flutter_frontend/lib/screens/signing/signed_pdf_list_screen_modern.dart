@@ -1,8 +1,7 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/signing/signed_pdf_list_screen_modern.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH DANH SÁCH PDF ĐÃ KÝ ===
+// Liệt kê các PDF đã ký ('signed-pdfs/'), tìm kiếm (_scheduleSearch), lọc theo trạng thái xác minh / chế độ ký (_statusLabel/_modeLabel); mở chi tiết (/signed-pdfs/<id>).
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/signing/signed_pdf_list_screen_modern.dart.
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -15,25 +14,21 @@ import '../../models/signing.dart';
 import '../../widgets/common/collapsible_filter_panel.dart';
 import '../../widgets/common/list_filter_extras.dart';
 
-// Mục đích: Widget `SignedPdfListScreen` triển khai phần việc `Signed Pdf List Screen` trong flutter_frontend/lib/screens/signing/signed_pdf_list_screen_modern.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn DANH SÁCH PDF ĐÃ KÝ.
 
 class SignedPdfListScreen extends StatefulWidget {
+  // Widget màn DANH SÁCH PDF ĐÃ KÝ.
   const SignedPdfListScreen({super.key});
 
   @override
   State<SignedPdfListScreen> createState() => _SignedPdfListScreenState();
 }
 
-// Mục đích: Widget `_SignedPdfListScreenState` triển khai phần việc `Signed Pdf List Screen State` trong flutter_frontend/lib/screens/signing/signed_pdf_list_screen_modern.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn danh sách PDF đã ký: tải, tìm, lọc theo trạng thái/chế độ.
 
 class _SignedPdfListScreenState extends State<SignedPdfListScreen> {
   AppStrings get _strings => AppStrings.of(context);
+  // Chọn chuỗi hiển thị VI/EN (i18n).
   String _pick(String vi, String en) => _strings.pick(vi, en);
 
   final _searchController = TextEditingController();
@@ -73,33 +68,21 @@ class _SignedPdfListScreenState extends State<SignedPdfListScreen> {
   }
 
   @override
-  // Mục đích: Phương thức `initState` triển khai phần việc `init State` trong flutter_frontend/lib/screens/signing/signed_pdf_list_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Mở màn: nạp danh sách PDF đã ký (_load 'signed-pdfs/').
   void initState() {
     super.initState();
     _load();
   }
 
   @override
-  // Mục đích: Phương thức `dispose` triển khai phần việc `dispose` trong flutter_frontend/lib/screens/signing/signed_pdf_list_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Rời màn: dọn controller tìm kiếm.
   void dispose() {
     _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
-  // Mục đích: Phương thức `_scheduleSearch` triển khai phần việc `schedule Search` trong flutter_frontend/lib/screens/signing/signed_pdf_list_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Debounce ô tìm kiếm rồi lọc danh sách.
   void _scheduleSearch(String value) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 280), () {
@@ -111,10 +94,7 @@ class _SignedPdfListScreenState extends State<SignedPdfListScreen> {
     });
   }
 
-  // Mục đích: Phương thức `_load` triển khai phần việc `load` trong flutter_frontend/lib/screens/signing/signed_pdf_list_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Tải danh sách PDF đã ký từ server ('signed-pdfs/').
 
   Future<void> _load() async {
     // Cập nhật state cục bộ để giao diện phản ánh ngay dữ liệu hoặc trạng thái mới.
@@ -168,11 +148,7 @@ class _SignedPdfListScreenState extends State<SignedPdfListScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_formatDate` triển khai phần việc `format Date` trong flutter_frontend/lib/screens/signing/signed_pdf_list_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Định dạng ngày để hiển thị.
   String _formatDate(String value) {
     if (value.isEmpty) return _pick('Chua co thoi gian', 'No timestamp');
     try {
@@ -187,11 +163,7 @@ class _SignedPdfListScreenState extends State<SignedPdfListScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_statusLabel` triển khai phần việc `status Label` trong flutter_frontend/lib/screens/signing/signed_pdf_list_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nhãn trạng thái xác minh (hợp lệ/đã sửa/không trust...).
   String _statusLabel(String status) {
     switch (status) {
       case 'safe':
@@ -209,6 +181,7 @@ class _SignedPdfListScreenState extends State<SignedPdfListScreen> {
     }
   }
 
+  // Màu badge theo trạng thái xác minh.
   Color _statusColor(String status) {
     switch (status) {
       case 'safe':
@@ -225,31 +198,20 @@ class _SignedPdfListScreenState extends State<SignedPdfListScreen> {
     }
   }
 
-  // Mục đích: Phương thức `_modeLabel` triển khai phần việc `mode Label` trong flutter_frontend/lib/screens/signing/signed_pdf_list_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Nhãn chế độ ký (PDF PKCS#7 / xác nhận nội bộ).
   String _modeLabel(String mode) => mode == 'pdf_pkcs7'
       ? 'PDF PKCS#7'
       : _pick('Xac nhan noi bo', 'Internal approval');
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/signing/signed_pdf_list_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
-
+  // Dựng danh sách PDF đã ký + lọc/tìm; mở chi tiết (/signed-pdfs/<id>).
   Widget build(BuildContext context) {
     final safeCount =
         _items.where((item) => item.verificationStatus == 'safe').length;
     final forwardedCount =
         _items.where((item) => item.mailboxThreadCount > 0).length;
 
-    // Mục đích: Phương thức `toggleChip` triển khai phần việc `toggle Chip` trong flutter_frontend/lib/screens/signing/signed_pdf_list_screen_modern.dart.
-    // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-    // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-    // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+    // Dựng chip bật/tắt 1 bộ lọc.
 
     Widget toggleChip(String label, bool active, VoidCallback onTap) {
       return InkWell(
@@ -654,10 +616,7 @@ class _SignedPdfListScreenState extends State<SignedPdfListScreen> {
   }
 }
 
-// Mục đích: Lớp `_TopMetric` triển khai phần việc `Top Metric` trong flutter_frontend/lib/screens/signing/signed_pdf_list_screen_modern.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là lớp thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget ô thống kê đầu màn (nhãn + số).
 
 class _TopMetric extends StatelessWidget {
   final String label;
@@ -666,10 +625,7 @@ class _TopMetric extends StatelessWidget {
   const _TopMetric({required this.label, required this.value});
 
   @override
-  // Mục đích: Phương thức `build` triển khai phần việc `build` trong flutter_frontend/lib/screens/signing/signed_pdf_list_screen_modern.dart.
-  // Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-  // Vai trò trong hệ thống: Đây là phương thức thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-  // Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+  // Dựng ô thống kê.
 
   Widget build(BuildContext context) {
     return Container(

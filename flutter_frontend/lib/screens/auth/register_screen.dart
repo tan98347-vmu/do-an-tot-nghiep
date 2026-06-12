@@ -1,32 +1,28 @@
-// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/auth/register_screen.dart.
-// Cách hoạt động: nhận state từ provider, dựng widget, phản ứng sự kiện và gửi thao tác ngược về backend khi người dùng tương tác.
-// Vai trò trong hệ thống: Đây là màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: biến nghiệp vụ backend thành trải nghiệm thao tác cụ thể trên web.
+// === MÀN HÌNH ĐĂNG KÝ ===
+// Đăng ký tự do đã bị TẮT ở bản multi-company: màn hình chỉ hiển thị thông báo và điều hướng về /login.
+// (Tài khoản do company-admin/platform-admin tạo, không tự đăng ký.)
 
+// Tệp này dùng để: dựng giao diện và orchestration UI trong flutter_frontend/lib/screens/auth/register_screen.dart.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../l10n/app_strings.dart';
 
-// Mục đích: Widget `RegisterScreen` triển khai phần việc `Register Screen` trong flutter_frontend/lib/screens/auth/register_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// Widget màn ĐĂNG KÝ (đã tắt ở bản multi-company).
 
 class RegisterScreen extends ConsumerStatefulWidget {
+  // Widget màn ĐĂNG KÝ (đã bị tắt ở bản multi-company).
   const RegisterScreen({super.key});
 
   @override
   ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-// Mục đích: Widget `_RegisterScreenState` triển khai phần việc `Register Screen State` trong flutter_frontend/lib/screens/auth/register_screen.dart.
-// Cách hoạt động: Thành phần này nhận dữ liệu đầu vào từ lớp gọi phía trên, áp dụng logic hiện có rồi trả lại kết quả hoặc giao diện phù hợp.
-// Vai trò trong hệ thống: Đây là widget thuộc màn hình Flutter mà người dùng tương tác trực tiếp.
-// Tác dụng khi hệ thống vận hành: Thành phần này giúp luồng `flutter_frontend` chạy đúng trách nhiệm tại đúng thời điểm.
+// State màn đăng ký: chỉ hiển thị thông báo không khả dụng + nút về /login.
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
+  // Dựng thông báo 'đăng ký tự do không khả dụng' + nút quay về /login.
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);

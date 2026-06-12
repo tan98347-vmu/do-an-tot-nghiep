@@ -11,6 +11,8 @@ from rest_framework import serializers
 from document_templates.models import TemplateReviewNotification
 
 
+# class AggregateNotificationItemSerializer là serializer định nghĩa dữ liệu vào/ra (AggregateNotificationItem).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class AggregateNotificationItemSerializer(serializers.Serializer):
     source_type = serializers.CharField()
     source_id = serializers.CharField()
@@ -30,10 +32,14 @@ class AggregateNotificationItemSerializer(serializers.Serializer):
     actor_name = serializers.CharField(required=False, allow_blank=True)
 
 
+# class AggregateNotificationReadSerializer là serializer định nghĩa dữ liệu vào/ra (AggregateNotificationRead).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class AggregateNotificationReadSerializer(serializers.Serializer):
     source_type = serializers.CharField()
     source_id = serializers.CharField()
 
+# class TemplateReviewNotificationSerializer là serializer định nghĩa dữ liệu vào/ra (TemplateReviewNotification).
+# vd: serializer.data -> JSON cho frontend; is_valid() kiểm tra dữ liệu gửi lên.
 class TemplateReviewNotificationSerializer(serializers.ModelSerializer):
     """
     Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -48,6 +54,8 @@ class TemplateReviewNotificationSerializer(serializers.ModelSerializer):
 
     
 
+    # class Meta khai báo metadata (fields, ordering, ràng buộc...) cho model/serializer.
+    # vd: ordering=['-created_at'] -> bản ghi mới nhất lên đầu.
     class Meta:
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.
@@ -71,6 +79,8 @@ class TemplateReviewNotificationSerializer(serializers.ModelSerializer):
 
     
 
+    # def get_actor_name để lấy actor name (trong serializer).
+    # vd: nhận điều kiện -> trả về dữ liệu phù hợp.
     def get_actor_name(self, obj):
         """
         Thuoc chuc nang nao: Bang dieu khien, Tai khoan - phong ban - nhom, Cau hinh AI, Sao luu du lieu, thong bao va ha tang route chung.

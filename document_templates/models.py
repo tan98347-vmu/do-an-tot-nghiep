@@ -1,9 +1,278 @@
 """
-Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
-Vai tro backend: File `document_templates/models.py` giu hoac ho tro luong backend cho CRUD mau, duyet mau, version mau, import DOCX/URL, bulk upload va preview noi dung mau.
-Vai tro cua no trong frontend: Cac man `/templates`, `/templates/create`, man chi tiet mau va man bulk upload lay du lieu hoac chiu tac dong gian tiep tu file nay.
-Moi lien he voi nhung ham / source khac: Tuong tac truc tiep voi `api/urls.py`, `api/serializers/templates.py`, `accounts.permissions`, `document_templates.models`, `document_templates.utils`, `document_templates.versioning`.
-Tac dung: Giu cho du lieu mau, quyen thao tac va preview cua nhom man Mau van ban luon dong nhat giua API, storage va chi so tim kiem.
+ ## Luồng kèm các hàm
+
+  1. User mở màn “Chỉnh sửa mẫu”
+     Flutter: _loadSession()
+         ↓
+  2. Gọi API tạo/lấy phiên chỉnh sửa
+     Flutter: ensureSession(templateId)
+         ↓
+  3. Django tiếp nhận request
+     View: template_manual_edit_session_create()
+         ↓
+  4. Kiểm tra quyền và tạo session
+     Service: create_template_manual_edit_session()
+         ↓
+  5. Đảm bảo mẫu có file DOCX
+     Service: _ensure_template_docx_source()
+         ↓
+  6. Tạo working copy từ DOCX gốc
+     Service: _read_file_field_bytes()
+              _save_field_bytes()
+         ↓
+  7. Tạo URL mở Collabora
+     Serializer: get_editor_url()
+     Provider: build_manual_edit_editor_url()
+               build_manual_edit_wopi_src()
+         ↓
+  8. Flutter mở Collabora trong iframe
+     Widget: ManualEditIFrame.build()
+         ↓
+  9. Collabora hỏi thông tin file
+     View: template_manual_edit_wopi_file()
+         ↓
+  10. Collabora tải working copy
+      View: template_manual_edit_wopi_contents() [GET]
+         ↓
+  11. User chỉnh sửa trong Collabora
+         ↓
+  12. Collabora khóa file
+      View: _handle_wopi_lock_override()
+         ↓
+  13. Collabora autosave DOCX về Django
+      View: template_manual_edit_wopi_contents() [PUT]
+         ↓
+  14. Django ghi DOCX mới vào working copy
+      Service: update_template_manual_edit_working_copy()
+               _save_field_bytes()
+         ↓
+  15. User bấm “Lưu & hoàn tất”
+      Flutter: _finishSession()
+         ↓
+  16. Flutter yêu cầu Collabora lưu lần cuối
+      Flutter: _flushEditorChanges()
+               requestManualEditIFrameSave()
+               _ManualEditFrameBridge.save()
+               _requestSave()
+         ↓
+  17. Collabora gửi Action_Save_Resp
+      Flutter: _ManualEditFrameBridge.handleMessage()
+         ↓
+  18. Flutter chờ working copy đã cập nhật
+      Flutter: _waitForWorkingCopySync()
+               getSession(sessionId)
+         ↓
+  19. Flutter gọi API hoàn tất
+      Provider: finishSession(sessionId)
+         ↓
+  20. Django tiếp nhận
+      View: template_manual_edit_session_finish()
+         ↓
+  21. Commit working copy thành mẫu chính
+      Service: finish_template_manual_edit_session()
+         ↓
+  22. Lưu phiên bản cũ
+      Versioning: create_template_version_snapshot()
+         ↓
+  23. Tăng version
+      Service: _bump_template_version()
+         ↓
+  24. Cập nhật mẫu hiện hành
+      Service: _save_field_bytes(template, 'docx_file')
+      Model: template.save()
+         ↓
+  25. Xóa working copy và đóng session
+      Service: _delete_session_working_copy()
+
+  ## Giải thích từng nhóm hàm
+
+  ### 1. Mở phiên chỉnh sửa
+
+  _loadSession() tại template_manual_edit_screen.dart được chạy khi màn hình mở:
+
+  final session = await ref
+      .read(templateManualEditApiProvider)
+      .ensureSession(widget.templateId);
+
+  ensureSession() gọi:
+
+  POST /api/templates/<id>/manual-edit/session/
+
+  template_manual_edit_session_create() nhận request, lấy mẫu user được phép truy cập rồi gọi:
+
+  create_template_manual_edit_session(
+      user=request.user,
+      template=template,
+  )
+
+  ## 2. Tạo working copy
+
+  create_template_manual_edit_session() thực hiện:
+
+  _require_manual_edit_provider()
+
+  Kiểm tra Collabora đã cấu hình và hoạt động.
+
+  get_active_template_manual_edit_session(template)
+
+  Kiểm tra mẫu có đang bị người khác chỉnh sửa không.
+
+  can_edit_template(user, template)
+
+  Kiểm tra user có quyền sửa mẫu không.
+
+  _ensure_template_docx_source(template)
+
+  Đảm bảo mẫu có DOCX. Nếu mẫu chỉ có text thì render text thành DOCX.
+
+  _read_file_field_bytes(template.docx_file)
+
+  Đọc toàn bộ DOCX gốc thành bytes.
+
+  _save_field_bytes(
+      session,
+      'working_copy_file',
+      file_bytes=source_bytes,
+  )
+
+  Sao chép bytes sang working copy của session.
+
+  ## 3. Tạo editor URL
+
+  TemplateManualEditSessionSerializer.get_editor_url() gọi:
+
+  build_manual_edit_editor_url()
+
+  Hàm này tiếp tục gọi:
+
+  build_manual_edit_wopi_src()
+
+  Kết quả:
+
+  Collabora URL
+   + WOPISrc của Django
+   + access_token
+   + token TTL
+
+  ## 4. Collabora lấy file
+
+  ManualEditIFrame.build() nhúng URL Collabora:
+
+  html.IFrameElement()..src = editorUrl;
+
+  Collabora gọi template_manual_edit_wopi_file() để lấy:
+
+  - Tên file.
+  - Kích thước.
+  - User.
+  - Quyền ghi.
+  - Phiên bản.
+  - Khả năng lock.
+
+  Sau đó Collabora gọi:
+
+  template_manual_edit_wopi_contents()
+
+  với HTTP GET để Django trả:
+
+  FileResponse(session.working_copy_file.open('rb'))
+
+  ## 5. Collabora lưu working copy
+
+  Collabora gọi cùng endpoint template_manual_edit_wopi_contents() nhưng kèm:
+
+  X-WOPI-Override: PUT
+
+  View kiểm tra khóa bằng:
+
+  _handle_wopi_lock_override()
+
+  Sau đó gọi:
+
+  update_template_manual_edit_working_copy(
+      session=session,
+      file_bytes=request.body,
+  )
+
+  Service dùng _save_field_bytes() để ghi DOCX mới vào working copy và cập nhật:
+
+  session.working_copy_updated_at = timezone.now()
+
+  ## 6. Lưu lần cuối
+
+  Khi user bấm Lưu & hoàn tất, _finishSession() gọi:
+
+  _flushEditorChanges(session)
+
+  Hàm này gọi:
+
+  requestManualEditIFrameSave()
+
+  _ManualEditFrameBridge._requestSave() gửi vào iframe:
+
+  {
+    "MessageId": "Action_Save"
+  }
+
+  Collabora nhận lệnh, gửi DOCX mới về WOPI rồi trả:
+
+  Action_Save_Resp
+
+  handleMessage() nhận kết quả xác nhận.
+
+  _waitForWorkingCopySync() liên tục gọi getSession() để chờ working_copy_updated_at thay đổi.
+
+  ## 7. Commit mẫu
+
+  Sau khi working copy đã đồng bộ, Flutter gọi:
+
+  finishSession(session.id)
+
+  View template_manual_edit_session_finish() gọi:
+
+  finish_template_manual_edit_session()
+
+  Trong đó:
+
+  create_template_version_snapshot(template)
+
+  Lưu DOCX và nội dung cũ vào TemplateVersion.
+
+  template.version = _bump_template_version(template.version)
+
+  Tăng 1.0 → 1.1.
+
+  template.content = _extract_text_from_docx(...)
+
+  Trích text từ DOCX mới.
+
+  _save_field_bytes(template, 'docx_file', file_bytes=file_bytes)
+
+  Thay DOCX hiện hành bằng file đã sửa.
+
+  _delete_session_working_copy(session)
+
+  Xóa file tạm và kết thúc session.
+
+  Tóm tắt lời gọi:
+
+  _loadSession
+  → ensureSession
+  → template_manual_edit_session_create
+  → create_template_manual_edit_session
+  → build_manual_edit_editor_url
+  → ManualEditIFrame
+  → template_manual_edit_wopi_file
+  → template_manual_edit_wopi_contents GET/PUT
+  → update_template_manual_edit_working_copy
+  → _finishSession
+  → requestManualEditIFrameSave
+  → finishSession
+  → template_manual_edit_session_finish
+  → finish_template_manual_edit_session
+  → create_template_version_snapshot
+  → cập nhật DocumentTemplate
+  → xóa working copy
 """
 
 import re
@@ -11,10 +280,13 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from accounts.peer_permissions import PeerPermissionLevel
+from accounts.record_codes import TEMPLATE_RECORD_PREFIX, format_record_code
 from accounts.storage_paths import company_media_path
 from my_tennis_club.soft_delete import ActiveOnlyManager
 
 
+# def _template_docx_upload xác định đường dẫn lưu file DOCX gốc của mẫu theo công ty.
+# vd: upload mẫu DOCX công ty A -> 'companies/<slug-A>/template_docx/<file>.docx'.
 def _template_docx_upload(instance, filename):
     return company_media_path(
         company=getattr(instance, 'company', None),
@@ -23,6 +295,8 @@ def _template_docx_upload(instance, filename):
     )
 
 
+# def _template_version_docx_upload xác định đường dẫn lưu file DOCX của từng version mẫu (theo công ty + template_id).
+# vd: -> 'companies/<slug>/template_versions/template_5/<file>.docx'.
 def _template_version_docx_upload(instance, filename):
     company = getattr(getattr(instance, 'template', None), 'company', None)
     return company_media_path(
@@ -45,6 +319,8 @@ STATUS_CHOICES = [
     (STATUS_REJECTED, 'Bị từ chối'),
 ]
 
+# class TemplateCategory là danh mục mẫu văn bản (theo công ty) để phân loại và lọc các DocumentTemplate.
+# vd: 'Hợp đồng', 'Công văn' -> nhóm các mẫu cùng loại để dễ tìm.
 class TemplateCategory(models.Model):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -66,6 +342,8 @@ class TemplateCategory(models.Model):
 
     
 
+    # class Meta: sắp xếp theo tên + ràng buộc tên danh mục là duy nhất trong mỗi công ty (uniq_template_category_company_name).
+    # vd: công ty A không thể có 2 danh mục cùng tên 'Hợp đồng'.
     class Meta:
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -83,6 +361,8 @@ class TemplateCategory(models.Model):
 
     
 
+    # def __str__ hiển thị danh mục bằng chính tên của nó.
+    # vd: -> 'Hợp đồng'.
     def __str__(self):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -93,6 +373,8 @@ class TemplateCategory(models.Model):
         """
         return self.name
 
+# class DocumentTemplate là MẪU văn bản — thực thể lõi của module: nguồn (nhập thủ công / file DOCX), nội dung + biến {{...}}, phạm vi (private/group/public), quy trình duyệt (status), công ty/phòng ban/nhóm sở hữu, file DOCX gốc, chia sẻ ngang hàng (peer_share) và soft-delete. Dùng để sinh văn bản bằng cách điền biến.
+# vd: mẫu 'Đơn xin nghỉ' (source=docx, visibility=group, status=approved) -> dùng để sinh đơn cho nhân viên.
 class DocumentTemplate(models.Model):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -222,6 +504,8 @@ class DocumentTemplate(models.Model):
 
     
 
+    # class Meta: cấu hình sắp xếp / index / soft-delete cho DocumentTemplate.
+    # vd: danh sách mẫu hiển thị theo thứ tự đã cấu hình.
     class Meta:
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -236,6 +520,8 @@ class DocumentTemplate(models.Model):
 
     
 
+    # def __str__ hiển thị mẫu bằng tiêu đề.
+    # vd: -> 'Đơn xin nghỉ phép'.
     def __str__(self):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -246,6 +532,14 @@ class DocumentTemplate(models.Model):
         """
         return self.title
 
+    # def record_code (property) sinh mã định danh hiển thị của mẫu theo tiền tố + id (format_record_code).
+    # vd: pk=5 -> mã kiểu 'MAU-000005'.
+    @property
+    def record_code(self):
+        return format_record_code(TEMPLATE_RECORD_PREFIX, self.pk)
+
+    # def save tự suy ra company nếu chưa có: ưu tiên theo category -> department -> group -> owner, đảm bảo mẫu luôn thuộc đúng công ty (phân quyền đa công ty).
+    # vd: tạo mẫu gắn category của công ty A nhưng chưa set company -> tự gán company=A.
     def save(self, *args, **kwargs):
         if self.company_id is None:
             if self.category_id and getattr(self.category, 'company_id', None):
@@ -260,6 +554,8 @@ class DocumentTemplate(models.Model):
 
     
 
+    # def get_variables trích danh sách tên biến {{...}} của mẫu: ưu tiên đọc từ file DOCX gốc (khớp đúng lúc sinh văn bản), fallback sang trường content; có cache _cached_variables.
+    # vd: mẫu chứa {{ho_ten}}, {{ngay}} -> ['ho_ten','ngay'].
     def get_variables(self):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -303,6 +599,8 @@ class DocumentTemplate(models.Model):
 
     
 
+    # def render điền giá trị biến vào nội dung text/HTML của mẫu (fill_variables_in_text), trả về nội dung đã điền.
+    # vd: '{{ho_ten}}' + {'ho_ten':'A'} -> 'A'.
     def render(self, variables_dict):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -316,6 +614,8 @@ class DocumentTemplate(models.Model):
 
     
 
+    # def render_as_docx xuất mẫu thành file DOCX đã điền biến: mẫu DOCX còn file gốc -> render giữ đúng định dạng (render_docx_from_template); không thì dựng DOCX từ HTML/text của content; allow_content_fallback=False mà mất file gốc -> ValueError.
+    # vd: mẫu DOCX -> file .docx điền biến giữ nguyên layout.
     def render_as_docx(self, variables_dict=None, *, allow_content_fallback=True):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -347,6 +647,8 @@ class DocumentTemplate(models.Model):
 
     
 
+    # def can_be_used cho biết mẫu có dùng được để sinh văn bản chưa: đã duyệt (approved) HOẶC là mẫu thủ công riêng tư (private + manual).
+    # vd: mẫu group chưa duyệt -> False; mẫu private thủ công -> True.
     def can_be_used(self):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -361,6 +663,8 @@ class DocumentTemplate(models.Model):
 
     
 
+    # def submit_for_approval đặt trạng thái duyệt theo phạm vi + vai trò: superuser/private -> approved ngay; group mà là trưởng nhóm -> approved, không phải -> pending_leader; public -> pending; tự điền approved_by/at khi cần.
+    # vd: nhân viên gửi mẫu group -> status='pending_leader' (chờ trưởng nhóm duyệt).
     def submit_for_approval(self):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -402,6 +706,8 @@ class DocumentTemplate(models.Model):
 
     
 
+    # def get_status_badge_class ánh xạ trạng thái -> class màu badge cho UI (draft→secondary, pending→warning, approved→success, rejected→danger).
+    # vd: status='approved' -> 'success' (badge xanh).
     def get_status_badge_class(self):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -419,6 +725,8 @@ class DocumentTemplate(models.Model):
 
     
 
+    # def get_tag_list tách trường notes thành danh sách tag (ngăn cách bởi dấu phẩy, bỏ rỗng).
+    # vd: notes='hanh chinh, mau moi' -> ['hanh chinh','mau moi'].
     def get_tag_list(self):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -429,6 +737,8 @@ class DocumentTemplate(models.Model):
         """
         return [t.strip() for t in self.notes.split(',') if t.strip()]
 
+# class TemplateVersion lưu một phiên bản (snapshot) nội dung + file DOCX của mẫu qua từng lần chỉnh sửa, phục vụ lịch sử và khôi phục.
+# vd: mỗi lần 'Lưu & hoàn tất' khi sửa mẫu -> tạo 1 TemplateVersion mới.
 class TemplateVersion(models.Model):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -455,6 +765,8 @@ class TemplateVersion(models.Model):
 
     
 
+    # class Meta: sắp xếp các version (theo số version/thời gian) gắn với template.
+    # vd: liệt kê lịch sử version của 1 mẫu.
     class Meta:
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -469,6 +781,8 @@ class TemplateVersion(models.Model):
 
     
 
+    # def __str__ hiển thị version dạng mẫu + số version.
+    # vd: -> 'Đơn xin nghỉ v1.2'.
     def __str__(self):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -479,6 +793,8 @@ class TemplateVersion(models.Model):
         """
         return f"{self.template.title} v{self.version_number}"
 
+# class TemplatePermission là phân quyền (legacy) trên mẫu cho user/nhóm: xem / sửa / xóa.
+# vd: cấp quyền sửa mẫu #5 cho user #12.
 class TemplatePermission(models.Model):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -501,6 +817,8 @@ class TemplatePermission(models.Model):
 
     
 
+    # class Meta: ràng buộc không trùng quyền + index tra cứu.
+    # vd: 1 cặp (mẫu, user) chỉ có 1 bản ghi quyền.
     class Meta:
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -515,6 +833,8 @@ class TemplatePermission(models.Model):
 
     
 
+    # def __str__ hiển thị quyền dạng mẫu -> đối tượng.
+    # vd: -> 'template 5 -> user 12'.
     def __str__(self):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -525,6 +845,8 @@ class TemplatePermission(models.Model):
         """
         return f"{self.template.title} – {self.user.username}"
 
+# class TemplateAudienceMember là bản ghi chia sẻ mẫu cho một đồng nghiệp cụ thể (peer share) kèm mức quyền (view/edit...).
+# vd: chia sẻ mẫu #5 cho user #12 quyền VIEW.
 class TemplateAudienceMember(models.Model):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -558,6 +880,8 @@ class TemplateAudienceMember(models.Model):
 
     
 
+    # class Meta: mỗi cặp (template, user) là duy nhất + index để tra cứu nhanh.
+    # vd: không chia sẻ trùng 1 mẫu cho cùng một user.
     class Meta:
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -572,6 +896,8 @@ class TemplateAudienceMember(models.Model):
 
     
 
+    # def __str__ hiển thị quan hệ chia sẻ dạng template -> user.
+    # vd: -> '5 -> 12'.
     def __str__(self):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -582,6 +908,8 @@ class TemplateAudienceMember(models.Model):
         """
         return f'{self.template.title} -> {self.user.username}'
 
+# class PendingTemplateAssignment lưu việc gán/phân công mẫu đang ở trạng thái chờ xử lý (vd gán cho phòng ban/người khi mẫu chưa sẵn sàng).
+# vd: gán mẫu cho phòng ban X, chờ xử lý/duyệt.
 class PendingTemplateAssignment(models.Model):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -615,6 +943,8 @@ class PendingTemplateAssignment(models.Model):
 
     
 
+    # class Meta: cấu hình sắp xếp/ràng buộc cho bản ghi phân công chờ.
+    # vd: liệt kê các phân công đang chờ.
     class Meta:
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -628,6 +958,8 @@ class PendingTemplateAssignment(models.Model):
 
     
 
+    # def __str__ tóm tắt bản ghi phân công ngắn gọn.
+    # vd: -> mô tả việc gán mẫu cho đối tượng.
     def __str__(self):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -639,6 +971,8 @@ class PendingTemplateAssignment(models.Model):
         target = self.group.name if self.group else (self.user.username if self.user else '?')
         return f'"{self.template_name}" → {self.assign_type}: {target}'
 
+# class TemplateFavorite đánh dấu một user yêu thích (ghim) một mẫu để truy cập nhanh.
+# vd: user #3 ghim mẫu #5 -> hiện ở tab 'Mẫu yêu thích'.
 class TemplateFavorite(models.Model):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -655,6 +989,8 @@ class TemplateFavorite(models.Model):
 
     
 
+    # class Meta: mỗi cặp (user, template) là duy nhất + index.
+    # vd: không ghim trùng một mẫu.
     class Meta:
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -668,6 +1004,8 @@ class TemplateFavorite(models.Model):
 
     
 
+    # def __str__ hiển thị quan hệ yêu thích dạng user -> template.
+    # vd: -> '3 ♥ 5'.
     def __str__(self):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -678,6 +1016,8 @@ class TemplateFavorite(models.Model):
         """
         return f"{self.user.username} ♥ {self.template.title}"
 
+# class TemplateApprovalLog ghi nhật ký các hành động duyệt mẫu (ai duyệt/từ chối, thời điểm, ghi chú) để truy vết.
+# vd: trưởng nhóm duyệt mẫu #5 -> 1 dòng log 'approved by ...'.
 class TemplateApprovalLog(models.Model):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -705,6 +1045,8 @@ class TemplateApprovalLog(models.Model):
 
     
 
+    # class Meta: sắp xếp log mới nhất lên đầu + index.
+    # vd: xem lịch sử duyệt của 1 mẫu.
     class Meta:
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -719,6 +1061,8 @@ class TemplateApprovalLog(models.Model):
 
     
 
+    # def __str__ tóm tắt một dòng log duyệt.
+    # vd: -> 'template 5 approved ...'.
     def __str__(self):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -729,6 +1073,8 @@ class TemplateApprovalLog(models.Model):
         """
         return f"{self.template.title} – {self.get_action_display()} by {self.actor}"
 
+# class TemplateReviewNotification là thông báo cho người duyệt khi có mẫu cần xem xét (chờ duyệt): gắn người nhận, mẫu và trạng thái đọc.
+# vd: nhân viên gửi mẫu group -> tạo thông báo cho trưởng nhóm.
 class TemplateReviewNotification(models.Model):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -769,6 +1115,8 @@ class TemplateReviewNotification(models.Model):
 
     
 
+    # class Meta: sắp xếp mới nhất lên đầu + index theo người nhận.
+    # vd: đếm số thông báo chưa đọc của trưởng nhóm.
     class Meta:
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -783,6 +1131,8 @@ class TemplateReviewNotification(models.Model):
 
     
 
+    # def __str__ tóm tắt thông báo duyệt.
+    # vd: -> 'review: template 5 -> leader 8'.
     def __str__(self):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).

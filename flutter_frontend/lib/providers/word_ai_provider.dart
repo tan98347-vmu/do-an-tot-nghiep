@@ -33,6 +33,7 @@ final wordAiJobHistoryProvider =
 Future<WordAiJob> createWordAiJob({
   required int documentId,
   required String instruction,
+  required String promptCheckToken,
   required bool trackChanges,
 }) async {
   final response = await ApiClient().dio.post(
@@ -40,6 +41,7 @@ Future<WordAiJob> createWordAiJob({
     data: {
       'document_id': documentId,
       'instruction': instruction,
+      'prompt_check_token': promptCheckToken,
       'track_changes': trackChanges,
       'edit_mode': 'direct_addin_mcp',
     },

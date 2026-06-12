@@ -17,6 +17,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from document_templates.status_rules import _auto_status
 
+# Là gì: `_vn_normalize` là helper nội bộ của module `bulk_upload.py`, phục vụ nhóm tải lên, kiểm tra và xử lý tài liệu hàng loạt.
+# Chức năng backend: Hàm chuẩn hóa dữ liệu về định dạng thống nhất; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình nhập nhiều tài liệu cùng lúc.
+# Mối liên hệ: Hàm phối hợp với `unicodedata.normalize`, `join`, `unicodedata.combining` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _vn_normalize(text: str) -> str:
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -29,6 +34,11 @@ def _vn_normalize(text: str) -> str:
     ascii_str = ''.join(c for c in nfkd if not unicodedata.combining(c))
     return ascii_str.lower().strip()
 
+# Là gì: `bulk_parse_excel` là endpoint REST của nhóm tải lên, kiểm tra và xử lý tài liệu hàng loạt; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm phân tích dữ liệu thô thành cấu trúc có thể sử dụng; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình nhập nhiều tài liệu cùng lúc sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.FILES.get`, `openpyxl.load_workbook`, `next` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def bulk_parse_excel(request):
@@ -58,6 +68,11 @@ def bulk_parse_excel(request):
 
         
 
+        # Là gì: `_col` là helper nội bộ của module `bulk_upload.py`, phục vụ nhóm tải lên, kiểm tra và xử lý tài liệu hàng loạt.
+        # Chức năng backend: Hàm xử lý phần việc `col` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+        # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình nhập nhiều tài liệu cùng lúc.
+        # Mối liên hệ: Hàm phối hợp với `_vn_normalize` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+        # Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
         def _col(candidates):
             """
             Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -92,6 +107,11 @@ def bulk_parse_excel(request):
 
             
 
+            # Là gì: `_get` là helper nội bộ của module `bulk_upload.py`, phục vụ nhóm tải lên, kiểm tra và xử lý tài liệu hàng loạt.
+            # Chức năng backend: Hàm đọc và trả về dữ liệu cần thiết; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+            # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình nhập nhiều tài liệu cùng lúc.
+            # Mối liên hệ: Hàm được các endpoint hoặc helper cùng module gọi khi cần cùng quy tắc xử lý.
+            # Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
             def _get(idx):
                 """
                 Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -106,6 +126,11 @@ def bulk_parse_excel(request):
 
             
 
+            # Là gì: `_get_raw` là helper nội bộ của module `bulk_upload.py`, phục vụ nhóm tải lên, kiểm tra và xử lý tài liệu hàng loạt.
+            # Chức năng backend: Hàm đọc và trả về dữ liệu cần thiết; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+            # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình nhập nhiều tài liệu cùng lúc.
+            # Mối liên hệ: Hàm được các endpoint hoặc helper cùng module gọi khi cần cùng quy tắc xử lý.
+            # Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
             def _get_raw(idx):
                 """
                 Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -133,6 +158,11 @@ def bulk_parse_excel(request):
             
             
 
+            # Là gì: `_normalise_date` là helper nội bộ của module `bulk_upload.py`, phục vụ nhóm tải lên, kiểm tra và xử lý tài liệu hàng loạt.
+            # Chức năng backend: Hàm xử lý phần việc `normalise date` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+            # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình nhập nhiều tài liệu cùng lúc.
+            # Mối liên hệ: Hàm phối hợp với `_dt.date.strftime`, `_dt.date`, `val.strftime` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+            # Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
             def _normalise_date(val):
                 """Chuan hoa nhieu kieu input ve YYYY-MM-DD; tra '' neu khong
                 hop le (vd "33/12/2026" hoac chuoi rac) thay vi day nguyen
@@ -140,6 +170,11 @@ def bulk_parse_excel(request):
                 """
                 import datetime as _dt
 
+                # Là gì: `_build` là hàm cục bộ bên trong `_normalise_date`, chỉ phục vụ bước xử lý nội bộ của nhóm tải lên, kiểm tra và xử lý tài liệu hàng loạt.
+                # Chức năng backend: Hàm tổng hợp dữ liệu đầu vào thành cấu trúc phục vụ bước tiếp theo; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+                # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình nhập nhiều tài liệu cùng lúc.
+                # Mối liên hệ: Hàm phối hợp với `_dt.date.strftime`, `_dt.date` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+                # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
                 def _build(y, m_, d_):
                     try:
                         return _dt.date(int(y), int(m_), int(d_)).strftime('%Y-%m-%d')
@@ -191,6 +226,11 @@ def bulk_parse_excel(request):
     except Exception as e:
         return Response({'detail': f'Lỗi đọc file Excel: {e}'}, status=status.HTTP_400_BAD_REQUEST)
 
+# Là gì: `bulk_upload_single` là endpoint REST của nhóm tải lên, kiểm tra và xử lý tài liệu hàng loạt; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tiếp nhận, kiểm tra và lưu tệp được tải lên; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình nhập nhiều tài liệu cùng lúc sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `request.FILES.get`, `_resolve_detection_guidance`, `str.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def bulk_upload_single(request):
@@ -221,6 +261,11 @@ def bulk_upload_single(request):
 
     import datetime as _dt
 
+    # Là gì: `_safe_date` là hàm cục bộ bên trong `bulk_upload_single`, chỉ phục vụ bước xử lý nội bộ của nhóm tải lên, kiểm tra và xử lý tài liệu hàng loạt.
+    # Chức năng backend: Hàm xử lý phần việc `safe date` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình nhập nhiều tài liệu cùng lúc.
+    # Mối liên hệ: Hàm phối hợp với `str.strip`, `_re.match`, `_dt.date` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def _safe_date(raw):
         """Tra date object hop le hoac None; tu choi chuoi nhu '2026-12-33'."""
         if not raw:
@@ -339,6 +384,12 @@ def bulk_upload_single(request):
     # both case-insensitive AND diacritics-insensitive so admin can type
     # either "Phòng Kế Toán" (chính xác) or "phong ke toan" (không dấu).
     # "đ"/"Đ" cũng được coi tương đương "d"/"D".
+    # vd: client gọi endpoint này -> nhận JSON kết quả tương ứng.
+    # Là gì: `_group_key` là hàm cục bộ bên trong `bulk_upload_single`, chỉ phục vụ bước xử lý nội bộ của nhóm tải lên, kiểm tra và xử lý tài liệu hàng loạt.
+    # Chức năng backend: Hàm xử lý phần việc `group key` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình nhập nhiều tài liệu cùng lúc.
+    # Mối liên hệ: Hàm phối hợp với `unicodedata.normalize`, `join`, `unicodedata.combining` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
     def _group_key(s):
         nfkd = unicodedata.normalize('NFKD', s or '')
         ascii_only = ''.join(c for c in nfkd if not unicodedata.combining(c))
@@ -371,6 +422,11 @@ def bulk_upload_single(request):
             seen_ids.add(g.pk)
             matched_groups.append(g)
 
+    # Là gì: `_create_template` là hàm cục bộ bên trong `bulk_upload_single`, chỉ phục vụ bước xử lý nội bộ của nhóm tải lên, kiểm tra và xử lý tài liệu hàng loạt.
+    # Chức năng backend: Hàm kiểm tra đầu vào và tạo dữ liệu mới; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+    # Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình nhập nhiều tài liệu cùng lúc.
+    # Mối liên hệ: Hàm phối hợp với `_auto_status`, `DocumentTemplate.objects.create`, `t.docx_file.save` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+    # Bản chất và tác dụng: callback cục bộ chỉ có hiệu lực trong hàm bao ngoài; có side effect ghi cơ sở dữ liệu.
     def _create_template(group=None):
         if group is not None:
             visibility = DocumentTemplate.VISIBILITY_GROUP
@@ -455,6 +511,11 @@ def bulk_upload_single(request):
         ],
     })
 
+# Là gì: `template_replace_docx` là endpoint REST của nhóm tải lên, kiểm tra và xử lý tài liệu hàng loạt; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `template replace docx` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình nhập nhiều tài liệu cùng lúc sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_accessible_templates`, `qs.get`, `request.FILES.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def template_replace_docx(request, pk):
@@ -543,6 +604,11 @@ def template_replace_docx(request, pk):
     })
 
 
+# Là gì: `bulk_upload_sample` là endpoint REST của nhóm tải lên, kiểm tra và xử lý tài liệu hàng loạt; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm tiếp nhận, kiểm tra và lưu tệp được tải lên; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình nhập nhiều tài liệu cùng lúc sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `openpyxl.Workbook`, `ws.append`, `Font` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def bulk_upload_sample(request):

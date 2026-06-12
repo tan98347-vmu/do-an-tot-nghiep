@@ -6,6 +6,8 @@ from django.db import models
 from accounts.storage_paths import company_media_path
 
 
+# def _template_manual_edit_working_copy_upload_to xác định đường dẫn lưu bản sao làm việc (.docx) khi sửa mẫu bằng trình soạn web (Collabora), theo công ty + template.
+# vd: -> 'companies/<slug>/manual_edit_working_copies/template_5/<wopi_id>.docx'.
 def _template_manual_edit_working_copy_upload_to(instance, filename):
     ext = '.docx'
     raw_name = str(filename or '').strip()
@@ -20,7 +22,11 @@ def _template_manual_edit_working_copy_upload_to(instance, filename):
     )
 
 
+# class TemplateManualEditSession là một phiên chỉnh sửa mẫu thủ công qua Collabora/WOPI: bản sao làm việc (working_copy), token truy cập, wopi_file_id, trạng thái vòng đời, lock WOPI, origin trình duyệt để postMessage, hạn dùng.
+# vd: bấm 'Sửa bằng trình soạn web' mẫu #5 -> tạo 1 session active mở editor Collabora.
 class TemplateManualEditSession(models.Model):
+    # class Status liệt kê trạng thái vòng đời phiên sửa (created -> active -> saving -> finished/cancelled/expired/failed).
+    # vd: đang mở editor -> ACTIVE; bấm 'Lưu & hoàn tất' xong -> FINISHED.
     class Status(models.TextChoices):
         CREATED = 'created', 'Created'
         ACTIVE = 'active', 'Active'
@@ -68,14 +74,22 @@ class TemplateManualEditSession(models.Model):
     cancelled_at = models.DateTimeField(null=True, blank=True)
     lock_token = models.CharField(max_length=255, blank=True)
     lock_token_refreshed_at = models.DateTimeField(null=True, blank=True)
+    # Origin that cua trinh duyet (noi nhung iframe), bat tu request tao phien.
+    # Collabora dung lam targetOrigin khi postMessage ve frame cha -> phai dung origin
+    # nay thi "Luu & hoan tat" moi nhan duoc phan hoi handshake.
+    post_message_origin = models.CharField(max_length=255, blank=True, default='')
     expires_at = models.DateTimeField(db_index=True)
     last_activity_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # class Meta: sắp xếp phiên mới nhất lên đầu.
+    # vd: liệt kê phiên sửa gần nhất trước.
     class Meta:
         ordering = ['-created_at']
 
+    # def save tự gán company theo template nếu chưa có.
+    # vd: tạo phiên cho mẫu của công ty A -> session.company=A.
     def save(self, *args, **kwargs):
         if self.company_id is None and self.template_id and getattr(
             self.template, 'company_id', None
@@ -83,6 +97,8 @@ class TemplateManualEditSession(models.Model):
             self.company = self.template.company
         super().save(*args, **kwargs)
 
+    # def active_statuses (classmethod) trả danh sách trạng thái được coi là 'đang hoạt động' (created/active/saving).
+    # vd: dùng để lọc các phiên còn đang mở.
     @classmethod
     def active_statuses(cls):
         return [
@@ -91,11 +107,15 @@ class TemplateManualEditSession(models.Model):
             cls.Status.SAVING,
         ]
 
+    # def is_active (property) cho biết phiên còn đang hoạt động không.
+    # vd: status='finished' -> False.
     @property
     def is_active(self):
         return self.status in self.active_statuses()
 
 
+# class TemplateManualEditSessionEvent ghi nhật ký sự kiện trong 1 phiên sửa (level, bước, trạng thái, message, payload) để debug luồng Collabora/WOPI.
+# vd: lỗi handshake -> 1 event level='error' kèm chi tiết.
 class TemplateManualEditSessionEvent(models.Model):
     session = models.ForeignKey(
         TemplateManualEditSession,
@@ -109,5 +129,7 @@ class TemplateManualEditSessionEvent(models.Model):
     payload = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # class Meta: sắp xếp event theo id tăng dần (đúng dòng thời gian).
+    # vd: xem chuỗi sự kiện của 1 phiên theo thứ tự xảy ra.
     class Meta:
         ordering = ['id']

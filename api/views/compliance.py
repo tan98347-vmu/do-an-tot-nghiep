@@ -17,6 +17,10 @@ from ai_engine.compliance_checker import (
     ComplianceLLMTimeout,
 )
 from ai_engine.models import ComplianceCheckResult
+from api.security.prompt_guard import (
+    prompt_check_expected_payload,
+    verify_prompt_check_token,
+)
 from api.serializers.compliance import (
     ComplianceCheckResultSerializer,
     ComplianceCheckRunSerializer,
@@ -30,6 +34,11 @@ from prompts.models import Prompt
 _SCOPE_TAG_RE = re.compile(r'[\s,;|]+')
 
 
+# Là gì: `_normalized_scope_tokens` là helper nội bộ của module `compliance.py`, phục vụ nhóm kiểm tra tuân thủ và đánh giá nội dung văn bản.
+# Chức năng backend: Hàm xử lý phần việc `normalized scope tokens` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình kiểm tra tuân thủ.
+# Mối liên hệ: Hàm phối hợp với `tokens.update`, `str.strip.lower`, `str.strip` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect ghi cơ sở dữ liệu.
 def _normalized_scope_tokens(prompt) -> set[str]:
     tokens: set[str] = set()
 
@@ -54,6 +63,11 @@ def _normalized_scope_tokens(prompt) -> set[str]:
     return tokens
 
 
+# Là gì: `_prompt_supports_scope` là helper nội bộ của module `compliance.py`, phục vụ nhóm kiểm tra tuân thủ và đánh giá nội dung văn bản.
+# Chức năng backend: Hàm xử lý phần việc `prompt supports scope` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình kiểm tra tuân thủ.
+# Mối liên hệ: Hàm phối hợp với `_normalized_scope_tokens` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _prompt_supports_scope(prompt, scope: str) -> bool:
     tokens = _normalized_scope_tokens(prompt)
     if not tokens:
@@ -61,6 +75,11 @@ def _prompt_supports_scope(prompt, scope: str) -> bool:
     return scope in tokens or f'scope:{scope}' in tokens
 
 
+# Là gì: `_resolve_prompt` là helper nội bộ của module `compliance.py`, phục vụ nhóm kiểm tra tuân thủ và đánh giá nội dung văn bản.
+# Chức năng backend: Hàm xác định đối tượng hoặc cấu hình hiệu lực từ ngữ cảnh hiện tại; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình kiểm tra tuân thủ.
+# Mối liên hệ: Hàm phối hợp với `get_accessible_prompts.filter.first`, `get_accessible_prompts.filter`, `get_accessible_prompts` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 def _resolve_prompt(user, prompt_id: int, *, scope: str):
     prompt = get_accessible_prompts(user).filter(pk=prompt_id).first()
     if prompt is None:
@@ -73,6 +92,11 @@ def _resolve_prompt(user, prompt_id: int, *, scope: str):
     return prompt, None
 
 
+# Là gì: `_resolve_target` là helper nội bộ của module `compliance.py`, phục vụ nhóm kiểm tra tuân thủ và đánh giá nội dung văn bản.
+# Chức năng backend: Hàm xác định đối tượng hoặc cấu hình hiệu lực từ ngữ cảnh hiện tại; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình kiểm tra tuân thủ.
+# Mối liên hệ: Hàm phối hợp với `get_user_company`, `getattr.filter`, `get_document_detail_queryset` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 def _resolve_target(user, target_type: str, target_id: int):
     company = get_user_company(user)
     if target_type == ComplianceCheckResult.TARGET_DOCUMENT:
@@ -98,6 +122,11 @@ def _resolve_target(user, target_type: str, target_id: int):
     return accessible, None
 
 
+# Là gì: `_normalize_plain_text` là helper nội bộ của module `compliance.py`, phục vụ nhóm kiểm tra tuân thủ và đánh giá nội dung văn bản.
+# Chức năng backend: Hàm chuẩn hóa dữ liệu về định dạng thống nhất; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình kiểm tra tuân thủ.
+# Mối liên hệ: Hàm phối hợp với `re.sub`, `text.replace.replace`, `text.replace` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _normalize_plain_text(value: str) -> str:
     text = re.sub(r'<[^>]+>', ' ', str(value or ''))
     text = text.replace('\r\n', '\n').replace('\r', '\n')
@@ -105,6 +134,11 @@ def _normalize_plain_text(value: str) -> str:
     return '\n'.join(line for line in lines if line).strip()
 
 
+# Là gì: `_extract_template_text` là helper nội bộ của module `compliance.py`, phục vụ nhóm kiểm tra tuân thủ và đánh giá nội dung văn bản.
+# Chức năng backend: Hàm trích xuất nội dung hoặc giá trị cần thiết từ dữ liệu nguồn; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình kiểm tra tuân thủ.
+# Mối liên hệ: Hàm phối hợp với `_normalize_plain_text`, `template.docx_file.open`, `_extract_text_from_docx` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect lên tệp hoặc storage.
 def _extract_template_text(template: DocumentTemplate) -> str:
     if _normalize_plain_text(template.content):
         return _normalize_plain_text(template.content)
@@ -119,6 +153,11 @@ def _extract_template_text(template: DocumentTemplate) -> str:
     return _normalize_plain_text(template.notes or '')
 
 
+# Là gì: `_extract_target_text` là helper nội bộ của module `compliance.py`, phục vụ nhóm kiểm tra tuân thủ và đánh giá nội dung văn bản.
+# Chức năng backend: Hàm trích xuất nội dung hoặc giá trị cần thiết từ dữ liệu nguồn; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình kiểm tra tuân thủ.
+# Mối liên hệ: Hàm phối hợp với `_build_document_summary_source`, `_extract_template_text` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _extract_target_text(target, target_type: str) -> str:
     if target_type == ComplianceCheckResult.TARGET_DOCUMENT:
         try:
@@ -129,10 +168,20 @@ def _extract_target_text(target, target_type: str) -> str:
     return _extract_template_text(target)
 
 
+# Là gì: `_serialize_result` là helper nội bộ của module `compliance.py`, phục vụ nhóm kiểm tra tuân thủ và đánh giá nội dung văn bản.
+# Chức năng backend: Hàm chuyển đối tượng nội bộ thành dữ liệu có thể trả cho client; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ màn hình kiểm tra tuân thủ.
+# Mối liên hệ: Hàm phối hợp với `ComplianceCheckResultSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _serialize_result(result: ComplianceCheckResult) -> dict:
     return ComplianceCheckResultSerializer(result).data
 
 
+# Là gì: `compliance_check_run` là endpoint REST của nhóm kiểm tra tuân thủ và đánh giá nội dung văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm kiểm tra điều kiện và trả kết quả để bước sau quyết định, đồng thời điều phối và thực thi chuỗi bước nghiệp vụ; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình kiểm tra tuân thủ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `ComplianceCheckRunSerializer`, `serializer.is_valid`, `serializer.validated_data.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def compliance_check_run(request):
@@ -142,6 +191,7 @@ def compliance_check_run(request):
     target_type = serializer.validated_data['target_type']
     target_id = serializer.validated_data['target_id']
     prompt_id = serializer.validated_data['prompt_id']
+    prompt_check_token = serializer.validated_data['prompt_check_token']
     force = serializer.validated_data.get('force', False)
 
     target, error_response = _resolve_target(request.user, target_type, target_id)
@@ -155,6 +205,32 @@ def compliance_check_run(request):
     )
     if prompt_error is not None:
         return prompt_error
+
+    prompt_text = '\n\n'.join(
+        part.strip()
+        for part in (
+            str(prompt.system_content or ''),
+            str(prompt.rules_content or ''),
+        )
+        if part.strip()
+    )
+    expected_check = prompt_check_expected_payload(
+        user_id=request.user.pk,
+        scope='compliance_check',
+        context=f'compliance_{target_type}',
+        prompt_role='criteria',
+        prompt_text=prompt_text,
+        target_id=target_id,
+    )
+    check_ok, check_why = verify_prompt_check_token(
+        prompt_check_token,
+        expected_check,
+    )
+    if not check_ok:
+        return Response(
+            {'detail': f'Cần kiểm tra lại prompt trước khi chạy kiểm tra ({check_why}).'},
+            status=400,
+        )
 
     content = _extract_target_text(target, target_type)
     checker = ComplianceChecker(prompt, content, user=request.user)
@@ -195,6 +271,11 @@ def compliance_check_run(request):
     return Response(_serialize_result(record))
 
 
+# Là gì: `compliance_check_history` là endpoint REST của nhóm kiểm tra tuân thủ và đánh giá nội dung văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm kiểm tra điều kiện và trả kết quả để bước sau quyết định; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình kiểm tra tuân thủ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `str.strip.lower`, `str.strip`, `request.GET.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def compliance_check_history(request):
@@ -230,6 +311,11 @@ def compliance_check_history(request):
     )
 
 
+# Là gì: `compliance_check_detail` là endpoint REST của nhóm kiểm tra tuân thủ và đánh giá nội dung văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể, đồng thời kiểm tra điều kiện và trả kết quả để bước sau quyết định; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được màn hình kiểm tra tuân thủ sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `ComplianceCheckResult.objects.select_related`, `_resolve_target` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def compliance_check_detail(request, pk):

@@ -10,7 +10,11 @@ from rest_framework.response import Response
 from accounts.permissions import get_document_detail_queryset
 from documents.edit_lock_state import get_document_edit_lock_state
 from documents.manual_edit_models import DocumentManualEditSession
-from documents.manual_edit_provider import get_manual_edit_provider_status
+from documents.manual_edit_provider import (
+    browser_origin_from_request,
+    get_manual_edit_provider_status,
+    manual_edit_postmessage_origin,
+)
 from documents.manual_edit_services import (
     cancel_manual_edit_session,
     create_manual_edit_session,
@@ -28,6 +32,11 @@ from ..serializers.document_manual_edit import (
 from ..serializers.documents import DocumentDetailSerializer
 
 
+# Là gì: `_resolve_wopi_access_token` là helper nội bộ của module `document_manual_edit.py`, phục vụ nhóm chỉnh sửa thủ công nội dung và phiên bản văn bản.
+# Chức năng backend: Hàm xác định đối tượng hoặc cấu hình hiệu lực từ ngữ cảnh hiện tại; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ trình chỉnh sửa văn bản trên Flutter.
+# Mối liên hệ: Hàm phối hợp với `request.GET.get`, `request.POST.get`, `request.headers.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _resolve_wopi_access_token(request):
     return (
         request.GET.get('access_token')
@@ -36,14 +45,29 @@ def _resolve_wopi_access_token(request):
     )
 
 
+# Là gì: `_wopi_override` là helper nội bộ của module `document_manual_edit.py`, phục vụ nhóm chỉnh sửa thủ công nội dung và phiên bản văn bản.
+# Chức năng backend: Hàm xử lý phần việc `wopi override` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ trình chỉnh sửa văn bản trên Flutter.
+# Mối liên hệ: Hàm phối hợp với `strip.upper`, `strip`, `request.headers.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _wopi_override(request):
     return (request.headers.get('X-WOPI-Override', '') or '').strip().upper()
 
 
+# Là gì: `_allow_inactive_wopi_cleanup` là helper nội bộ của module `document_manual_edit.py`, phục vụ nhóm chỉnh sửa thủ công nội dung và phiên bản văn bản.
+# Chức năng backend: Hàm dọn tài nguyên tạm hoặc dữ liệu không còn hiệu lực; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ trình chỉnh sửa văn bản trên Flutter.
+# Mối liên hệ: Hàm phối hợp với `_wopi_override` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu.
 def _allow_inactive_wopi_cleanup(request):
     return _wopi_override(request) in {'GET_LOCK', 'UNLOCK', 'UNLOCK_AND_RELOCK'}
 
 
+# Là gì: `_wopi_lock_conflict` là helper nội bộ của module `document_manual_edit.py`, phục vụ nhóm chỉnh sửa thủ công nội dung và phiên bản văn bản.
+# Chức năng backend: Hàm xử lý phần việc `wopi lock conflict` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ trình chỉnh sửa văn bản trên Flutter.
+# Mối liên hệ: Hàm phối hợp với `HttpResponse` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 def _wopi_lock_conflict(lock_value):
     response = HttpResponse(status=409)
     if lock_value:
@@ -51,6 +75,11 @@ def _wopi_lock_conflict(lock_value):
     return response
 
 
+# Là gì: `_handle_wopi_lock_override` là helper nội bộ của module `document_manual_edit.py`, phục vụ nhóm chỉnh sửa thủ công nội dung và phiên bản văn bản.
+# Chức năng backend: Hàm xử lý phần việc `handle wopi lock override` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ trình chỉnh sửa văn bản trên Flutter.
+# Mối liên hệ: Hàm phối hợp với `_wopi_override`, `strip`, `request.headers.get` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 def _handle_wopi_lock_override(session, request):
     override = _wopi_override(request)
     requested_lock = (request.headers.get('X-WOPI-Lock', '') or '').strip()
@@ -104,6 +133,11 @@ def _handle_wopi_lock_override(session, request):
     return HttpResponse(status=400)
 
 
+# Là gì: `_get_wopi_working_copy_size` là helper nội bộ của module `document_manual_edit.py`, phục vụ nhóm chỉnh sửa thủ công nội dung và phiên bản văn bản.
+# Chức năng backend: Hàm đọc và trả về dữ liệu cần thiết; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ trình chỉnh sửa văn bản trên Flutter.
+# Mối liên hệ: Hàm phối hợp với `file_field.open`, `handle.read` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect lên tệp hoặc storage.
 def _get_wopi_working_copy_size(file_field):
     if not file_field:
         return 0
@@ -117,11 +151,22 @@ def _get_wopi_working_copy_size(file_field):
             return 0
 
 
+# Là gì: `document_manual_edit_session_create` là endpoint REST của nhóm chỉnh sửa thủ công nội dung và phiên bản văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm kiểm tra đầu vào và tạo dữ liệu mới; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được trình chỉnh sửa văn bản trên Flutter sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_object_or_404`, `get_document_detail_queryset`, `create_manual_edit_session` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; có side effect ghi cơ sở dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_manual_edit_session_create(request, pk):
     document = get_object_or_404(get_document_detail_queryset(request.user), pk=pk)
     session, created = create_manual_edit_session(user=request.user, document=document)
+    # Ghi lai origin THAT cua trinh duyet (request nay den tu browser) de CheckFileInfo
+    # tra dung PostMessageOrigin -> Collabora postMessage ve duoc frame cha.
+    browser_origin = browser_origin_from_request(request)
+    if browser_origin and session.post_message_origin != browser_origin:
+        session.post_message_origin = browser_origin
+        session.save(update_fields=['post_message_origin', 'updated_at'])
     serializer = DocumentManualEditSessionSerializer(session, context={'request': request})
     return Response(
         {
@@ -132,6 +177,11 @@ def document_manual_edit_session_create(request, pk):
     )
 
 
+# Là gì: `document_manual_edit_provider_status` là endpoint REST của nhóm chỉnh sửa thủ công nội dung và phiên bản văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `document manual edit provider status` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được trình chỉnh sửa văn bản trên Flutter sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_manual_edit_provider_status` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def document_manual_edit_provider_status(request):
@@ -146,6 +196,11 @@ def document_manual_edit_provider_status(request):
     )
 
 
+# Là gì: `document_manual_edit_session_detail` là endpoint REST của nhóm chỉnh sửa thủ công nội dung và phiên bản văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm đọc hoặc xử lý một bản ghi cụ thể; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được trình chỉnh sửa văn bản trên Flutter sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_manual_edit_session_for_user`, `DocumentManualEditSessionSerializer` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def document_manual_edit_session_detail(request, session_id):
@@ -154,6 +209,11 @@ def document_manual_edit_session_detail(request, session_id):
     return Response(serializer.data)
 
 
+# Là gì: `document_manual_edit_session_heartbeat` là endpoint REST của nhóm chỉnh sửa thủ công nội dung và phiên bản văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `document manual edit session heartbeat` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được trình chỉnh sửa văn bản trên Flutter sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_manual_edit_session_for_user`, `touch_manual_edit_session`, `session.refresh_from_db` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_manual_edit_session_heartbeat(request, session_id):
@@ -164,6 +224,11 @@ def document_manual_edit_session_heartbeat(request, session_id):
     return Response(serializer.data)
 
 
+# Là gì: `document_manual_edit_session_finish` là endpoint REST của nhóm chỉnh sửa thủ công nội dung và phiên bản văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm xử lý phần việc `document manual edit session finish` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được trình chỉnh sửa văn bản trên Flutter sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_manual_edit_session_for_user`, `DocumentManualEditFinishSerializer`, `serializer.is_valid` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_manual_edit_session_finish(request, session_id):
@@ -184,6 +249,11 @@ def document_manual_edit_session_finish(request, session_id):
     return Response(response_payload)
 
 
+# Là gì: `document_manual_edit_session_cancel` là endpoint REST của nhóm chỉnh sửa thủ công nội dung và phiên bản văn bản; nó là điểm nhận request từ client đã đi qua router và lớp permission.
+# Chức năng backend: Hàm yêu cầu dừng một tiến trình đang chờ hoặc đang chạy; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Kết quả được trình chỉnh sửa văn bản trên Flutter sử dụng trực tiếp để hiển thị dữ liệu, tải tệp hoặc cập nhật trạng thái thao tác.
+# Mối liên hệ: Hàm phối hợp với `get_manual_edit_session_for_user`, `cancel_manual_edit_session`, `session.refresh_from_db` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: view mỏng ở biên HTTP; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def document_manual_edit_session_cancel(request, session_id):
@@ -193,6 +263,11 @@ def document_manual_edit_session_cancel(request, session_id):
     return Response(DocumentManualEditSessionSerializer(session, context={'request': request}).data)
 
 
+# Là gì: `document_manual_edit_wopi_file` là hàm điều phối nghiệp vụ của module `document_manual_edit.py`, thuộc nhóm chỉnh sửa thủ công nội dung và phiên bản văn bản.
+# Chức năng backend: Hàm xử lý phần việc `document manual edit wopi file` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ trình chỉnh sửa văn bản trên Flutter.
+# Mối liên hệ: Hàm phối hợp với `_resolve_wopi_access_token`, `get_manual_edit_session_for_wopi`, `JsonResponse` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; chủ yếu đọc, kiểm tra hoặc biến đổi dữ liệu; chuyển kết quả thành HTTP response.
 @csrf_exempt
 def document_manual_edit_wopi_file(request, file_id):
     access_token = _resolve_wopi_access_token(request)
@@ -218,6 +293,7 @@ def document_manual_edit_wopi_file(request, file_id):
             'UserId': str(session.created_by_id or ''),
             'UserFriendlyName': session.created_by.get_full_name() or session.created_by.username,
             'Version': f'{session.document.version_number}:{session.updated_at.isoformat()}',
+            'PostMessageOrigin': session.post_message_origin or manual_edit_postmessage_origin(request),
             'UserCanWrite': True,
             'ReadOnly': False,
             'SupportsUpdate': True,
@@ -235,6 +311,11 @@ def document_manual_edit_wopi_file(request, file_id):
     return HttpResponse(status=400)
 
 
+# Là gì: `document_manual_edit_wopi_contents` là hàm điều phối nghiệp vụ của module `document_manual_edit.py`, thuộc nhóm chỉnh sửa thủ công nội dung và phiên bản văn bản.
+# Chức năng backend: Hàm xử lý phần việc `document manual edit wopi contents` theo dữ liệu và ngữ cảnh được truyền vào; đầu vào được kiểm tra hoặc chuẩn hóa trước khi tạo kết quả.
+# Vai trò với UI: Flutter không gọi trực tiếp hàm này; các endpoint cùng module dùng kết quả của nó để phục vụ trình chỉnh sửa văn bản trên Flutter.
+# Mối liên hệ: Hàm phối hợp với `_resolve_wopi_access_token`, `get_manual_edit_session_for_wopi`, `JsonResponse` và trả dữ liệu về cho lớp gọi kế tiếp trong cùng luồng.
+# Bản chất và tác dụng: hàm hỗ trợ tái sử dụng trong module; có side effect lên tệp hoặc storage; chuyển kết quả thành HTTP response.
 @csrf_exempt
 def document_manual_edit_wopi_contents(request, file_id):
     access_token = _resolve_wopi_access_token(request)

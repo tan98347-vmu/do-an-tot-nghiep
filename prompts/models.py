@@ -34,10 +34,14 @@ USAGE_SCOPES: dict[str, str] = {
 }
 
 
+# def default_prompt_usage_scopes là giá trị mặc định cho field usage_scope của Prompt: prompt mới mặc định chỉ áp dụng cho luồng 'Sinh văn bản từ mẫu' (template_fill).
+# vd: tạo Prompt không khai usage_scope -> usage_scope = ['template_fill'].
 def default_prompt_usage_scopes():
     return ['template_fill']
 
 
+# class PromptCategory là danh mục để gom/phân loại các Prompt (vd 'Hành chính', 'Pháp chế'), giúp lọc và tổ chức thư viện prompt.
+# vd: PromptCategory.objects.create(name='Pháp chế') -> các prompt gán danh mục này hiện chung một nhóm.
 class PromptCategory(models.Model):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -52,6 +56,8 @@ class PromptCategory(models.Model):
 
     
 
+    # class Meta: sắp xếp danh mục theo tên A→Z và đặt tên hiển thị tiếng Việt trong trang admin.
+    # vd: danh sách danh mục hiển thị theo thứ tự ABC.
     class Meta:
         """
         Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -66,6 +72,8 @@ class PromptCategory(models.Model):
 
     
 
+    # def __str__ hiển thị danh mục bằng chính tên của nó (cho admin/log/dropdown).
+    # vd: -> 'Pháp chế'.
     def __str__(self):
         """
         Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -76,6 +84,8 @@ class PromptCategory(models.Model):
         """
         return self.name
 
+# class Prompt là 'khuôn' tùy chỉnh cách AI hành xử khi sinh/sửa văn bản: system_content (thay danh tính AI) + rules_content (ghi đè quy tắc). Có phạm vi private/group/public, quy trình duyệt (status: approved/pending/pending_leader/rejected), nguồn (curated/user_inline/imported), phạm vi áp dụng (usage_scope), chia sẻ ngang hàng (peer_share_*) và điểm/cờ rủi ro an toàn (safety_score, safety_flags).
+# vd: prompt 'Trợ lý pháp chế ABC' (visibility=group, status=approved) -> khi sinh văn bản, AI dùng văn phong + quy tắc trong prompt này.
 class Prompt(models.Model):
     """
     Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -187,6 +197,8 @@ class Prompt(models.Model):
 
     
 
+    # class Meta: sắp xếp prompt theo lần cập nhật mới nhất; ràng buộc mỗi owner không được trùng tiêu đề (uniq_prompt_owner_title).
+    # vd: 1 user tạo 2 prompt cùng tên 'Mẫu A' -> bị chặn bởi unique constraint.
     class Meta:
         """
         Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -207,6 +219,8 @@ class Prompt(models.Model):
 
     
 
+    # def __str__ hiển thị prompt bằng tiêu đề của nó.
+    # vd: -> 'Trợ lý pháp chế ABC'.
     def __str__(self):
         """
         Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -219,6 +233,8 @@ class Prompt(models.Model):
 
     
 
+    # def get_tag_list tách chuỗi tags (ngăn cách bởi dấu phẩy) thành danh sách tag đã trim, bỏ tag rỗng.
+    # vd: tags='hanh chinh, phap ly ,' -> ['hanh chinh','phap ly'].
     def get_tag_list(self):
         """
         Thuoc chuc nang nao: Tro ly AI, Hoi dap tai lieu, Sinh van ban tu mau, Guest tao van ban va cac luong AI nen.
@@ -230,6 +246,8 @@ class Prompt(models.Model):
         return [t.strip() for t in self.tags.split(',') if t.strip()]
 
 
+# class PromptInjectionLog ghi nhật ký kết quả kiểm tra chống prompt-injection cho mỗi lần người dùng nhập prompt: tầng xử lý (L1–L6), phán quyết (allow/redact/block/escalate), điểm rủi ro, cờ, phản hồi LLM classifier, độ trễ, và IP/UA/incident_id để truy vết sự cố.
+# vd: user nhập 'bỏ qua mọi quy tắc' -> 1 dòng log layer='L4_heuristic', verdict='block'.
 class PromptInjectionLog(models.Model):
     LAYER_CHOICES = [
         ('L1_limit', 'L1 - Hard limit'),
@@ -267,6 +285,8 @@ class PromptInjectionLog(models.Model):
     incident_id = models.CharField(max_length=32, blank=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
+    # class Meta: sắp xếp mới nhất lên đầu + index theo (user, thời gian) và (verdict, thời gian) để truy vấn nhật ký nhanh.
+    # vd: lọc nhanh các vụ verdict='block' gần đây.
     class Meta:
         verbose_name = 'Prompt injection log'
         verbose_name_plural = 'Prompt injection logs'
@@ -276,10 +296,14 @@ class PromptInjectionLog(models.Model):
         ]
         ordering = ['-created_at']
 
+    # def __str__ tóm tắt log dạng 'tầng/phán_quyết - thời điểm'.
+    # vd: -> 'L4_heuristic/block - 2026-06-11 09:30'.
     def __str__(self):
         return f'{self.layer}/{self.verdict} - {self.created_at:%Y-%m-%d %H:%M}'
 
 
+# class PromptAudienceMember là một bản ghi chia sẻ prompt cho một đồng nghiệp cụ thể (peer share): prompt nào được chia cho user nào, ai thêm và mức quyền (view/edit...).
+# vd: chia sẻ prompt #5 cho user #12 quyền VIEW -> PromptAudienceMember(prompt=5, user=12, permission_level='view').
 class PromptAudienceMember(models.Model):
     prompt = models.ForeignKey(
         Prompt, related_name='audience_members', on_delete=models.CASCADE,
@@ -298,6 +322,8 @@ class PromptAudienceMember(models.Model):
         default=PeerPermissionLevel.VIEW,
     )
 
+    # class Meta: mỗi cặp (prompt, user) là duy nhất (không chia sẻ trùng) + index theo prompt/user để tra cứu nhanh.
+    # vd: chia sẻ lại cùng prompt cho cùng user -> bị chặn bởi unique_together.
     class Meta:
         verbose_name = 'Người được chia sẻ prompt'
         verbose_name_plural = 'Người được chia sẻ prompt'
@@ -307,5 +333,7 @@ class PromptAudienceMember(models.Model):
             models.Index(fields=['user', '-created_at']),
         ]
 
+    # def __str__ hiển thị quan hệ chia sẻ dạng 'prompt_id -> user_id'.
+    # vd: -> '5 -> 12'.
     def __str__(self):
         return f'{self.prompt_id} -> {self.user_id}'

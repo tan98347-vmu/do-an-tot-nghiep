@@ -547,7 +547,7 @@ class AppStrings {
       'Không có nhóm nào.': (vi: 'Không có nhóm nào.', en: 'No groups found.'),
       'Admin công ty': (vi: 'Admin công ty', en: 'Company admin'),
       'Trưởng nhóm': (vi: 'Trưởng nhóm', en: 'Team lead'),
-      'Mẫu Văn Bản': (vi: 'Mẫu văn bản', en: 'Templates'),
+      'Mẫu Văn Bản': (vi: 'Quản lý mẫu văn bản', en: 'Template management'),
       'Văn Bản': (vi: 'Văn bản', en: 'Documents'),
       'Phiên AI': (vi: 'Phiên AI', en: 'AI sessions'),
       'VB Tháng Này': (vi: 'VB tháng này', en: 'Documents this month'),

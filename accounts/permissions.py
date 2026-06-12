@@ -1,3 +1,5 @@
+# file từ code cũ fallback, chưa được chỉnh sửa trong quá trình tối ưu. File này chứa các hàm liên quan đến quyền truy cập và quản lý tài nguyên như template, document và prompt. Nó định nghĩa các hàm để kiểm tra quyền sử dụng, chỉnh sửa, xóa và xem xét các tài nguyên này dựa trên người dùng và các nhóm người dùng mà họ thuộc về. Các hàm này thường gọi đến các dịch vụ chia sẻ (sharing.services) để xác định quyền truy cập dựa trên các quy tắc đã được định nghĩa trước đó.
+
 """
 Helper quyen dung chung cho template/document/prompt - **WRAPPER LAYER**.
 

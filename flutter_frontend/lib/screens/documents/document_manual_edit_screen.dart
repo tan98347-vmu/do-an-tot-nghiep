@@ -1,3 +1,8 @@
+// === MÀN HÌNH SỬA VĂN BẢN THỦ CÔNG (Collabora) ===
+// Mở editor Collabora trong iframe để sửa file DOCX của văn bản:
+// - _loadSession: tạo/lấy phiên qua documentManualEditApiProvider; _heartbeatSession giữ phiên sống.
+// - 'Lưu & hoàn tất' (_finishSession): _flushEditorChanges yêu cầu Collabora lưu rồi _waitForWorkingCopySync chờ đồng bộ trước khi commit; _cancelSession để hủy. Xong -> về /documents/<id>.
+
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -15,6 +20,7 @@ import '../../widgets/documents/manual_edit_iframe.dart';
 class DocumentManualEditScreen extends ConsumerStatefulWidget {
   final int documentId;
 
+  // Widget màn SỬA VĂN BẢN THỦ CÔNG bằng Collabora; nhận documentId (+ returnTo để điều hướng khi xong).
   const DocumentManualEditScreen({
     super.key,
     required this.documentId,
@@ -47,12 +53,14 @@ class _DocumentManualEditScreenState
   bool get _hasUnsavedRisk => !_leaving && _session?.isActive == true;
 
   @override
+  // Khi mở màn: nạp/khởi tạo phiên sửa (_loadSession) và bật cảnh báo rời trang khi đang sửa dở.
   void initState() {
     super.initState();
     _loadSession();
   }
 
   @override
+  // Khi rời màn: tắt cảnh báo beforeunload và dừng heartbeat phiên.
   void dispose() {
     _heartbeatTimer?.cancel();
     setBeforeUnloadGuard(false);
@@ -60,6 +68,7 @@ class _DocumentManualEditScreenState
     super.dispose();
   }
 
+  // Khởi động lại vòng heartbeat định kỳ để giữ phiên Collabora sống (chống hết hạn khi đang sửa lâu).
   void _restartHeartbeat(DocumentManualEditSession session) {
     _heartbeatTimer?.cancel();
     if (!session.isActive) {
@@ -69,6 +78,7 @@ class _DocumentManualEditScreenState
         Timer.periodic(_heartbeatInterval, (_) => _heartbeatSession());
   }
 
+  // Một nhịp heartbeat: gọi API gia hạn phiên; nếu phiên hỏng/hết hạn thì cập nhật trạng thái lên UI.
   Future<void> _heartbeatSession() async {
     final session = _session;
     if (!mounted || session == null || !session.isActive) {
@@ -122,16 +132,19 @@ class _DocumentManualEditScreenState
     }
   }
 
+  // Sinh key duy nhất cho iframe Collabora theo phiên (ép Flutter dựng lại đúng editor khi đổi phiên).
   String _editorViewKey(DocumentManualEditSession session) {
     return 'manual-edit-session-${session.id}';
   }
 
+  // Cho biết đã đủ điều kiện hiển thị iframe editor chưa (phiên còn active + có editor_url).
   bool _canRenderEditor(DocumentManualEditSession session) {
     return kIsWeb &&
         session.providerReady &&
         (session.editorUrl ?? '').isNotEmpty;
   }
 
+  // Parse mốc thời gian ISO (vd working_copy_updated_at) để so sánh đồng bộ; lỗi -> null.
   DateTime? _parseIsoTimestamp(String? raw) {
     final value = raw?.trim() ?? '';
     if (value.isEmpty) {
@@ -140,6 +153,7 @@ class _DocumentManualEditScreenState
     return DateTime.tryParse(value)?.toUtc();
   }
 
+  // Kiểm tra Collabora đã autosave working copy mới hơn mốc trước chưa (biết bản lưu đã tới server).
   bool _workingCopySyncAdvanced(
     String? before,
     String? after,
@@ -155,6 +169,7 @@ class _DocumentManualEditScreenState
     return afterTs.isAfter(beforeTs);
   }
 
+  // Chờ (poll getSession) tới khi working copy được cập nhật mới hơn — đảm bảo lấy đúng bản vừa lưu trước khi commit.
   Future<DocumentManualEditSession> _waitForWorkingCopySync(
     int sessionId, {
     required String? previousSyncAt,
@@ -183,6 +198,7 @@ class _DocumentManualEditScreenState
     );
   }
 
+  // Yêu cầu Collabora lưu lần cuối (requestManualEditIFrameSave) rồi chờ working copy đồng bộ — gọi ngay trước khi hoàn tất.
   Future<DocumentManualEditSession> _flushEditorChanges(
       DocumentManualEditSession session) async {
     if (!_canRenderEditor(session)) {
@@ -196,6 +212,7 @@ class _DocumentManualEditScreenState
     );
   }
 
+  // Nút 'Lưu & hoàn tất': flush editor -> chờ đồng bộ -> finishSession commit thành văn bản; xong thì refresh danh sách + báo thành công + về /documents/<id>.
   Future<void> _finishSession() async {
     final session = _session;
     if (session == null || _finishLoading) return;
@@ -231,6 +248,7 @@ class _DocumentManualEditScreenState
     }
   }
 
+  // Nút 'Hủy': hỏi xác nhận rồi gọi API hủy phiên (giữ nguyên văn bản) và rời màn.
   Future<void> _cancelSession() async {
     final session = _session;
     if (session == null || _cancelLoading) return;
@@ -272,21 +290,25 @@ class _DocumentManualEditScreenState
     }
   }
 
+  // Cho biết viewport có nhỏ (mobile) không để chọn layout gọn.
   bool _isCompactViewportSize(Size size) {
     return size.width < _compactLayoutBreakpoint ||
         size.height < _compactHeightBreakpoint;
   }
 
+  // Cho biết theo BoxConstraints có nên dùng layout compact (xếp dọc) không.
   bool _isCompactLayout(BoxConstraints constraints) {
     return _isCompactViewportSize(
       Size(constraints.maxWidth, constraints.maxHeight),
     );
   }
 
+  // Cho biết panel điều khiển phụ có nên thu gọn không theo bề rộng màn hình.
   bool _controlsCollapsed(BoxConstraints constraints) {
     return _controlsCollapsedOverride ?? _isCompactLayout(constraints);
   }
 
+  // Dựng panel cạnh editor: thông tin phiên + ô ghi chú thay đổi (change note) + nút 'Lưu & hoàn tất' / 'Hủy'.
   Widget _buildSessionSidePanel(
     BuildContext context,
     DocumentManualEditSession session, {
@@ -385,6 +407,7 @@ class _DocumentManualEditScreenState
     );
   }
 
+  // Dựng thân màn: trạng thái loading / lỗi (kèm nút thử lại) hoặc iframe Collabora + side panel; chọn layout theo kích thước (LayoutBuilder).
   Widget _buildBody() {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
@@ -530,6 +553,7 @@ class _DocumentManualEditScreenState
   }
 
   @override
+  // Dựng khung màn (AppBar + PopScope chặn rời trang khi đang sửa) bao quanh _buildBody.
   Widget build(BuildContext context) {
     final title = _session?.documentTitle ?? 'Chinh sua van ban';
     final isCompactViewport = _isCompactViewportSize(MediaQuery.sizeOf(context));

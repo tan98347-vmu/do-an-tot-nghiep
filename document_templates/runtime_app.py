@@ -8,6 +8,8 @@ Tac dung: Giu cho du lieu mau, quyen thao tac va preview cua nhom man Mau van ba
 
 from django.apps import AppConfig
 
+# class DocumentTemplatesRuntimeConfig là AppConfig của document_templates; ở ready() nạp signals và áp các runtime override (vá hành vi model).
+# vd: khi Django khởi động -> đăng ký signal reindex + áp override render/save.
 class DocumentTemplatesRuntimeConfig(AppConfig):
     """
     Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).
@@ -22,6 +24,8 @@ class DocumentTemplatesRuntimeConfig(AppConfig):
 
     
 
+    # def ready nạp module signals và gọi apply_runtime_overrides() lúc app khởi động.
+    # vd: chạy 1 lần khi start app -> kích hoạt signal + override.
     def ready(self):
         """
         Thuoc chuc nang nao: Tao mau van ban, Mau dung chung, Mau phong ban, Mau rieng, Mau yeu thich va Tat ca mau (Admin).

@@ -15,6 +15,7 @@ from .models import (
 
 # [Web] `TemplateCategoryAdmin` gom một cụm xử lý backend dùng chung cho nhóm màn Mẫu văn bản.
 
+# vd: trang admin hiển thị/lọc các bản ghi của model này.
 @admin.register(TemplateCategory)
 class TemplateCategoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'created_at')
@@ -22,6 +23,7 @@ class TemplateCategoryAdmin(admin.ModelAdmin):
 
 # [Web] `DocumentTemplateAdmin` gom một cụm xử lý backend dùng chung cho nhóm màn Mẫu văn bản.
 
+# vd: trang admin hiển thị/lọc các bản ghi của model này.
 @admin.register(DocumentTemplate)
 class DocumentTemplateAdmin(admin.ModelAdmin):
     list_display = ('title', 'owner', 'status', 'version', 'category', 'department', 'is_shared', 'created_at')
@@ -30,6 +32,7 @@ class DocumentTemplateAdmin(admin.ModelAdmin):
 
 # [Web] `TemplateVersionAdmin` gom một cụm xử lý backend dùng chung cho nhóm màn Mẫu văn bản.
 
+# vd: trang admin hiển thị/lọc các bản ghi của model này.
 @admin.register(TemplateVersion)
 class TemplateVersionAdmin(admin.ModelAdmin):
     list_display = ('template', 'version_number', 'created_by', 'created_at')
@@ -37,6 +40,7 @@ class TemplateVersionAdmin(admin.ModelAdmin):
 
 # [Web] `TemplatePermissionAdmin` gom một cụm xử lý backend dùng chung cho nhóm màn Mẫu văn bản.
 
+# vd: trang admin hiển thị/lọc các bản ghi của model này.
 @admin.register(TemplatePermission)
 class TemplatePermissionAdmin(admin.ModelAdmin):
     list_display = ('template', 'user', 'can_view', 'can_edit', 'can_use', 'can_approve')
@@ -44,6 +48,7 @@ class TemplatePermissionAdmin(admin.ModelAdmin):
 
 # [Web] `TemplateApprovalLogAdmin` gom một cụm xử lý backend dùng chung cho nhóm màn Mẫu văn bản.
 
+# vd: trang admin hiển thị/lọc các bản ghi của model này.
 @admin.register(TemplateApprovalLog)
 class TemplateApprovalLogAdmin(admin.ModelAdmin):
     list_display = ('template', 'action', 'actor', 'created_at')
@@ -51,6 +56,7 @@ class TemplateApprovalLogAdmin(admin.ModelAdmin):
 
 # [Web] `TemplateAudienceMemberAdmin` gom một cụm xử lý backend dùng chung cho nhóm màn Mẫu văn bản.
 
+# vd: trang admin hiển thị/lọc các bản ghi của model này.
 @admin.register(TemplateAudienceMember)
 class TemplateAudienceMemberAdmin(admin.ModelAdmin):
     list_display = ('template', 'user', 'created_at')
